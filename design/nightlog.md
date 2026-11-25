@@ -759,7 +759,15 @@ What was built overnight while the user slept, in order. Start the game from VS 
        their capsule slid up its edge; enemies are kept on the ground.
      - Buildings and props matte (generated metal maps) with a weathering pass
        (`shaders/grime.gdshader`: dirt splashed up, rain streaks, mottled plaster; strong in the
-       Mediterranean, `grime`). Wells have a dark hole inside the ring (the plaza's ground showed).
+       Mediterranean, `grime`). The well is built in code now (`world/well.gd`; the generated model's
+       ring had no inside that could meet a shaft): a fieldstone wall with capstones, gritty
+       masonry with moss and grime low down (`well_stone.gdshaderinc`, bump lighting from its
+       relief), its inner wall going on 3.5 m down to a black bottom as a portal through the
+       terrain (an invisible disc at the opening marks it in the stencil buffer, the shaft is
+       drawn there without depth test), weathered wooden posts, roof, crank, rope and bucket.
+     - No distance fog in the Mediterranean (clear air, like the deserts).
+     - Running: the weapon hand turns fully with the arm, the wrist nearly straight (35°; it was
+       bent 95° down like standing still, the blade kept pointing at the ground).
 
 
 ## Known issues / next

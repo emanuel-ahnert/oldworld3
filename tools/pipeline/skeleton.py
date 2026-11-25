@@ -398,7 +398,7 @@ WALK_LEG = {
 }
 
 
-HAND_FOLLOW = 0.75
+HAND_FOLLOW = 1.0
 
 
 def make_cycle(armature, name, frames, keys, leg, stance, arm_swing, arm_center, elbow_base,
@@ -446,9 +446,8 @@ def make_cycle(armature, name, frames, keys, leg, stance, arm_swing, arm_center,
             "Head": [(X, -(pelvis_tilt + trunk_lean) * 0.85), (Z, -chest_turn * 0.4 * turn)],
             "LeftUpperArm": [(Y, arm_out), (X, -al)], "RightUpperArm": [(Y, -arm_out), (X, -ar)],
             "LeftLowerArm": [(X, -el)], "RightLowerArm": [(X, -er)],
-            # The sword hand swings with the arm (HAND_FOLLOW of the forearm's swing; holding the
-            # blade at one angle the whole stride looked stiff), the wrist taking back the rest so
-            # the blade doesn't wave through the leg.
+            # The sword hand turns with the arm (HAND_FOLLOW of the forearm's swing, the wrist
+            # nearly straight: a hand bent down to the idle angle the whole stride looked stiff).
             "LeftHand": [(X, -8)], "RightHand": [(X, hand + (1 - HAND_FOLLOW) * ((ar + er) - (arm_center + elbow_base)))],
         }
         keyframe_pose(armature, f, pose)
@@ -536,7 +535,7 @@ def make_run(armature, name="run", frames=17, keys=34):
     """Run at ~7 m/s (the hero's speed): short stance, flight, forward lean from the ankles."""
     return make_cycle(armature, name, frames, keys, RUN_LEG, RUN_STANCE, arm_swing=34, arm_center=-6,
                       elbow_base=88, elbow_swing=14, pelvis_tilt=7, trunk_lean=6, pelvis_turn=7,
-                      chest_turn=10, adduct=9, shin_in=-1, flight=0.05, arm_out=7, hand=95)
+                      chest_turn=10, adduct=9, shin_in=-1, flight=0.05, arm_out=7, hand=35)
 
 
 def make_walk(armature, name="walk", frames=22, keys=32):

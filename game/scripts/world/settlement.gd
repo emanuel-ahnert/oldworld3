@@ -99,8 +99,7 @@ func build(zone: Zone, seed: int) -> void:
 		var v := Villager.new()
 		v.setup(pp[0], pp[1], terrain, pp[2], seed + i)
 		add_child(v)
-	if ResourceLoader.exists("res://assets/props/well.glb"):
-		_well(_place("res://assets/props/well.glb", terrain, Vector3(6, 0, -6), 3.0, 0.3), terrain)
+	Well.build(self, terrain, Vector3(6, 0, -6), 0.3)
 	for s in shrine_spots(terrain):
 		_place("res://assets/buildings/shrine.glb", terrain, s, 2.8, rng.randf() * TAU, true)
 		checkpoints.append({"name": "the shrine", "pos": s + origin, "spawn": s + Vector3(2.5, 0, 0) + origin})
@@ -135,29 +134,6 @@ func _place(path: String, terrain: Terrain, pos: Vector3, size: float, yaw: floa
 	Placement.add_box_collision(n)
 	Placement.weather(n, path, _grime)
 	return n
-
-
-## The well's model is a ring of stones with nothing in it (looking in, the plaza's ground
-## showed): a dark hole on the ground inside the ring (shaders/well_shaft.gdshader). The ring is
-## 0.29 of the model's unit size inside.
-func _well(n: Node3D, terrain: Terrain) -> void:
-	if n == null:
-		return
-	var r := 0.36 * n.scale.x          # under the stones all round (the ring is 0.29 inside at the bottom)
-	var disc := CylinderMesh.new()
-	disc.top_radius = r
-	disc.bottom_radius = r
-	disc.height = 0.01
-	disc.radial_segments = 24
-	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/well_shaft.gdshader")
-	m.set_shader_parameter("radius", r)
-	var mi := MeshInstance3D.new()
-	mi.mesh = disc
-	mi.material_override = m
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mi)
-	mi.position = Vector3(n.position.x, terrain.height_at(n.position.x, n.position.z) + 0.03, n.position.z)
 
 
 func _process(_dt: float) -> void:
