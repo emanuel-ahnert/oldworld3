@@ -14,7 +14,9 @@ static var smokes: Array[Dictionary] = []    ## {pos: Vector3, radius: float, un
 ## Floating combat text above a position (damage numbers, "Miss", XP). With `follow` it rises
 ## relative to that character, so it stays with them when they (or the camera) move instead of
 ## being left behind in the world.
-static func float_text(pos: Vector3, text: String, color: Color, size := 48, follow: Node3D = null) -> void:
+## Floating combat text. sticky (crits, like WoW): it pops in large, shrinks back and stays put
+## for a moment before it rises and fades.
+static func float_text(pos: Vector3, text: String, color: Color, size := 48, follow: Node3D = null, sticky := false) -> void:
 	if root == null:
 		return
 	var l := Label3D.new()
@@ -26,19 +28,25 @@ static func float_text(pos: Vector3, text: String, color: Color, size := 48, fol
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	l.fixed_size = false
-	l.pixel_size = 0.008
+	l.pixel_size = 0.0072
 	root.add_child(l)
 	var start := pos + Vector3(randf_range(-0.3, 0.3), 0, randf_range(-0.3, 0.3))
 	var offset := start - follow.global_position if follow else Vector3.ZERO
 	l.global_position = start
+	var hold := 0.7 if sticky else 0.0
 	var tw := l.create_tween()
 	tw.set_parallel(true)
+	if sticky:
+		l.render_priority = 1                       # over the other numbers
+		l.scale = Vector3.ONE * 1.9
+		tw.tween_property(l, "scale", Vector3.ONE, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_method(func(k: float) -> void:
 		var base := start
 		if is_instance_valid(follow) and follow.is_inside_tree():
 			base = follow.global_position + offset
-		l.global_position = base + Vector3(0, 1.4 * k, 0), 0.0, 1.0, 1.1)
-	tw.tween_property(l, "modulate:a", 0.0, 1.1).set_delay(0.4)
+		var rise := clampf((k * (1.1 + hold) - hold) / 1.1, 0.0, 1.0)
+		l.global_position = base + Vector3(0, 1.4 * rise, 0), 0.0, 1.0, 1.1 + hold)
+	tw.tween_property(l, "modulate:a", 0.0, 1.1).set_delay(0.4 + hold)
 	tw.chain().tween_callback(l.queue_free)
 
 

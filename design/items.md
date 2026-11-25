@@ -35,10 +35,15 @@ ItemLevel − 2.
 - **Armor** gives Defense and Resistance by type: cloth 0.5/1.0, leather 0.8/0.6,
   mail 0.95/0.45, plate 1.15/0.3 per budget point. A class wears its own armor type or lighter
   (warrior/paladin plate, hunter/shaman mail, rogue/druid leather, mage/warlock/priest cloth).
-- **Weapons** put 2.2× their budget into Attack (or Magic, plus some Mana, for casters' staves,
-  maces and daggers): weapon kinds per class as in Oldworld2 (sword, axe, mace, dagger, staff,
-  bow). **Off hands:** shield (Defense; warrior, paladin, shaman), orb (Magic; casters),
-  parrying dagger (Attack; rogue).
+- **Weapons** carry **Damage** (always): 8 × (1 + 0.1 × (item level − 1)) × the rarity's factor,
+  two-handed weapons ×1.3. It multiplies the hero's physical hits (mechanics.md, 4): the weapon
+  is the biggest damage piece. Physical weapons carry no Attack any more (suffixes still add
+  stats); casters' staves, maces and daggers also put 2.2× their budget into Magic plus some
+  Mana. Kinds per class as in Oldworld2 (sword, axe, mace, dagger, staff, bow) and the
+  two-handed **greatsword** (warrior, paladin), **greataxe** (warrior, shaman) and **maul**
+  (warrior, paladin, shaman): 30% more damage, no off hand (equipping one puts the off-hand
+  item in the bag, and the other way round). **Off hands:** shield (Defense; warrior, paladin,
+  shaman), orb (Magic; casters), parrying dagger (Attack; rogue).
 - **Jewelry** (neck, ring): one random stat.
 - **Suffixes:** of the Bear (Attack, Health), Owl (Magic, Mana), Fox (Crit, Attack), Turtle
   (Defense, Resistance), Serpent (Magic, Crit), Boar (Attack, Defense), Wolf (Attack, Crit),

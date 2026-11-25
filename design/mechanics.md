@@ -62,6 +62,11 @@ Damage = max(1, floor(3 × Base × Affinity × Element × Crit × Random × Othe
   enemies hit a level-12 hero a third less, relative to its health, than a level-1 one).
 - Atk/Def: Attack vs. Defense for physical hits, Magic vs. Resistance for magical ones.
 - Affinity 1.5 if the ability's element is one of the attacker's affinities.
+- **Weapon (the hero's physical hits):** Other includes 1.2 × (weapon Damage / that of a
+  common one-hander of the hero's level)^0.75, two-handed weapons rated against two-handers
+  and then ×1.3. A same-level common one-hander gives 1.2 (what its Attack used to add), a
+  two-hander 1.56, a rare one-hander about 1.6; an item-level-1 weapon at level 10 0.74; fists
+  0.71. Enemies: 1. Spells don't use it.
 - Element: the chart from Oldworld2 (8 elements; heroes are always Physical-typed and take
   neutral damage). Random 0.85–1.0. Other: buffs, debuffs, Enrage, gear.
 - **No random misses**, as in Oldworld2: hits always land unless a visible mechanic says

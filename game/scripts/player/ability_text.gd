@@ -60,7 +60,7 @@ const TEXT := {
 	"warrior:Heavy Strike": "Instant strong hit, power 50",
 	"warrior:Overwhelm": "Usable for 5 s after the target dodges or a Smoke miss; power 100, can't be dodged",
 	"warrior:Rend": "Bleed: 1/32 of max HP every 3 s for 15 s",
-	"warrior:Whirlwind": "Spin with the blade out: power 40 to every enemy within 4 m once a second, 10 rage a second (the first on use) until rage runs out or you press it again. You can move; no other abilities but Battle Cry, no auto-attack meanwhile",
+	"warrior:Whirlwind": "Spin with the blade out: power 40 to every enemy within 4 m once a second, 10 rage a second (the first on use) until rage runs out or you press it again. Every kill by it takes 5 s off its cooldown. You can move; no other abilities but Battle Cry, no auto-attack meanwhile",
 	"warrior:Thunder Clap": "Area: power 25 to all enemies within 8 m, slows their attacks by 20% for 10 s. Answer to packs",
 }
 

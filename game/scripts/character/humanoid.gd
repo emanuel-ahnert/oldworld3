@@ -42,6 +42,28 @@ func build(cfg: Dictionary) -> void:
 	mat.set_shader_parameter("pick", _pick)
 	mat.set_shader_parameter("tint_a", cfg.get("tint_a", Color.WHITE))
 	mat.set_shader_parameter("tint_b", cfg.get("tint_b", Color.WHITE))
+	# Ragged clothes and a different build (goblins): body_slots tatter, Proportions.
+	mat.set_shader_parameter("tatter", float(cfg.get("tatter", 0.0)))
+	mat.set_shader_parameter("fur", float(cfg.get("fur", 0.0)))
+	if cfg.has("fur_color"):
+		mat.set_shader_parameter("fur_color", cfg.fur_color)
+	mat.set_shader_parameter("skin_hands", bool(cfg.get("skin_hands", false)))
+	if cfg.has("head_tint"):
+		mat.set_shader_parameter("head_tint", cfg.head_tint)
+	head_egg = float(cfg.get("head_egg", 0.0))
+	mat.set_shader_parameter("head_egg", head_egg)
+	var bld: Vector3 = cfg.get("build", Vector3.ONE)
+	mat.set_shader_parameter("head_unbuild", Vector3(1.0 / bld.x, 1.0 / bld.y, 1.0 / bld.z))
+	if cfg.has("ears"):
+		_add_ears(cfg.get("skin", Color(0.36, 0.5, 0.2)), float(cfg.ears), cfg.get("build", Vector3.ONE))
+	if cfg.has("skin"):
+		mat.set_shader_parameter("skin", cfg.skin)
+	if cfg.has("legs") or cfg.has("head_size"):
+		var pr := Proportions.new()
+		pr.legs = float(cfg.get("legs", 1.0))
+		pr.head = float(cfg.get("head_size", 1.0))
+		_skel.add_child(pr)
+		_body.position.y = -pr.drop()
 	_mesh.material_override = mat
 	for key in cfg.get("layers", {}):
 		set_layer(key, cfg.layers[key])
@@ -89,8 +111,11 @@ const HEAD_LAYERS := {
 }
 ## What of the head still shows under each kind (body_slots.gdshader hide_hair): [cos of the
 ## face's half width, brow m above the head's middle] (the openings of headgear.py's KINDS).
-const FACE_SHOWN := [[0.55, 0.065], [0.68, 0.055], [0.3, 0.045], [2.0, 0.0]]
+const FACE_SHOWN := [[0.6, 0.036], [0.68, 0.036], [0.24, 0.034], [2.0, 0.0]]
 var _face_shown := []
+var head_egg := 0.0             ## > 0: the head egg-shaped, wide on top (goblins; body_slots)
+const HEAD_AHEAD := 0.09
+const HEAD_SIDE := 0.032       ## the face's center line is this far to the side of the head bone (headgear.py CX)
 const HOOD_TINT := [Color(0.42, 0.36, 0.29), Color(0.30, 0.25, 0.19)]   ## a plain hood: tint, hem
 var _robe_colors := HOOD_TINT
 var _held := {}
@@ -176,7 +201,7 @@ func has_layer(key: String) -> bool:
 
 ## Puts a model into a hold (replacing what was there); path "" empties it. rot: optional
 ## rotation override (staves stand upright: Vector3.ZERO).
-func equip_model(key: String, path: String, rot: Variant = null) -> void:
+func equip_model(key: String, path: String, rot: Variant = null, size := 1.0) -> void:
 	if _held.has(key):
 		(_held[key] as Node).queue_free()
 		_held.erase(key)
@@ -198,7 +223,7 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 		return
 	var h: Array = HOLD[key]
 	var offset: Vector3 = h[1]
-	var scale_f: float = h[3]
+	var scale_f: float = h[3] * size
 	if key == "weapon" and path.get_file().begins_with("staff"):
 		scale_f *= STAFF_SCALE        # staves were too long: they stood far over the head
 		# Held about the middle, the top tipped a little outward and forward (clear of the robe).
@@ -208,6 +233,7 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 	if att:
 		_held[key] = att
 		if key == "weapon":
+			_grip = null
 			(att.get_child(0) as Node3D).set_meta("staff", path.get_file().begins_with("staff"))
 			(att.get_child(0) as Node3D).set_meta("rest", (att.get_child(0) as Node3D).transform)
 		if key == "bow":
@@ -220,6 +246,7 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 		helmet_worn = att != null
 	if key == "weapon":
 		_fit_trail()
+		_update_grip()
 		if anim:
 			anim.keep_arms_in_air = path.get_file().begins_with("staff")
 
@@ -269,6 +296,149 @@ func _attach(bone: String, path: String, offset: Vector3, rot_deg: Vector3, scal
 	m.transform = _hold_xf(idx, offset, rot_deg, scale_f)
 	att.add_child(m)
 	return att
+
+
+## Long pointed ears (goblins): a cupped leaf each side of the head on the head bone, pointing
+## out, a little up and back. `length` in m (the body's units, before any head scaling).
+func _add_ears(skin: Color, length: float, build := Vector3.ONE) -> void:
+	var idx := _skel.find_bone("Head")
+	if idx < 0:
+		return
+	var m := StandardMaterial3D.new()
+	m.albedo_color = skin * 0.85        # thin and in full light: a little darker than the face to match
+	m.roughness = 0.95
+	m.metallic_specular = 0.2
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mesh := _ear_mesh(length)
+	for sgn in [-1.0, 1.0]:
+		var att := BoneAttachment3D.new()
+		att.bone_name = "Head"
+		_skel.add_child(att)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = m
+		att.add_child(mi)
+		# On the side of the head at eye height (the face's line is HEAD_SIDE off the bone), the
+		# base a little inside the skin, pointing out and up (40 degrees) and a little back.
+		var off := Vector3(HEAD_SIDE + sgn * 0.064, 0.095, 0.035)
+		var rot := Vector3(0, -15 * sgn, 40 * sgn)
+		var xf := _hold_xf(idx, off, rot, 1.0)
+		if sgn < 0:
+			xf.basis = xf.basis * Basis.from_scale(Vector3(-1, 1, 1))   # mirrored (built along +X)
+		# The body's build (a non-uniform scale on the whole model) is taken back out of the ears,
+		# like out of the head (body_slots head_unbuild): stretched, the base stood off the head.
+		var rel := Transform3D()
+		var nn: Node = _skel
+		while nn != _body:
+			rel = (nn as Node3D).transform * rel
+			nn = nn.get_parent()
+		var rb := (rel * _skel.get_bone_global_rest(idx)).basis.orthonormalized()
+		var unbuild := rb.inverse() * Basis.from_scale(Vector3(1.0 / build.x, 1.0 / build.y, 1.0 / build.z)) * rb
+		mi.transform = Transform3D(unbuild, Vector3.ZERO) * xf
+
+
+## An ear: a pointed leaf along +X (base at 0), widest near the base, cupped forward, a little
+## thicker at the rim.
+static func _ear_mesh(length: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := 10
+	var w := 5
+	var pts := []
+	for i in n + 1:
+		var t := float(i) / n
+		var half := length * 0.22 * pow(1.0 - t, 0.75) * (0.6 + 0.4 * sin(PI * minf(t * 1.6, 1.0)))
+		var row := []
+		for j in w + 1:
+			var u := float(j) / w * 2.0 - 1.0          # -1 bottom .. 1 top edge
+			var cup := (1.0 - u * u) * half * 0.35      # the middle forward, a hollow behind
+			row.append(Vector3(t * length, u * half - t * length * 0.08, cup))
+		pts.append(row)
+	for i in n:
+		for j in w:
+			var a: Vector3 = pts[i][j]
+			var b: Vector3 = pts[i + 1][j]
+			var c: Vector3 = pts[i + 1][j + 1]
+			var d: Vector3 = pts[i][j + 1]
+			for v in [a, b, c, a, c, d]:
+				st.add_vertex(v)
+	st.generate_normals()
+	return st.commit()
+
+
+## Two-handed weapons: the left hand holds the grip below the right one (TwoHandGrip on the
+## skeleton, its target on the weapon GRIP2 m toward the pommel), so every swing is two-handed:
+## the right arm leads, the left follows the hilt.
+const GRIP2 := 0.14
+var two_handed := false
+var _ik: TwoHandGrip
+var _grip: Node3D
+
+
+func set_two_handed(on: bool) -> void:
+	two_handed = on
+	if not on:
+		_stance = 0.0
+		if anim:
+			anim.set_two_handed(0.0)
+	_update_grip()
+
+
+## Out of combat a two-hander is carried in the right hand like a one-hander; in combat
+## (`fighting`) both hands take it: the two-handed hold and the left hand on the grip ease in
+## over STANCE_TIME s (and out again).
+const STANCE_TIME := 0.35
+var _stance := 0.0
+
+
+func set_two_hand_stance(fighting: bool, dt: float) -> void:
+	if not two_handed:
+		return
+	var want := 1.0 if fighting else 0.0
+	if is_equal_approx(_stance, want):
+		return
+	_stance = move_toward(_stance, want, dt / STANCE_TIME)
+	var k := _stance * _stance * (3.0 - 2.0 * _stance)
+	if anim:
+		anim.set_two_handed(k)
+	if _ik:
+		_ik.influence = k
+		_ik.active = k > 0.0
+
+
+func _update_grip() -> void:
+	var att := _held.get("weapon") as BoneAttachment3D
+	if not two_handed or att == null or att.get_child_count() == 0:
+		if _ik:
+			_ik.active = false
+		return
+	var m := att.get_child(0) as Node3D
+	if _ik == null:
+		_ik = TwoHandGrip.new()
+		_ik.name = "TwoHandGrip"
+		_skel.add_child(_ik)
+	if _grip == null or not is_instance_valid(_grip) or _grip.get_parent() != m:
+		# The grip below the right hand: along the model's long axis, away from the blade's tip
+		# (the end farther from the model's origin, which is where the right hand holds it).
+		var box := AABB()
+		var first := true
+		for mi: MeshInstance3D in m.find_children("*", "MeshInstance3D", true, false):
+			var bx := (m.global_transform.affine_inverse() * mi.global_transform) * mi.get_aabb()
+			box = bx if first else box.merge(bx)
+			first = false
+		var axis := box.get_longest_axis_index()
+		var dir := Vector3.ZERO
+		dir[axis] = -1.0 if absf(box.end[axis]) > absf(box.position[axis]) else 1.0   # toward the pommel
+		_grip = Node3D.new()
+		_grip.name = "Grip2"
+		m.add_child(_grip)
+		_grip.position = dir * GRIP2 / maxf(m.scale.x, 0.001)
+	_ik.grip = _grip
+	var k := _stance * _stance * (3.0 - 2.0 * _stance)
+	_ik.influence = k
+	_ik.active = k > 0.0
+	if anim:
+		anim.set_two_handed(k)
 
 
 ## A held model's transform under its bone: placed in character space (Y up, +Z = the body's
@@ -356,14 +526,21 @@ func _head_update() -> void:
 	if mat == null:
 		return
 	mat.set_shader_parameter("hide_hair", not _face_shown.is_empty())
-	if _face_shown.is_empty():
+	if _face_shown.is_empty() and head_egg <= 0.0:
 		return
 	var to_mesh := _mesh.global_transform.affine_inverse() * _skel.global_transform
 	var pose := _skel.get_bone_global_pose(_head)
 	var turn := to_mesh.basis * pose.basis * _skel.get_bone_global_rest(_head).basis.inverse()
+	var hs := turn.get_scale().x           # a scaled head (Proportions): the offsets scale with it
 	var up := (turn * Vector3.UP).normalized()
-	mat.set_shader_parameter("head_center", to_mesh * pose.origin + up * 0.10)
+	var fwd := (turn * Vector3.BACK).normalized()
+	# The head's middle (headgear.py's HC): 10 cm over the head bone and 9 cm ahead of it (the
+	# bone sits at the back of the neck; from there the ears counted as "ahead" and showed).
+	var side := (turn * Vector3.RIGHT).normalized()
+	mat.set_shader_parameter("head_center", to_mesh * pose.origin + (up * 0.10 + fwd * HEAD_AHEAD + side * HEAD_SIDE) * hs)
 	mat.set_shader_parameter("head_up", up)
-	mat.set_shader_parameter("head_fwd", (turn * Vector3.BACK).normalized())
-	mat.set_shader_parameter("face_cos", _face_shown[0])
-	mat.set_shader_parameter("brow", _face_shown[1])
+	mat.set_shader_parameter("head_fwd", fwd)
+	mat.set_shader_parameter("head_size", hs)
+	if not _face_shown.is_empty():
+		mat.set_shader_parameter("face_cos", _face_shown[0])
+		mat.set_shader_parameter("brow", _face_shown[1])

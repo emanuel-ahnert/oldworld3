@@ -42,6 +42,9 @@ var poison_resist := false
 var ticking := false                  ## true while a damage-over-time tick is being applied            ## rogue passive: poison ticks do 75% less
 var base_crit := 0.05                 ## crit chance without gear
 var gear := {}                        ## stat bonuses of the equipped items (Items.totals)
+var weapon_damage := -1.0              ## the hero's weapon damage (0: fists); -1: none (enemies, x1)
+## The hero's physical hits grow with the weapon instead of the level (Rules.weapon_mult).
+var weapon_mult := 1.0                 ## physical hits multiplied by this (Rules.weapon_mult)
 var swing_time := 2.0
 var affinity := 1.5                   ## Physical attacks by Physical-typed units
 var rage := 0.0                       ## warrior resource, 0..100
@@ -81,6 +84,7 @@ func recompute() -> void:
 	if max_mana > 0.0:
 		max_mana += float(gear.get("mana", 0))
 	crit_chance = base_crit + float(gear.get("crit", 0)) / 100.0
+	weapon_mult = 1.0 if weapon_damage < 0.0 else Rules.weapon_mult(weapon_damage)
 	hp = mini(hp, max_hp)
 	mana = minf(mana, max_mana)
 
@@ -178,9 +182,15 @@ func _crit_vs(target: Combatant) -> float:
 func roll_damage_elem(target: Combatant, power: float, element: String) -> Dictionary:
 	var crit := rng.randf() < _crit_vs(target)
 	var aff := 1.5 if element in affinities else 1.0
-	var other: float = buff_mult("damage") * Rules.element_mult(element, target.types) * float(Rules.TIER_DAMAGE.get(tier, 1.0))
-	var amount := Rules.damage(level, power, attack * buff_mult("attack"), target.defense * target.buff_mult("defense"), aff, Rules.CRIT_ABILITY if crit else 1.0, other, rng)
+	var other: float = buff_mult("damage") * Rules.element_mult(element, target.types) * float(Rules.TIER_DAMAGE.get(tier, 1.0)) * weapon_mult
+	var amount := Rules.damage(_hit_level(), power, attack * buff_mult("attack"), target.defense * target.buff_mult("defense"), aff, Rules.CRIT_ABILITY if crit else 1.0, other, rng)
 	return {"amount": amount, "crit": crit}
+
+
+## The level a physical hit grows with: the hero's weapon brings the growth (level 1 here),
+## everyone else's hits grow with their level.
+func _hit_level() -> int:
+	return 1 if weapon_damage >= 0.0 else level
 
 
 ## One hit from this unit on `target`. power: ability power; auto: auto-attack (2x crit).
@@ -188,8 +198,8 @@ func roll_damage_elem(target: Combatant, power: float, element: String) -> Dicti
 func roll_damage(target: Combatant, power: float, auto := false, extra := 1.0) -> Dictionary:
 	var crit := rng.randf() < _crit_vs(target)
 	var cm := (Rules.CRIT_AUTO if auto else Rules.CRIT_ABILITY) if crit else 1.0
-	var other: float = buff_mult("damage") * float(Rules.TIER_DAMAGE.get(tier, 1.0)) * extra
-	var amount := Rules.damage(level, power, attack * buff_mult("attack"), target.defense * target.buff_mult("defense"), affinity, cm, other, rng)
+	var other: float = buff_mult("damage") * float(Rules.TIER_DAMAGE.get(tier, 1.0)) * extra * weapon_mult
+	var amount := Rules.damage(_hit_level(), power, attack * buff_mult("attack"), target.defense * target.buff_mult("defense"), affinity, cm, other, rng)
 	return {"amount": amount, "crit": crit}
 
 

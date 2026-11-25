@@ -2,7 +2,7 @@ class_name Items
 extends RefCounted
 ## Items, loot and prices (design/items.md, after Oldworld2's design/items.md). An item is a plain
 ## Dictionary so it saves as JSON:
-##   {name, slot, kind, ilvl, rarity, stats: {attack, defense, magic, resistance, hp, mana, crit},
+##   {name, slot, kind, ilvl, rarity, stats: {damage, attack, defense, magic, resistance, hp, mana, crit},
 ##    count (potions only)}
 ## Gear changes the hero's numbers only; the look stays the class outfit for now.
 
@@ -40,28 +40,28 @@ const ARMOR_NOUNS := {
 ## The armor pieces are the class's outfit: without them the hero is in the plain shirt, cloth
 ## trousers and shoes under it (Player._show_weapons, Humanoid.set_pick).
 const STARTER := {
-	"warrior": [["main", "sword", "Worn Greatsword", "attack"], ["head", "plate", "Dented Helm", "defense"],
+	"warrior": [["main", "greatsword", "Worn Greatsword", "damage"], ["head", "plate", "Dented Helm", "defense"],
 		["chest", "plate", "Squire's Breastplate", "defense"], ["legs", "plate", "Squire's Legplates", "defense"],
 		["hands", "plate", "Squire's Gauntlets", "defense"], ["feet", "plate", "Squire's Sabatons", "defense"]],
 	"mage": [["main", "staff", "Apprentice's Staff", "magic"], ["chest", "cloth", "Apprentice's Robe", "resistance"],
 		["legs", "cloth", "Apprentice's Trousers", "resistance"], ["hands", "cloth", "Apprentice's Handwraps", "resistance"],
 		["feet", "cloth", "Apprentice's Slippers", "resistance"]],
-	"rogue": [["main", "dagger", "Rusty Dagger", "attack"], ["off", "offdagger", "Old Parrying Dagger", "attack"],
+	"rogue": [["main", "dagger", "Rusty Dagger", "damage"], ["off", "offdagger", "Old Parrying Dagger", "attack"],
 		["chest", "leather", "Worn Leather Jerkin", "defense"], ["legs", "leather", "Worn Leather Breeches", "defense"],
 		["hands", "leather", "Worn Leather Gloves", "defense"], ["feet", "leather", "Soft Leather Boots", "defense"]],
 	"priest": [["main", "mace", "Initiate's Mace", "magic"], ["chest", "cloth", "Initiate's Robe", "resistance"],
 		["legs", "cloth", "Initiate's Trousers", "resistance"], ["hands", "cloth", "Initiate's Handwraps", "resistance"],
 		["feet", "cloth", "Initiate's Sandals", "resistance"]],
-	"paladin": [["main", "mace", "Squire's Mace", "attack"], ["off", "shield", "Squire's Shield", "defense"],
+	"paladin": [["main", "mace", "Squire's Mace", "damage"], ["off", "shield", "Squire's Shield", "defense"],
 		["chest", "mail", "Novice's Tabard", "defense"], ["legs", "mail", "Novice's Chausses", "defense"],
 		["hands", "mail", "Novice's Gloves", "defense"], ["feet", "mail", "Novice's Boots", "defense"]],
 	"warlock": [["main", "staff", "Acolyte's Staff", "magic"], ["chest", "cloth", "Acolyte's Robe", "resistance"],
 		["legs", "cloth", "Acolyte's Trousers", "resistance"], ["hands", "cloth", "Acolyte's Handwraps", "resistance"],
 		["feet", "cloth", "Acolyte's Slippers", "resistance"]],
-	"hunter": [["main", "bow", "Hunting Bow", "attack"],
+	"hunter": [["main", "bow", "Hunting Bow", "damage"],
 		["chest", "leather", "Ranger's Jerkin", "defense"], ["legs", "leather", "Ranger's Breeches", "defense"],
 		["hands", "leather", "Ranger's Gloves", "defense"], ["feet", "leather", "Ranger's Boots", "defense"]],
-	"shaman": [["main", "mace", "Tribal Mace", "attack"], ["off", "shield", "Hide Shield", "defense"],
+	"shaman": [["main", "mace", "Tribal Mace", "damage"], ["off", "shield", "Hide Shield", "defense"],
 		["chest", "leather", "Hide Vest", "defense"], ["legs", "leather", "Hide Breeches", "defense"],
 		["hands", "leather", "Hide Gloves", "defense"], ["feet", "leather", "Hide Boots", "defense"]],
 	"druid": [["main", "staff", "Grove Staff", "magic"], ["chest", "cloth", "Grove Robe", "resistance"],
@@ -74,8 +74,32 @@ const STARTER := {
 static func starter_kit(cls: String) -> Dictionary:
 	var out := {}
 	for e: Array in STARTER.get(cls, []):
-		out[e[0]] = {"name": e[2], "slot": e[0], "kind": e[1], "ilvl": 1, "rarity": "common", "stats": {e[3]: 1}}
+		var st := {e[3]: 1}
+		if e[0] == "main":
+			st = {"damage": weapon_damage_for(1, "common", e[1])}
+			if e[3] == "magic":
+				st["magic"] = 1
+		out[e[0]] = {"name": e[2], "slot": e[0], "kind": e[1], "ilvl": 1, "rarity": "common", "stats": st}
 	return out
+
+
+static func two_handed(kind: String) -> bool:
+	return int(WEAPONS.get(kind, {}).get("hands", 1)) == 2
+
+
+## A weapon's Damage for its item level, rarity and kind (Rules: WEAPON_BASE, TWO_HANDED).
+static func weapon_damage_for(ilvl: int, rarity: String, kind: String) -> int:
+	var d := Rules.weapon_ref(ilvl) * float(RARITY[rarity].mod) * (Rules.TWO_HANDED if two_handed(kind) else 1.0)
+	return maxi(1, roundi(d))
+
+
+## The main-hand item's Damage (items from older saves have none: computed from it); 0 without one.
+static func weapon_damage(item: Dictionary) -> int:
+	if item.is_empty() or not WEAPONS.has(String(item.get("kind", ""))):
+		return 0
+	if item.get("stats", {}).has("damage"):
+		return int(item.stats.damage)
+	return weapon_damage_for(int(item.get("ilvl", 1)), String(item.get("rarity", "common")), String(item.kind))
 
 
 ## Materials by item level: 1-7, 8-15, 16+.
@@ -86,9 +110,13 @@ const MATERIALS := {
 	"jewel": ["Copper", "Silver", "Gold"],
 }
 
-## Weapons: the classes that use them and the stat they carry (Attack or Magic; spell weapons
-## also some Mana). Off-hand kinds: shield (Defense), orb (Magic), dagger (Attack).
+## Weapons: the classes that use them. Every weapon has Damage (weapon_damage_for, Rules
+## WEAPON_*); caster weapons also Magic and some Mana. hands 2: two-handed (30% more damage, no
+## off-hand). Off-hand kinds: shield (Defense), orb (Magic), dagger (Attack).
 const WEAPONS := {
+	"greatsword": {"classes": ["warrior", "paladin"], "stat": "attack", "noun": "Greatsword", "mat": "weapon", "hands": 2},
+	"greataxe": {"classes": ["warrior", "shaman"], "stat": "attack", "noun": "Greataxe", "mat": "weapon", "hands": 2},
+	"maul": {"classes": ["warrior", "paladin", "shaman"], "stat": "attack", "noun": "Maul", "mat": "weapon", "hands": 2},
 	"sword": {"classes": ["warrior", "paladin", "rogue", "hunter"], "stat": "attack", "noun": "Sword", "mat": "weapon"},
 	"axe": {"classes": ["warrior", "paladin", "hunter", "shaman"], "stat": "attack", "noun": "Axe", "mat": "weapon"},
 	"mace": {"classes": ["warrior", "paladin", "priest", "shaman", "druid"], "stat": "attack", "noun": "Mace", "mat": "weapon"},
@@ -123,7 +151,7 @@ const SUFFIX_FITS := {
 }
 ## How many points of a stat one point of budget buys.
 const STAT_SCALE := {"attack": 1.0, "defense": 1.0, "magic": 1.0, "resistance": 1.0, "hp": 9.0, "mana": 8.0, "crit": 0.6}
-const STAT_NAMES := {"attack": "Attack", "defense": "Defense", "magic": "Magic", "resistance": "Resistance",
+const STAT_NAMES := {"damage": "Damage", "attack": "Attack", "defense": "Defense", "magic": "Magic", "resistance": "Resistance",
 	"hp": "Health", "mana": "Mana", "crit": "% Crit"}
 
 const POTION := {"name": "Healing Potion", "slot": "potion", "kind": "potion", "ilvl": 1, "rarity": "common", "stats": {}, "count": 1}
@@ -174,10 +202,12 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 			var w: Dictionary = WEAPONS[kind]
 			# Weapons are worth more than armor: they carry most of the damage.
 			var stat: String = "magic" if (cls in CASTERS and kind in ["staff", "dagger", "mace"]) else String(w.stat)
-			# A weapon's own stat takes the whole budget, the suffix comes on top: a better rarity
-			# never lowers it.
-			_add(stats, stat, b * 2.2)
+			# Damage on every weapon; caster weapons also their spell stat (the whole budget, the
+			# suffix on top: a better rarity never lowers it). Physical weapons carry no Attack:
+			# their Damage is what makes them hit harder.
+			stats["damage"] = weapon_damage_for(ilvl, rarity, kind)
 			if stat == "magic":
+				_add(stats, "magic", b * 2.2)
 				_add(stats, "mana", b * 0.6)
 			name = "%s %s" % [MATERIALS[w.mat][tier], w.noun]
 		"off":
@@ -281,9 +311,13 @@ static func describe(item: Dictionary, cls: String, level: int) -> String:
 		lines.append("Restores %d%% health (cooldown %d s). Key R." % [roundi(POTION_HEAL * 100), roundi(POTION_CD)])
 		lines.append("x%d" % int(item.get("count", 1)))
 		return "\n".join(lines)
-	lines.append("%s  %s  (item level %d)" % [SLOT_NAMES[item.slot], String(item.kind).replace("offdagger", "dagger").capitalize(), int(item.ilvl)])
+	lines.append("%s  %s%s  (item level %d)" % [SLOT_NAMES[item.slot], String(item.kind).replace("offdagger", "dagger").capitalize(), "  (two-handed)" if two_handed(item.kind) else "", int(item.ilvl)])
+	if item.slot == "main" and not item.stats.has("damage") and WEAPONS.has(item.kind):
+		lines.append("%d Damage" % weapon_damage(item))
 	for k in STAT_NAMES:
-		if item.stats.has(k):
+		if k == "damage" and item.stats.has(k):
+			lines.append("%d Damage" % int(item.stats[k]))
+		elif item.stats.has(k):
 			lines.append("+%d %s" % [int(item.stats[k]), STAT_NAMES[k]] if k != "crit" else "+%d%s" % [int(item.stats[k]), STAT_NAMES[k]])
 	var p := problem(item, cls, level)
 	if p != "":

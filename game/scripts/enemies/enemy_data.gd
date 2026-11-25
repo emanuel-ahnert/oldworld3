@@ -21,7 +21,12 @@ const KINDS := {
 	"goblin": {
 		"name": "Goblin", "types": ["Physical", "Dark"], "resistance": 7, "tier": "trash", "hp": 180, "attack": 9, "defense": 8,
 		"behavior": "normal", "speed": 7.0, "swing": 2.0, "reach": 1.2, "radius": 0.35,
-		"model": "humanoid:goblin", "scale": 0.72, "group": Vector2i(2, 3),
+		"model": "humanoid:goblin", "scale": 0.7, "build": Vector3(1.4, 1.0, 1.3), "group": Vector2i(2, 3),
+		# Stubby: short legs, a big head; ragged clothes with the green skin showing through.
+		"legs": 0.7, "head_size": 1.3, "head_egg": 1.0, "ears": 0.24, "tatter": 0.5, "skin": Color(0.3, 0.44, 0.17),
+		# The base face in the skin's green (the outfit's baked face was smeared), black hair; fur
+		# hides instead of clothes, bare green hands.
+		"head_tint": Color(0.44, 0.7, 0.3), "fur": 1.0, "fur_color": Color(0.48, 0.34, 0.2), "skin_hands": true,
 		"abilities": ["sling_stone"], "weapon": "club",
 	},
 	"bear": {

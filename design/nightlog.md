@@ -696,8 +696,70 @@ What was built overnight while the user slept, in order. Start the game from VS 
      - Under headgear the body shader draws only the face and the neck (`hide_hair`): hair
        would poke through the shells (WoW hides it too).
      - Test: `--heads [--heads-turn 180]` shows the four in a row.
+     - The hood snug (1.2 cm off, inside the hair's outline where the head isn't drawn anyway),
+       mirrored left to right, with a soft point at the back; the forehead covered down to the
+       brows; below the chin a smooth tube around the neck (`tube`). The head's middle for
+       hide_hair is 9 cm ahead of the head bone (the ears showed through the hood).
+     - All four snug the same way (`snug`, `shown`, `tube` per kind), the sides narrowest (the
+       ears and the side hair aren't drawn under headgear); the leather cap hides the ears too.
+     - Centered on the face's line (nose and chin tips), 3.2 cm beside the head bone: centered on
+       the bone, every shell bulged on one side and sat tight on the other (`CX`, HEAD_SIDE).
+     - Head-shaped instead of a ball: narrower than deep, taller, the skull reaching back, the
+       sides narrowing from the temples to the jaw (`egg(kx, kb, ku, jaw)`).
      - Nameplates: the name in white on the health bar, the bar as wide as the name needs,
        drawn over everything, about 50% larger.
+
+117. **Weapon damage and two-handed weapons; stocky goblins; Whirlwind and Rend.**
+     - Every weapon has Damage; it multiplies the hero's physical hits (Rules.weapon_mult,
+       design/mechanics.md 4); weapons lost their Attack. Two-handed greatsword, greataxe and
+       maul: 30% more, no off hand. The warrior's starting greatsword is one now. The bags show
+       the weapon damage and its factor.
+     - Goblins stubby: short legs and a big head (`Proportions`, a skeleton modifier scaling
+       the thighs and the head after the animation, the body lowered to keep the feet down),
+       wide (`build`), and in rags (body_slots `tatter`: faded, stained cloth, frayed rips in
+       shirt and trousers showing the green skin). The head egg-shaped, wide on top (body_slots
+       `head_egg`, the build taken back out of the head), long pointed ears (Humanoid._add_ears,
+       generated leaf meshes on the head bone). Test: `--heads-goblin`.
+     - Combat text 10% smaller, nameplate names 10% larger; crits stick like WoW's (pop in big,
+       stay put 0.7 s, then rise), also for crits taken.
+     - Under a robe the legs are drawn whole (`robe_legs`; it was 0.24 m): any height cut left
+       holes in the back leg when running, seen from behind. In a long stride the back shin shows
+       behind the hem.
+     - Goblin face: the base body's face in the skin's green (`head_tint`; the generated
+       outfit's baked face was a smear), thin stringy black hair from a hairline above the brows
+       (strands running down from the crown, in the head's own angles), a goblin skull: a low
+       forehead sloping back from the brow, the crown narrowing, the back swept back (above the
+       brows, and for the base hair's bangs and side locks found by their dark texels, the head
+       is held inside an ellipse, its front and back axes blended across the middle; the upper
+       front lowered the further ahead, so the forehead slants back into the crown; the hair's
+       volume read as a cap on the forehead; the hair pull only on the front half and never on
+       the face's surface: the dark eye corners and brows were pulled in too, which hollowed the
+       eyes out in profile; the skull's front edge starts at the face's depth and follows a
+       quarter ellipse from the brow round into the crown, no steep slope with a corner), its
+       own face drawn in head space on even skin (the base face's painted shading made it
+       darker): yellow almond eyes with slit pupils, a wide down-turned mouth with two fangs, a wide jaw, a beak nose (a long narrow bridge, the tip hooked down), goblin features shaped in the head shader (a long hooked
+       nose, a heavy brow, a jutting chin), rougher mottled skin; fur hides instead of the
+       outfit's cloth (body_slots `fur`: patches and fine strands, the folds kept), bare green
+       hands, fewer rips.
+     - Goblin ears smaller (0.24), a little darker than the face (thin, in full light, they
+       looked brighter). Test: `--heads-goblin --heads-goblin-lift 0.75` (faces at eye level).
+     - Goblin ears point up (40 degrees), the build taken back out of them too (stretched with
+       the body, their base stood off the head).
+     - Whirlwind: every kill by it takes 5 s off its cooldown. Rend from level 2.
+     - No level penalty on weapons: the hero's physical hits don't grow with the hero's level,
+       the weapon brings the growth (1.2 × Damage / 8); a same-level weapon hits as before,
+       levelling never lowers damage, a new weapon raises it. Spells still grow with level.
+     - Two-handed animations: a two-handed hold over the arms (`hold2h` in skeleton.py: both
+       hands in front, the blade up and forward), the left hand kept on the grip below the right
+       one by a two-bone IK after the animation (`two_hand_grip.gd`); swings follow with both
+       hands. (Godot's TwoBoneIK3D left the hand 12 cm off and the arm up.) Out of combat a
+       two-hander is carried like a one-hander; the two-handed hold eases in when fighting
+       (Humanoid.set_two_hand_stance). Two-handed models 20% larger.
+     - Attackers no longer rise into the air: pressing against a crate or the tent in a fight,
+       their capsule slid up its edge; enemies are kept on the ground.
+     - Buildings and props matte (generated metal maps) with a weathering pass
+       (`shaders/grime.gdshader`: dirt splashed up, rain streaks, mottled plaster; strong in the
+       Mediterranean, `grime`). Wells have a dark hole inside the ring (the plaza's ground showed).
 
 
 ## Known issues / next
@@ -706,8 +768,7 @@ What was built overnight while the user slept, in order. Start the game from VS 
   armor needs outfits per item type).
 - Elite groups (2–3 elites one level above you) kill rogues, priests, mages and hunters of the
   same level in automated fights; tune if that feels too hard in play.
-- The leather cap still reads much like a hood (it covers the ears and the nape); a cap with
-  cheek guards or a shorter back would set it apart.
+- Two-handed weapons are the one-handed models, larger.
 - Some generated buildings look rough up close (the Mediterranean villa), the obelisk has no
   pointed tip, the tomb guardian's kilt came out as trousers.
 - Sunrise and sunset light is dim on the side facing away from the sun.

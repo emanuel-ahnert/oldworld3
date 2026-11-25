@@ -62,6 +62,7 @@ const TYPES := {
 		"bushes": true, "bush_kind": "lavender",
 		"enemies": {"crab": 10, "wind_spirit": 8, "corsair": 6, "hoplite": 6},
 		"inn": "res://assets/buildings/villa.glb", "houses": ["res://assets/buildings/whitehouse.glb", "res://assets/buildings/villa.glb"],
+		"grime": 1.0,         # the whitewashed houses came out spotless: weathered hard (Placement.weather)
 		"music": "mediterranean", "village_music": "harbor", "names": "mediterranean",
 		"fog": Color(0.72, 0.82, 0.94), "sun": Color(1.0, 0.95, 0.84), "frozen_lakes": false,
 		"rock_tint": Color(1.12, 1.0, 0.8), "rock_moss": Color(0.42, 0.44, 0.2, 0.35),

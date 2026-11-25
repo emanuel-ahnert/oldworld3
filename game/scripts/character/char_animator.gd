@@ -10,7 +10,7 @@ extends RefCounted
 const UPPER := ["Spine", "Chest", "UpperChest", "Neck", "Head",
 	"LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
 	"RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
-const LOOPING := ["idle", "walk", "run", "ready", "cast_loop"]
+const LOOPING := ["idle", "walk", "run", "ready", "cast_loop", "hold2h"]
 const ARMS := ["LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
 	"RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
 ## Ground speed (m/s) each locomotion clip covers at playback rate 1, so feet don't slide:
@@ -82,9 +82,27 @@ func _init(body: Node3D) -> void:
 	bt.connect_node("arms_mix", 0, "speed")
 	bt.connect_node("arms_mix", 1, "arms_idle")
 
+	# Two-handed weapons (set_two_handed): both arms in the two-handed hold over the gait and the
+	# stance; the swings (one-shots) play over it.
+	var arms_out := "arms_mix"
+	if lib.has_animation("hold2h"):
+		var h2 := AnimationNodeAnimation.new()
+		h2.animation = "hold2h"
+		bt.add_node("hold2h", h2)
+		var hm := AnimationNodeBlend2.new()
+		hm.filter_enabled = true
+		for b in ARMS:
+			if skel.find_bone(b) >= 0:
+				hm.set_filter_path(NodePath(skel_path0 + ":" + b), true)
+		bt.add_node("hold2h_mix", hm)
+		bt.connect_node("hold2h_mix", 0, "arms_mix")
+		bt.connect_node("hold2h_mix", 1, "hold2h")
+		arms_out = "hold2h_mix"
+		_has["hold2h"] = true
+
 	# Whole body (under) and upper body (over), each with its own clip picker.
 	bt.add_node("full", _shot_node(bt, "pick_full"))
-	bt.connect_node("full", 0, "arms_mix")
+	bt.connect_node("full", 0, arms_out)
 	bt.connect_node("full", 1, "pick_full")
 	var one := _shot_node(bt, "pick")
 	one.filter_enabled = true
@@ -243,6 +261,13 @@ const IMPACT := {"attack1": 0.44, "attack2": 0.44, "attack3": 0.36, "strike": 0.
 
 static func impact(name: String) -> float:
 	return float(IMPACT.get(name, 0.3))
+
+
+## Two-handed weapons in combat: the arms take the two-handed hold (the hold2h clip) under the
+## swings, `amount` 0..1 (Humanoid eases it in and out).
+func set_two_handed(amount: float) -> void:
+	if _has.get("hold2h", false):
+		tree.set("parameters/hold2h_mix/blend_amount", amount)
 
 
 ## A melee swing playing (the staff then swings with the hand, Humanoid._staff_update).

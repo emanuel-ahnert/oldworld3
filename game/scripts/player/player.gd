@@ -37,13 +37,14 @@ const ABILITIES_WARRIOR := [
 	{"id": "overwhelm", "name": "Overwhelm", "key": 3, "level": 2, "rage": 5, "cd": 0.0, "power": 100.0},
 	{"id": "thunder_clap", "name": "Thunder Clap", "key": 4, "level": 4, "rage": 20, "cd": 6.0, "power": 25.0},
 	{"id": "charge", "name": "Charge", "key": 5, "level": 6, "rage": 0, "cd": 15.0, "gain": 15},
-	{"id": "rend", "name": "Rend", "key": 6, "level": 10, "rage": 10, "cd": 0.0},
+	{"id": "rend", "name": "Rend", "key": 6, "level": 2, "rage": 10, "cd": 0.0},
 	{"id": "whirlwind", "name": "Whirlwind", "key": 7, "level": 12, "rage": 10, "cd": 60.0, "power": 40.0},
 ]
 ## Whirlwind: spins while rage lasts (WHIRL_RAGE per second, the first second paid on use),
 ## hitting every enemy within WHIRL_RADIUS once a second; the model turns WHIRL_SPIN times a second.
 const WHIRL_RAGE := 10.0
 const WHIRL_RADIUS := 4.0
+const WHIRL_KILL_CD := 5.0          ## s off Whirlwind's cooldown per kill by it
 const WHIRL_SPIN := 3.4
 
 ## Mage spells (design/classes.md; Oldworld2's Mage in real time). cast: seconds (0 = instant),
@@ -1111,6 +1112,7 @@ func weapon_sound() -> String:
 		kind = String(main.kind)
 	else:
 		kind = String(CLASSES[cls].get("weapon", "")).get_file().get_basename()
+	kind = {"greatsword": "sword", "greataxe": "axe", "maul": "mace"}.get(kind, kind)
 	for k in ["sword", "axe", "mace", "dagger", "staff", "club"]:
 		if kind.begins_with(k):
 			return k
@@ -1238,6 +1240,7 @@ func _set_bear(on: bool) -> void:
 		_bear_model.visible = true
 		stats.add_buff("bear_form", 3600.0, {"defense": 2.0})
 		stats.attack = stats.magic
+		stats.weapon_mult = Rules.weapon_mult(Rules.weapon_ref(stats.level))   # claws: like a same-level weapon
 		stats.swing_time = 2.0
 		stats.heal(roundi(stats.max_hp * 0.25))
 		auto_attacking = target != null
@@ -1359,6 +1362,10 @@ func _whirl_hit() -> void:
 		e.engage()
 		Audio.hit(weapon_sound(), r.crit, -2.0)
 		hit = true
+		if e.stats.dead and cooldowns.has("whirlwind"):
+			# Every kill by Whirlwind takes WHIRL_KILL_CD s off its own cooldown.
+			cooldowns["whirlwind"] = float(cooldowns["whirlwind"]) - WHIRL_KILL_CD
+			World.float_text(global_position + Vector3(0, 2.6, 0), "-%d s" % int(WHIRL_KILL_CD), Color(1, 0.8, 0.3), 32, self)
 	Audio.sfx("miss", -6.0 if hit else -2.0)       # the blade's whoosh
 
 
@@ -1383,7 +1390,7 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 		var e := source.body as Enemy
 		if not e.data.has("ranged") and e.global_position.distance_to(global_position) < 5.0:
 			source.take_damage(maxi(1, stats.max_hp / 16), false, stats)
-	World.float_text(global_position + Vector3(0, 2.0, 0), "-%d" % amount, Color(1, 0.3, 0.25), 44, self)
+	World.float_text(global_position + Vector3(0, 2.0, 0), "-%d" % amount + ("!" if crit else ""), Color(1, 0.3, 0.25), 56 if crit else 44, self, crit)
 	# Enrage (level 3): a crit taken, or 30% on any hit, gives +25% damage for 12 s.
 	if has_passive("Enrage") and (crit or randf() < 0.3):
 		stats.add_buff("enrage", 12.0, {})
@@ -1755,6 +1762,8 @@ func _process(dt: float) -> void:
 	if cls == "hunter":
 		# The bow turns to its shooting hold in combat (and for any shot), slanted at rest.
 		model.set_bow_aim(auto_attacking or stats.in_combat() or not casting.is_empty(), dt)
+	# A two-hander is carried like a one-hander; in combat both hands take it (Humanoid).
+	model.set_two_hand_stance(auto_attacking or stats.in_combat(), dt)
 	if _whirl_fx:
 		_whirl_fx.set_on(whirling)
 		model.anim.set_whirl(whirling, dt)
@@ -1858,9 +1867,22 @@ func equip(i: int) -> void:
 	if p != "":
 		message.emit(p)
 		return
+	# Two hands: a two-handed weapon takes the off-hand item off (into the bag), an off-hand item
+	# the two-handed weapon.
+	var clash := ""
+	if it.slot == "main" and Items.two_handed(String(it.kind)) and equipped.has("off"):
+		clash = "off"
+	elif it.slot == "off" and Items.two_handed(String(equipped.get("main", {}).get("kind", ""))):
+		clash = "main"
+	if clash != "" and bag.size() >= Items.BAG_SIZE and not equipped.has(it.slot):
+		message.emit("Your bags are full.")
+		return
 	bag.remove_at(i)
 	if equipped.has(it.slot):
 		bag.insert(i, equipped[it.slot])
+	if clash != "":
+		bag.append(equipped[clash])
+		equipped.erase(clash)
 	equipped[it.slot] = it
 	Audio.sfx("stat_up", -6.0)
 	apply_gear()
@@ -1928,9 +1950,12 @@ func give_starter_kit() -> void:
 ## Puts the equipped items' stats onto the combat numbers and the weapons into the hands.
 func apply_gear() -> void:
 	stats.gear = Items.totals(equipped)
+	stats.gear.erase("damage")                  # not a stat: the weapon's own (weapon_damage)
+	stats.weapon_damage = float(Items.weapon_damage(equipped.get("main", {})))
 	stats.recompute()
 	if bear:
 		stats.attack = stats.magic
+		stats.weapon_mult = Rules.weapon_mult(Rules.weapon_ref(stats.level))
 	_show_weapons()
 	inventory_changed.emit()
 
@@ -1951,7 +1976,12 @@ const WEAPON_MODELS := {
 	"sword": "res://assets/characters/warrior/sword.glb", "axe": "res://assets/weapons/axe.glb",
 	"mace": "res://assets/weapons/mace.glb", "dagger": "res://assets/weapons/dagger.glb",
 	"staff": "res://assets/weapons/staff.glb",
+	"greatsword": "res://assets/characters/warrior/sword.glb", "greataxe": "res://assets/weapons/axe.glb",
+	"maul": "res://assets/weapons/mace.glb",
 }
+## Two-handed weapons are the one-handed models, larger (a 1H sword a bit smaller than the
+## warrior's greatsword model).
+const WEAPON_SIZE := {"sword": 0.85, "greatsword": 1.2, "greataxe": 1.62, "maul": 1.68}
 
 
 ## The hero's look follows what is worn (the starting items explain the class look): the main
@@ -1966,9 +1996,11 @@ func _show_weapons() -> void:
 		var path: String = WEAPON_MODELS[kind]
 		if c.has("weapon") and String(c.weapon).get_file().begins_with(kind):
 			path = c.weapon
-		model.equip_model("weapon", path, Vector3.ZERO if kind == "staff" else null)
+		model.equip_model("weapon", path, Vector3.ZERO if kind == "staff" else null, float(WEAPON_SIZE.get(kind, 1.0)))
+		model.set_two_handed(Items.two_handed(kind))
 	else:
 		model.equip_model("weapon", "")
+		model.set_two_handed(false)
 	model.equip_model("bow", "res://assets/weapons/bow.glb" if kind == "bow" else "")
 	var off_kind := String(equipped.get("off", {}).get("kind", ""))
 	model.equip_model("shield", "res://assets/weapons/shield.glb" if off_kind == "shield" else "")

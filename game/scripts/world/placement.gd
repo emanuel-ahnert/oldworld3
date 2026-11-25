@@ -46,3 +46,36 @@ static func add_box_collision(n: Node3D, shrink := 0.8) -> void:
 	n.add_child(body)
 	body.position = aabb.get_center()
 	body.scale = Vector3.ONE / n.scale.x
+
+
+static var _weathered := {}
+static var _grime_shader: Shader
+
+
+## Generated buildings and props look new and polished: their materials come with metallic
+## 1.0 and a metal map (a sheen like painted metal) and clean, even colours. Made matte, with a
+## weathering pass over them (shaders/grime.gdshader: dirt splashed up from the ground, rain
+## streaks, mottled plaster), `strength` 0..1. Once per model (its materials are shared).
+static func weather(n: Node, path: String, strength: float) -> void:
+	var key := "%s@%.2f" % [path, strength]
+	if _weathered.has(path):
+		return
+	_weathered[path] = true
+	if _grime_shader == null:
+		_grime_shader = load("res://shaders/grime.gdshader")
+	var grime := ShaderMaterial.new()
+	grime.shader = _grime_shader
+	grime.set_shader_parameter("strength", strength)
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(i) as StandardMaterial3D
+			if mat == null:
+				continue
+			mat.metallic = 0.0
+			mat.metallic_texture = null
+			mat.metallic_specular = 0.3
+			mat.roughness = 0.95
+			if strength > 0.0:
+				mat.next_pass = grime

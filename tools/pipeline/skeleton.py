@@ -675,6 +675,18 @@ def _guard(breath=0.0):
                  twist=-12, pitch=0, left=(14, 22, 6, -3), right=(-8, 20, 8, -3))
 
 
+def make_hold2h(armature):
+    """Two-handed weapons (the game lays it over the arms while one is held): the right hand in
+    front of the belly a little to the right, the blade angled up and forward at the enemy; the
+    left hand is put on the grip below it in the game (two_hand_grip.gd), its keys here only a
+    start close to it."""
+    p = dict(IDLE_ARMS)
+    p.update(IDLE_LEGS)
+    p.update({"RightUpperArm": [(Y, -24), (X, -26)], "RightLowerArm": [(X, -72)], "RightHand": [(X, 38)],
+              "LeftUpperArm": [(Y, 24), (X, -30)], "LeftLowerArm": [(X, -78)], "LeftHand": [(X, 10)]})
+    return make_clip(armature, "hold2h", [(1, p, None), (12, p, None)])
+
+
 def make_ready(armature, frames=60):
     """Combat idle (loop): the guard stance with slow breathing; the knees give a little."""
     return make_clip(armature, "ready", [(1, _guard(0.0), None), (1 + frames // 4, _guard(1.0), None),
@@ -895,6 +907,7 @@ def make_animations(armature):
         make_walk(armature),
         make_run(armature),
         make_ready(armature),
+        make_hold2h(armature),
     ] + make_jump(armature) + make_sit(armature) + make_attacks(armature)
     armature.animation_data.action = acts[1]
     bpy.context.scene.frame_start, bpy.context.scene.frame_end = 1, 32

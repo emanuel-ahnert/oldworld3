@@ -19,6 +19,26 @@ static func damage(level: int, power: float, atk: float, def: float, affinity: f
 	return maxi(1, int(floor(3.0 * base * affinity * crit_mult * rnd * other)))
 
 
+## Weapon damage (Items.weapon_damage): a common one-handed weapon of item level L has
+## WEAPON_BASE grown 10% per level; two-handed ones TWO_HANDED times that. The hero's physical
+## hits don't grow with the hero's level (Combatant.roll_damage): the weapon brings the growth,
+## WEAPON_PAR * damage / WEAPON_BASE. A same-level common one-hander hits as hard as the level
+## growth did (plus WEAPON_PAR, what its Attack bonus used to add); levelling up never lowers it,
+## a better weapon raises it. Fists: FIST of an item-level-1 weapon.
+const WEAPON_BASE := 8.0
+const TWO_HANDED := 1.3
+const WEAPON_PAR := 1.2
+const FIST := 0.5
+
+
+static func weapon_ref(item_level: int) -> float:
+	return grow(WEAPON_BASE, item_level)
+
+
+static func weapon_mult(weapon_damage: float) -> float:
+	return WEAPON_PAR * maxf(weapon_damage, FIST * WEAPON_BASE) / WEAPON_BASE
+
+
 ## Stat at a level: HP grows 9% per level, other stats 10% (Oldworld2).
 static func grow(base: float, level: int, is_hp := false) -> float:
 	return base * (1.0 + (0.09 if is_hp else 0.1) * (level - 1))

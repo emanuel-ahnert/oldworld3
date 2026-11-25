@@ -34,10 +34,14 @@ body_dir, KIND, out = Path(a[0]), a[1], Path(a[2])
 # closed), open below the opening's middle (leather cap: the cheeks free), bottom cut below the head
 # base at the front / back (m), ridge on top (m).
 KINDS = {
-    "hood": dict(offset=0.030, thick=0.008, face=(-12, 44, 60), open_below=False, cut=(0.055, 0.075), ridge=0.0, blur=3),
-    "coif": dict(offset=0.014, thick=0.005, face=(-10, 38, 50), open_below=False, cut=(0.095, 0.10), ridge=0.0, blur=2),
-    "cowl": dict(offset=0.013, thick=0.006, face=(-8, 30, 74), open_below=True, cut=(0.0, 0.045), ridge=0.0, blur=2),
-    "helm": dict(offset=0.036, thick=0.007, face=None, open_below=False, cut=(0.06, 0.085), ridge=0.012, blur=3),
+    "hood": dict(offset=0.012, thick=0.007, face=(-17, 36, 54), arch=1.6, open_below=False, cut=(0.055, 0.075), ridge=0.0, blur=3,
+                 snug=0.9, tip=0.06, tube=-56, shown=0.62),
+    "coif": dict(offset=0.010, thick=0.005, face=(-15, 33, 50), arch=1.7, open_below=False, cut=(0.095, 0.10), ridge=0.0, blur=2,
+                 snug=0.88, tube=-56, shown=0.7),
+    "cowl": dict(offset=0.010, thick=0.006, face=(-12, 28, 74), arch=1.8, open_below=True, cut=(0.0, 0.045), ridge=0.0, blur=2,
+                 snug=0.88, tube=-56, shown=0.26),
+    "helm": dict(offset=0.026, thick=0.007, face=None, open_below=False, cut=(0.06, 0.085), ridge=0.012, blur=3,
+                 snug=0.92, tube=-56, shown=2.0),
 }
 K = KINDS[KIND]
 
@@ -56,8 +60,17 @@ NECK = float((rig.matrix_world @ rig.data.bones["Head"].head_local).z)
 head_g = body.vertex_groups["Head"].index
 head_v = np.array([any(g.group == head_g and g.weight > 0.5 for g in v.groups) for v in body.data.vertices])
 head_y = float(np.median(bco[head_v, 1]))
-AXY = np.array([0.0, float(np.median(bco[(bco[:, 2] > NECK - 0.1) & (bco[:, 2] < NECK), 1]))])
-HC = np.array([0.0, head_y, NECK + 0.10])
+# The face's center line: the head mesh sits ~3 cm to the side of the head bone (x = 0), and its
+# hair is lopsided; the nose tip and the chin tip give the line the shells are centered on
+# (centered on the bone, one side bulged out and the other sat tight).
+H_ = bco[head_v]
+mid_ = H_[(H_[:, 2] > NECK + 0.06) & (H_[:, 2] < NECK + 0.12)]
+low_ = H_[(H_[:, 2] > NECK - 0.05) & (H_[:, 2] < NECK + 0.02)]
+CX = float((mid_[np.argmin(mid_[:, 1]), 0] + low_[np.argmin(low_[:, 1]), 0]) / 2)
+neck_pts = bco[(bco[:, 2] > NECK - 0.1) & (bco[:, 2] < NECK) & (np.abs(bco[:, 0] - CX) < 0.09)]
+AXY = np.array([float(np.median(neck_pts[:, 0])), float(np.median(neck_pts[:, 1]))])
+HC = np.array([CX, head_y, NECK + 0.10])
+print(f"CENTER face line x {CX:.3f}, neck axis {AXY[0]:.3f}, {AXY[1]:.3f}")
 # The head and the neck (not the shoulders: only points near the neck's axis below the head).
 near_axis = np.hypot(bco[:, 0] - AXY[0], bco[:, 1] - AXY[1]) < 0.085
 pts = bco[(bco[:, 2] > NECK - 0.02) | ((bco[:, 2] > NECK - 0.16) & near_axis)]
@@ -91,12 +104,15 @@ ED = -np.percentile(hp[:, 2], 0.5)
 print(f"EGG side {EX:.3f} front {EF:.3f} back {EB:.3f} up {EU:.3f} down {ED:.3f}")
 
 
-def egg(e, az):
+def egg(e, az, kx=1.0, kb=1.0, ku=1.0, jaw=0.0):
+    """The egg's radius toward (e, az); kx, kb, ku scale its sides, back and top; `jaw` narrows
+    the sides below the temples toward the jaw (a head is widest at the temples)."""
     er, ar = math.radians(e), math.radians(az)
     x, y, z = math.cos(er) * math.sin(ar), -math.cos(er) * math.cos(ar), math.sin(er)
-    sy = EF if y < 0 else EB
-    sz = EU if z > 0 else ED
-    return 1.0 / math.sqrt((x / EX) ** 2 + (y / sy) ** 2 + (z / sz) ** 2)
+    sy = EF if y < 0 else EB * kb
+    sz = EU * ku if z > 0 else ED
+    sx = EX * kx * (1 - jaw * min(max((0.15 - z) / 0.75, 0.0), 1.0))
+    return 1.0 / math.sqrt((x / sx) ** 2 + (y / sy) ** 2 + (z / sz) ** 2)
 
 
 bw = K["blur"]
@@ -131,7 +147,62 @@ for _ in range(3):
     local = (local * 2 + np.roll(local, 1, 1) + np.roll(local, -1, 1) + np.vstack([local[:1], local[:-1]]) + np.vstack([local[1:], local[-1:]])) / 6
 M = M * (1 - w) + local * w
 
+# Snug (the hood): under headgear only the face and the neck are drawn (hide_hair), so away from
+# them the shell may hug the head inside the hair's outline: SNUG of the egg, the face (within the
+# opening, below the brow) and chin and neck kept clear. Mirrored left to right (the hair's bangs
+# made it lopsided). A soft point at the back, up a little (a hood's tip).
+if K.get("snug"):
+    # What the game draws under the hood (body_slots.gdshader hide_hair, FACE_SHOWN of the hood):
+    # the face below the brow and within ~57 degrees of ahead, the neck.
+    up_ = d[:, 2] - 0.0
+    flat_ = d[:, :2]
+    ahead = -flat_[:, 1] / np.maximum(np.linalg.norm(flat_, axis=1), 1e-6)
+    near_neck = np.hypot(pts[:, 0] - AXY[0], pts[:, 1] - AXY[1]) < 0.075
+    # The face below the eyes (above them the opening is free; the bangs mustn't push a visor
+    # out), the neck near its axis (not the hair strands hanging beside it).
+    shown = ((up_ < 0.0) & (ahead > K["shown"])) | ((up_ < -0.12) & near_neck)
+    RF = np.zeros((NE, NA))
+    np.maximum.at(RF, (ei[shown], ai[shown]), rr[shown])
+    RF = np.maximum(RF, RF[:, (NA - np.arange(NA)) % NA])
+    keep = RF.copy()
+    for de in (-1, 0, 1):
+        for da in (-1, 0, 1):
+            sh = np.roll(np.roll(RF, da, 1), de, 0)
+            if de > 0:
+                sh[:de] = 0                  # rows don't wrap (the neck's rows onto the top)
+            elif de < 0:
+                sh[de:] = 0
+            keep = np.maximum(keep, sh)
+    keep = np.where(keep > 0, keep + 0.006, 0.0)
+    # The ears and the hair at the sides aren't drawn under headgear: the sides narrowest.
+    sn = K["snug"]
+    # Head-shaped, not a ball: narrower than deep, a little taller, the skull reaching back
+    # further than the face forward, the sides narrowing from the temples to the jaw.
+    SNUG = np.array([[egg(e, az, kx=sn * 0.82, kb=sn * 1.08, ku=sn * 1.12, jaw=0.24) for az in azim0] for e in elev0])
+    tight = np.maximum(SNUG, keep)
+    S2 = tight
+    # Smoothed wide, so the face swells the shell gently instead of raising lips at the opening;
+    # the face may then reach a few mm into the shell's thickness at most.
+    for _ in range(10):
+        S2 = (S2 * 2 + np.roll(S2, 1, 1) + np.roll(S2, -1, 1) + np.vstack([S2[:1], S2[:-1]]) + np.vstack([S2[1:], S2[-1:]])) / 6
+    S2 = np.maximum(S2, keep - 0.004)
+    M = np.maximum(S2, S2[:, (NA - np.arange(NA)) % NA])
+    if K.get("tip"):
+        tip_dir = np.array([0.0, math.cos(math.radians(32)), math.sin(math.radians(32))])   # behind (+y), up
+        for i, e in enumerate(elev0):
+            for j, az in enumerate(azim0):
+                er, ar = math.radians(e), math.radians(az)
+                dv = np.array([math.cos(er) * math.sin(ar), -math.cos(er) * math.cos(ar), math.sin(er)])
+                ang = math.degrees(math.acos(max(-1.0, min(1.0, float(dv @ tip_dir)))))
+                f = max(0.0, 1 - ang / 40.0)
+                M[i, j] += K["tip"] * f ** 3.0
+
 # --- the grid shell -------------------------------------------------------------------------------
+def cut_z(az):
+    back = (1 - math.cos(math.radians(az))) / 2               # 0 ahead .. 1 behind
+    return NECK - (K["cut"][0] + (K["cut"][1] - K["cut"][0]) * back)
+
+
 elev = np.linspace(E0, E1, NE)
 azim = np.linspace(-180, 180, NA, endpoint=False)
 verts, uvs = [], []
@@ -147,6 +218,48 @@ for i, e in enumerate(elev):
         uvs.append(((az + 180) / 360, (e - E0) / (E1 - E0)))
 verts = np.array(verts)
 
+# Below the chin (the hood): the rows below elevation `tube` run down along the neck instead of
+# out along rays from the head's middle (those go down inside the neck): each column from its
+# join-row vertex down to the cut, its distance from the neck's axis easing to the neck's own
+# radius there (chin and neck, not the hair beside them) plus the offset. The last row is the
+# bottom edge.
+if K.get("tube"):
+    EJ = K["tube"]
+    ij = int(np.argmax(elev >= EJ))
+    rel = bco[:, :2] - AXY
+    rad = np.hypot(rel[:, 0], rel[:, 1])
+    # One radius for the neck (the shirt's collar flaps below it would crumple the cloth).
+    nsel = (bco[:, 2] > NECK - 0.05) & (bco[:, 2] < NECK - 0.01) & (rad < 0.08)
+    RN = float(np.percentile(rad[nsel], 85))
+    print(f"NECK radius {RN:.3f}")
+
+    for j, az in enumerate(azim):
+        J = verts[ij * NA + j]
+        hj = J[:2] - AXY
+        ar = math.radians(az)
+        dirh = np.array([math.sin(ar), -math.cos(ar)])
+        zbot = cut_z(az) + 0.002
+        ahead = (1 + math.cos(ar)) / 2                       # 1 ahead .. 0 behind
+        z_in = NECK - 0.035 * ahead ** 2                      # below the chin in front, at the head's base behind
+        for i in range(ij):
+            t = (elev[ij] - elev[i]) / (elev[ij] - E0)
+            z = J[2] + (zbot - J[2]) * t
+            h = dirh * (RN + K["offset"] + 0.006)
+            w_ = min(max((z_in + 0.005 - z) / 0.025, 0.0), 1.0)
+            w_ = w_ * w_ * (3 - 2 * w_)
+            hh = hj * (1 - w_) + h * w_
+            verts[i * NA + j] = np.array([AXY[0] + hh[0], AXY[1] + hh[1], z])
+    # The seam between the head part and the tube: the rows around it smoothed (no crease under
+    # the chin), the bottom row and the rows far from it kept.
+    G = verts[:NE * NA].reshape(NE, NA, 3)
+    band = range(max(1, ij - 7), min(NE - 1, ij + 6))
+    for _ in range(12):
+        Gn = G.copy()
+        for i in band:
+            Gn[i] = (G[i] * 2 + G[i - 1] + G[i + 1] + np.roll(G[i], 1, 0) + np.roll(G[i], -1, 0)) / 6
+        G = Gn
+    verts[:NE * NA] = G.reshape(-1, 3)
+
 
 def vid(i, j):
     return i * NA + (j % NA)
@@ -159,12 +272,14 @@ def is_open(e, az):
     ec, eh, aw = K["face"]
     if K["open_below"] and abs(az) < aw and e < ec:
         return True
-    return (az / aw) ** 2 + ((e - ec) / eh) ** 2 < 1.0
+    return _oval(az / aw, (e - ec) / eh) < 1.0
 
 
-def cut_z(az):
-    back = (1 - math.cos(math.radians(az))) / 2               # 0 ahead .. 1 behind
-    return NECK - (K["cut"][0] + (K["cut"][1] - K["cut"][0]) * back)
+def _oval(x, y):
+    """The opening's shape: an ellipse, its upper half arched (a superellipse, `arch` < 2)."""
+    p = K.get("arch", 2.0) if y > 0 else 2.0
+    return (abs(x) ** p + abs(y) ** p) ** (1.0 / p)
+
 
 
 faces = []
@@ -215,7 +330,7 @@ if K["face"] is not None:
             # The cap's cheek edge: straight down at the opening's width.
             az = math.copysign(aw, az) if abs(az) < aw else az
         else:
-            k = math.hypot(az / aw, (e - ec) / eh)
+            k = _oval(az / aw, (e - ec) / eh)
             if k < 1e-6:
                 continue
             az, e = az / k, ec + (e - ec) / k
@@ -236,6 +351,9 @@ uvs.append((0.5, 1.0))
 for j in range(NA):
     faces.append([vid(NE - 1, j), vid(NE - 1, j + 1), top])
 
+_v = verts[verts[:, 2] > NECK]
+print(f"DIMS width {np.ptp(_v[:, 0]):.3f} depth {np.ptp(_v[:, 1]):.3f} height {np.ptp(verts[:, 2]):.3f} "
+      f"(x {(_v[:, 0].min() - CX):.3f}..{(_v[:, 0].max() - CX):.3f})")
 me = bpy.data.meshes.new(KIND)
 me.from_pydata([tuple(v) for v in verts], [], faces)
 me.update()

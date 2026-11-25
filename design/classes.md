@@ -33,13 +33,13 @@ From Oldworld2 (HP × 4, see [mechanics.md](mechanics.md#3-stats)); growth per l
 | 1 | **Heavy Strike** | Power 50, 15 rage | Instant strong hit, power 50 | 15 rage | GCD |
 | 1 | **Battle Cry** | Attack +1 stage | Attack +25% for 2 min; usable out of combat. Costs nothing and gives 10 rage, so a fight can start with a Heavy Strike sooner | 0, gives 10 rage | 2 min |
 | 2 | **Overwhelm** | After a dodge or miss | Usable for 5 s after the target dodges or a Smoke miss; power 100, can't be dodged | 5 rage | GCD |
+| 2 | **Rend** | Bleed 10 rounds | Bleed: 1/32 of max HP every 3 s for 15 s | 10 rage | GCD |
 | 3 | **Enrage** (passive) | On crits taken | Taking a crit (or 30% on any hit) gives +25% damage for 12 s | — | — |
 | 4 | **Thunder Clap** (new) | — | Area: power 25 to all enemies within 8 m, slows their attacks by 20% for 10 s. Answer to packs | 20 rage | 6 s |
 | 6 | **Charge** | First round, stun, +15 rage | Rush to the target from 8–25 m, stun 1.5 s, +15 rage; out of combat only | 0, gives 15 rage | 15 s |
 | 8 | **Second Wind** (passive) | Regen on hit | 30% chance when hit (always on a crit taken): heals 1/32 of max HP every 3 s for 9 s; refreshes, doesn't stack | — | — |
-| 10 | **Rend** | Bleed 10 rounds | Bleed: 1/32 of max HP every 3 s for 15 s | 10 rage | GCD |
 | 10 | **Juggernaut** (passive, new) | — | Charge has no cooldown and works in combat (no rage from it there); 1 rage per second while fighting | — | — |
-| 12 | **Whirlwind** (new) | — | Spin with the blade out: power 40 to every enemy within 4 m once a second, 10 rage a second until rage runs out or pressed again; moving allowed, no other abilities (but Battle Cry) and no auto-attack meanwhile. Not on the bar by default (abilities menu, N) | 10 rage per second | 1 min |
+| 12 | **Whirlwind** (new) | — | Spin with the blade out: power 40 to every enemy within 4 m once a second, 10 rage a second until rage runs out or pressed again; every kill by it takes 5 s off its cooldown; moving allowed, no other abilities (but Battle Cry) and no auto-attack meanwhile. Not on the bar by default (abilities menu, N) | 10 rage per second | 1 min |
 
 - **Thunder Clap** is new: real-time combat brings packs, and a pure single-target kit made
   packs too punishing in testing on paper. Its level-4 slot was empty in Oldworld2.

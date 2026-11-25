@@ -122,12 +122,13 @@ func _ready() -> void:
 		humanoid = Humanoid.new()
 		_model.add_child(humanoid)
 		humanoid.build(_humanoid_cfg(m.trim_prefix("humanoid:")))
-		_model.scale = Vector3.ONE * float(data.get("scale", 1.0))
+		# build: a stockier (or slimmer) body than the shared skeleton's: x wide, y tall, z deep.
+		_model.scale = Vector3.ONE * float(data.get("scale", 1.0)) * (data.get("build", Vector3.ONE) as Vector3)
 	nameplate = Node3D.new()
 	nameplate.position.y = (2.1 * float(data.get("scale", 1.0))) if humanoid else 1.6
 	_plate_name = Label3D.new()
 	_plate_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_plate_name.font_size = 26
+	_plate_name.font_size = 29
 	_plate_name.outline_size = 7
 	_plate_name.pixel_size = 0.005
 	_plate_name.no_depth_test = true
@@ -216,6 +217,11 @@ func _humanoid_cfg(outfit: String) -> Dictionary:
 		cfg.weapon = w
 	if data.get("shield", false):
 		cfg.shield = "res://assets/weapons/shield.glb"
+	for k in ["tatter", "skin", "legs", "head_size", "head_egg", "ears", "build", "fur", "fur_color", "skin_hands", "head_tint"]:
+		if data.has(k):
+			cfg[k] = data[k]
+	if data.has("head_tint"):
+		cfg.pick = [0] + Array(cfg.pick).slice(1)     # the base body's face, recoloured
 	return cfg
 
 
@@ -303,6 +309,12 @@ func _physics_process(dt: float) -> void:
 	velocity.z = want.z * speed
 	velocity.y = 0.0 if is_on_floor() else velocity.y - GRAVITY * dt
 	move_and_slide()
+	# Enemies stand on the ground only: pressing against a crate, the tent or a rock in a fight
+	# the capsule slid up onto its edge, and the attacker rose into the air mid-swing.
+	var ground := World.height_at(global_position.x, global_position.z)
+	if global_position.y > ground + 0.04:
+		global_position.y = ground
+		velocity.y = 0.0
 	_animate(dt, speed)
 	nameplate.visible = state == State.CHASE or (p != null and p.target == self)
 	if nameplate.visible:
@@ -670,7 +682,7 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 		# Thorns: 15% of melee damage goes back to the attacker.
 		source.take_damage(maxi(1, amount * 15 / 100), false, stats)
 	_flinch = 1.0
-	World.float_text(global_position + Vector3(0, 1.8 * float(data.get("scale", 1.0)) if humanoid else 1.3, 0), str(amount) + ("!" if crit else ""), Color(1, 0.95, 0.4) if crit else Color(1, 1, 1), 64 if crit else 48, self)
+	World.float_text(global_position + Vector3(0, 1.8 * float(data.get("scale", 1.0)) if humanoid else 1.3, 0), str(amount) + ("!" if crit else ""), Color(1, 0.95, 0.4) if crit else Color(1, 1, 1), 64 if crit else 48, self, crit)
 	if state == State.IDLE:
 		engage()
 	if humanoid and randf() < 0.35:

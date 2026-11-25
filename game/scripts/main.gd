@@ -200,6 +200,8 @@ func _ready() -> void:
 		_lineup()
 	if args.has("heads"):
 		_heads()
+	if args.has("heads-goblin"):
+		_heads_goblin()
 	player.message.connect(hud.show_message)
 	player.hint.connect(hud.show_hint)
 	if args.has("nohud"):
@@ -333,6 +335,27 @@ func _heads() -> void:
 		var p := player.global_position + Vector3(x, 0, 2.2)
 		h.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
 		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
+	player.visible = false
+
+
+## Test: a goblin from the front, the side and behind (its build, head and ears).
+func _heads_goblin() -> void:
+	var d: Dictionary = EnemyData.get_kind("goblin")
+	for i in 3:
+		var h := Humanoid.new()
+		add_child(h)
+		var cfg := {"pick": [1, 1, 1, 1, 1], "outfit": "res://assets/characters/goblin/goblin"}
+		for k in ["tatter", "skin", "legs", "head_size", "head_egg", "ears", "build", "fur", "fur_color", "skin_hands", "head_tint"]:
+			if d.has(k):
+				cfg[k] = d[k]
+		if d.has("head_tint"):
+			cfg.pick = [0, 1, 1, 1, 1]
+		h.build(cfg)
+		h.scale = Vector3.ONE * float(d.get("scale", 1.0)) * (d.get("build", Vector3.ONE) as Vector3)
+		var p := player.global_position + Vector3((i - 1) * 0.9, 0, 1.6)
+		# Raised to the camera's height (--heads-goblin-lift m): the faces at eye level.
+		h.global_position = Vector3(p.x, World.height_at(p.x, p.z) + float(args.get("heads-goblin-lift", 0.0)), p.z)
+		h.rotation.y = [0.0, PI / 2, PI][i]
 	player.visible = false
 
 
