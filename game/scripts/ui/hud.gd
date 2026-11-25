@@ -339,9 +339,14 @@ func show_level(level: int, learned: Array) -> void:
 			_fresh[ab.id] = Combatant.now() + 12.0
 
 
-func show_message(text: String) -> void:
+func show_message(text: String, seconds := 2.5) -> void:
 	_msg.text = text
-	_msg_until = Combatant.now() + 2.5
+	_msg_until = Combatant.now() + seconds
+
+
+## A tip: like a message, but it stays longer.
+func show_hint(text: String) -> void:
+	show_message(text, 8.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:

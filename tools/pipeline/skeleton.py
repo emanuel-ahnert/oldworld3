@@ -785,11 +785,29 @@ def make_attacks(armature):
     idle_full.update(IDLE_LEGS)
     cast = _full(cast_up, twist=-6, pitch=2, left=(12, 14, 2), right=(-6, 12, 6), shift=(0.000, 0.005))
     acts.append(make_clip(armature, "cast", [(1, idle_full, 0.0), (5, cast, None), (12, cast, None)]))
-    # release: a short push forward when the spell flies, the weight going onto the front leg.
-    rel_up = dict(cast_up)
-    rel_up.update({"RightUpperArm": [(Y, 5), (X, -85)], "RightLowerArm": [(X, -5)], "Spine": [(X, 6)]})
-    rel = _full(rel_up, twist=4, pitch=6, left=(18, 24, 4), right=(-12, 14, 12), shift=(0.000, -0.020))
-    acts.append(make_clip(armature, "release", [(1, cast, None), (4, rel, None), (12, idle_full, 0.0)]))
+
+    # cast_loop: channelling a spell (looped for the whole cast time, 1 s): the staff raised
+    # high in the right hand, the left hand forward at chest height, palm out, circling as it
+    # gathers the spell; the body leans back a little and breathes, the head looks along the hand.
+    def channel(k):
+        c, sn = math.cos(2 * math.pi * k), math.sin(2 * math.pi * k)
+        up = dict(IDLE_ARMS)
+        up.update({"RightUpperArm": [(Y, 16 + 3 * sn), (X, -118 - 6 * c)], "RightLowerArm": [(X, -38 + 4 * sn)],
+                   "RightHand": [(X, 10)],
+                   "LeftUpperArm": [(Y, -2 + 8 * c), (X, -52 - 8 * sn)], "LeftLowerArm": [(X, -24 - 6 * c)],
+                   "LeftHand": [(X, -25), (Z, 8 * sn)],
+                   "Spine": [(X, -4)], "Chest": [(X, -4 - 1.5 * sn), (Z, 9 + 3 * c)], "Head": [(X, -7), (Z, -6)]})
+        return _full(up, twist=-8, pitch=-3, left=(14, 16, 3), right=(-8, 14, 7), shift=(0.000, 0.010))
+    acts.append(make_clip(armature, "cast_loop", [(1 + 6 * i, channel(i / 4), None) for i in range(5)]))
+    # release: the spell is thrown: a step into a lunge, the left hand and the staff thrust at
+    # the target, a short hold, then back to rest (0.6 s).
+    rel = _full(dict(IDLE_ARMS, **{
+        "RightUpperArm": [(Y, 10), (X, -108)], "RightLowerArm": [(X, -6)], "RightHand": [(X, 30)],
+        "LeftUpperArm": [(Y, -8), (X, -112)], "LeftLowerArm": [(X, -4)], "LeftHand": [(X, -45)],
+        "Spine": [(X, 8)], "Chest": [(X, 6), (Z, -4)], "Head": [(X, -6), (Z, 4)]}),
+        twist=6, pitch=8, left=(28, 32, 5, -3), right=(-14, 16, 14), shift=(0.000, -0.045))
+    acts.append(make_clip(armature, "release", [(1, channel(0), None), (4, rel, None), (8, rel, None),
+                                                (15, idle_full, 0.0)]))
     # hit: a flinch from a blow to the chest: the body jerks back, the right foot catches the
     # weight a step back, the knees give a little.
     acts.append(make_clip(armature, "hit", [

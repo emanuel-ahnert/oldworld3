@@ -1,8 +1,8 @@
 class_name SpellBook
 extends CanvasLayer
 ## The abilities menu (N; Oldworld2 game-design 7.3): on the left the 6 action-bar slots and the
-## 3 passive slots, on the right every ability and passive of the class (not learned yet:
-## greyed, with the level); details of the selected entry at the bottom. A passive works only
+## 3 passive slots, on the right the class's learned abilities and passives (the others appear
+## when their level is reached); details of the selected entry at the bottom. A passive works only
 ## while it is in a passive slot.
 ## Keyboard first: Up/Down (W/S) move, Left/Right (A/D) switch sides, Space/Enter: on a known
 ## ability or passive puts it into the first free slot of its kind, or (none free, or already
@@ -93,12 +93,16 @@ func close() -> void:
 
 
 ## Right side: the class's abilities, then the passives ([kind, data]).
+## Learned abilities and passives only (the rest stays hidden until its level).
 func _entries() -> Array:
 	var out: Array = []
+	var lvl := player.stats.level
 	for a in player.abilities():
-		out.append(["active", a])
+		if lvl >= int(a.level):
+			out.append(["active", a])
 	for p: Array in AbilityText.PASSIVES.get(player.cls, []):
-		out.append(["passive", p])
+		if lvl >= int(p[0]):
+			out.append(["passive", p])
 	return out
 
 

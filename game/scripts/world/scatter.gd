@@ -57,7 +57,7 @@ var _trunks := []     ## [origin, height, trunk radius] for the colliders
 
 
 ## Where everything grows: data only, safe on a worker thread (see ZoneManager).
-func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dictionary = {}, avoid_big: Array[Vector3] = []) -> void:
+func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dictionary = {}, avoid_big: Array[Vector3] = [], clearings: Array[Vector3] = []) -> void:
 	_trees = info.get("trees", TREES)
 	var density: float = info.get("tree_density", 1.0)
 	var bushes: bool = info.get("bushes", true)
@@ -99,6 +99,9 @@ func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dict
 					blocked = true
 			for q in avoid_big:
 				if Vector2(px - q.x, pz - q.z).length() < 45.0:
+					blocked = true
+			for q in clearings:
+				if Vector2(px - q.x, pz - q.z).length() < Graveyard.CLEARING:
 					blocked = true
 			if blocked:
 				continue

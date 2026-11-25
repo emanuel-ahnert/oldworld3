@@ -38,12 +38,15 @@ func build(cfg: Dictionary) -> void:
 			["tex_b", b + "_color.png"], ["mr_b", b + "_mr.png"], ["normal_b", b + "_normal.png"]]:
 		if ResourceLoader.exists(k[1]):
 			mat.set_shader_parameter(k[0], load(k[1]))
-	mat.set_shader_parameter("pick", PackedFloat32Array(cfg.get("pick", [0, 0, 0, 0, 0])))
+	_pick = PackedFloat32Array(cfg.get("pick", [0, 0, 0, 0, 0]))
+	mat.set_shader_parameter("pick", _pick)
 	mat.set_shader_parameter("tint_a", cfg.get("tint_a", Color.WHITE))
 	mat.set_shader_parameter("tint_b", cfg.get("tint_b", Color.WHITE))
 	_mesh.material_override = mat
 	for key in cfg.get("layers", {}):
 		set_layer(key, cfg.layers[key])
+	if cfg.has("robe"):
+		set_robe(cfg.robe[0], cfg.robe[1], cfg.robe[2] if cfg.robe.size() > 2 else Color(-1, 0, 0))
 	if cfg.has("helmet"):
 		equip_model("helmet", cfg.helmet)
 	if cfg.has("weapon"):
@@ -52,6 +55,7 @@ func build(cfg: Dictionary) -> void:
 		if cfg.has(key):
 			equip_model(key, cfg[key])
 	anim = CharAnimator.new(_body)
+	anim.keep_arms_in_air = String(cfg.get("weapon", "")).get_file().begins_with("staff")
 	trail = WeaponTrail.new()
 	add_child(trail)
 	_fit_trail()
@@ -71,6 +75,9 @@ const HOLD := {
 	"helmet": ["Head", Vector3(0, 0.085, 0.04), Vector3.ZERO, 0.30],
 }
 const BOW_AIM := Vector3(90, 0, 0)
+const STAFF_SCALE := 0.75
+static var STAFF_GRIP := Vector3(0.0, -0.16, 0.03)     ## the hand about the staff's middle
+static var STAFF_TILT := Vector3(-12, 0, -5)          ## upright in the idle hand, off the robe
 ## Per-model fit of headgear: [offset, scale] (generated models differ in size and pivot).
 ## [offset, scale, rotation in degrees, head shrink]: the head shrinks under headgear so the hair
 ## doesn't poke through (WoW hides it). Closed helms, the coif and the cowl shrink it fully (the face
@@ -116,6 +123,40 @@ func set_layer(key: String, path: String, own_material := false) -> void:
 	_layers[key] = mi
 
 
+var _pick := PackedFloat32Array([0, 0, 0, 0, 0])
+
+
+## Which texture set each body part shows (head, chest, hands, legs, feet): 1 the outfit
+## (set B), 0 the plain clothes under it (set A: shirt, cloth trousers, shoes).
+func set_pick(pick: Array) -> void:
+	_pick = PackedFloat32Array(pick)
+	if mat:
+		mat.set_shader_parameter("pick", _pick)
+
+
+## A caster's robe (tools/pipeline/robe_layer.py): the skirt layer coloured by shaders/robe.
+## Color.TRANSPARENT tint takes it off.
+func set_robe(tint: Color, trim: Color, accent := Color(-1, 0, 0)) -> void:
+	if mat:
+		mat.set_shader_parameter("robed", tint.a > 0.0)
+	if tint.a <= 0.0:
+		set_layer("robe", "")
+		return
+	set_layer("robe", ROBE, true)
+	var mi := _layers.get("robe") as MeshInstance3D
+	if mi == null:
+		return
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/robe.gdshader")
+	m.set_shader_parameter("tint", tint)
+	m.set_shader_parameter("trim", trim)
+	m.set_shader_parameter("accent", accent if accent.r >= 0.0 else tint * 0.42)
+	mi.material_override = m
+
+
+const ROBE := "res://assets/gear/robe_layer.glb"
+
+
 func has_layer(key: String) -> bool:
 	return _layers.has(key)
 
@@ -143,6 +184,11 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 	var fit: Array = HEAD_FIT.get(path.get_file().get_basename(), [])
 	if key == "helmet":
 		_shrink = 1.0
+	if key == "weapon" and path.get_file().begins_with("staff"):
+		scale_f *= STAFF_SCALE        # staves were too long: they stood far over the head
+		# Held about the middle, the top tipped a little outward and forward (clear of the robe).
+		offset = STAFF_GRIP
+		rot = STAFF_TILT
 	if key == "helmet" and not fit.is_empty():
 		offset = fit[0]
 		scale_f = fit[1]
@@ -151,6 +197,9 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 	var att := _attach(h[0], path, offset, rot if rot != null else h[2], scale_f)
 	if att:
 		_held[key] = att
+		if key == "weapon":
+			(att.get_child(0) as Node3D).set_meta("staff", path.get_file().begins_with("staff"))
+			(att.get_child(0) as Node3D).set_meta("rest", (att.get_child(0) as Node3D).transform)
 		if key == "bow":
 			var m := att.get_child(0) as Node3D
 			m.set_meta("rest", m.transform)
@@ -161,6 +210,21 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 		helmet_worn = att != null          # the body shader shrinks the head under it (no hair poking out)
 	if key == "weapon":
 		_fit_trail()
+		if anim:
+			anim.keep_arms_in_air = path.get_file().begins_with("staff")
+
+
+## Something carried on a bone (a spell's glow in the hand): returns the attachment; free it to
+## take it off.
+func attach_to_bone(bone: String, node: Node3D, offset := Vector3.ZERO) -> BoneAttachment3D:
+	if _skel.find_bone(bone) < 0:
+		return null
+	var att := BoneAttachment3D.new()
+	att.bone_name = bone
+	_skel.add_child(att)
+	att.add_child(node)
+	node.position = offset
+	return att
 
 
 ## Weapons and shield put away (sitting at a camp fire): hidden until drawn again.
@@ -210,6 +274,53 @@ func _hold_xf(idx: int, offset: Vector3, rot_deg: Vector3, scale_f: float) -> Tr
 	return rest.affine_inverse() * want
 
 
+## A staff stays upright in the hand whatever the arm does (walking, casting with the hand
+## raised: it turned upside down with the hand), turned about the grip, its top leaning a little
+## in and its foot out, clear of the robe; in a melee swing it swings with the hand.
+const STAFF_LEAN := 0.08           ## radians: the foot outward
+const STAFF_FORWARD := 0.06        ## radians: the top forward
+var _staff_up := 1.0
+
+
+func _staff_update() -> void:
+	if not _held.has("weapon"):
+		return
+	var att := _held["weapon"] as BoneAttachment3D
+	if not is_instance_valid(att) or att.get_child_count() == 0:
+		return
+	var m := att.get_child(0) as Node3D
+	if not m.get_meta("staff", false):
+		return
+	var dt := get_process_delta_time()
+	_staff_up = move_toward(_staff_up, 0.0 if (anim and anim.swinging()) else 1.0, dt * 6.0)
+	var rest: Transform3D = m.get_meta("rest")
+	var held := att.global_transform * rest
+	if _staff_up <= 0.0:
+		m.transform = rest
+		return
+	# The fist: along the hand from the wrist (the bone's origin).
+	var grip := att.global_position + att.global_basis.y.normalized() * 0.075
+	var local_grip := held.affine_inverse() * grip
+	var scale_v := held.basis.get_scale()
+	# Upright in the character's frame: the foot out to the hand's side, the top a bit forward.
+	var fwd := -global_basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var out := grip - global_position
+	out.y = 0.0
+	out = (out - fwd * out.dot(fwd)).normalized() if out.length() > 0.01 else Vector3.ZERO
+	var up := (Vector3.UP * cos(STAFF_LEAN) - out * sin(STAFF_LEAN)).normalized()
+	grip += out * 0.06 + fwd * 0.04        # the shaft beside the fist, clear of the robe
+	up = (up * cos(STAFF_FORWARD) + fwd * sin(STAFF_FORWARD)).normalized()
+	var z := fwd - up * fwd.dot(up)
+	z = z.normalized()
+	var x := up.cross(z)
+	var target := Basis(x, up, z)
+	var q := held.basis.orthonormalized().get_rotation_quaternion().slerp(target.get_rotation_quaternion(), _staff_up)
+	var b := Basis(q).scaled(scale_v)
+	m.global_transform = Transform3D(b, grip - b * local_grip)
+
+
 var _bow_aim := 0.0
 
 
@@ -231,6 +342,7 @@ func set_bow_aim(on: bool, dt: float) -> void:
 ## this frame's pose (after the animation: in _process it was a frame late, and in fast blows
 ## the head poked out of the helmet).
 func _head_update() -> void:
+	_staff_update()
 	if mat == null:
 		return
 	mat.set_shader_parameter("head_shrink", _shrink if helmet_worn else 0.0)

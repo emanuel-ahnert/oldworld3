@@ -548,6 +548,107 @@ What was built overnight while the user slept, in order. Start the game from VS 
      `tools/screenshots.sh [NAME...]` retakes them (High quality, native resolution, rare gear,
      the HUD without the controls list: new `--nohelp`). `--whirl` now ignores the global
      cooldown (the bot's last ability blocked it).
+108. **Pathfinding, casting, spells, robes, staves.**
+     - Enemies go around obstacles (enemy.gd `_steer`): rays ahead at knee height (middle and
+       both shoulders; walkable slopes don't count); when blocked, the clear direction closest
+       to the goal, on one side kept for 2 s (no dithering at a wall); no headway for half a
+       second: a sidestep along the wall. Test `--chase-from X,Z`: an enemy behind the inn
+       reached the hero in 5–6 s (never without steering, `--no-steer`). Costs < 1 FPS.
+     - Casting: a channelling loop for the whole cast (staff raised, the free hand circling at
+       chest height, feet apart; skeleton.py `cast_loop`, blended in by CharAnimator.set_cast)
+       and a release with a lunge, both hands thrust at the target. While casting: light
+       gathering in the left hand and a rune circle at the feet in the spell's colour.
+     - Spells have models (combat/spell_fx.gd, all built in code): a fireball with a flame
+       ribbon and smoke, an ice shard, a water orb, a green thorn, a crackling storm bolt, a
+       golden holy orb, a shadow bolt trailing smoke; impacts with a burst and a flash of light;
+       Moonbeam a column of light. Enemy casters use them too. Trails are continuous ribbons
+       (particles alone clumped per frame at these speeds).
+     - Hellfire Rain: while casting, a burning rune circle marks its 8 m area on the target;
+       then 16 meteors fall at a slant into it, each bursting in flames, sparks and smoke with a
+       heat ring over the ground and a scorch mark; enemies in the circle burn when the first
+       ones land.
+     - Casters (mage, priest, warlock, druid) wear robes: a skirt layer built from the body
+       (tools/pipeline/robe_layer.py, from the waist to above the ankles, widening to the hem,
+       skinned to hips and thighs so it swings with the stride), coloured per class with a belt
+       and an embroidered hem (shaders/robe.gdshader, Player.ROBES).
+     - Staves are 25% shorter (they stood far over the head).
+     - Tests: `--nobot` (target the group but only act on `--press`).
+109. **Jumping with a staff, the global cooldown, hidden abilities, graveyards.**
+     - Staff wielders keep their arms still in a jump (CharAnimator `keep_arms_in_air`: the idle
+       pose on the arms over the jump clip); the jump's arm swing had tipped the staff over
+       backward. Everyone else jumps as before.
+     - No global cooldown after a spell with a cast time goes off, only after instants (the
+       cast starts one, which has run out by the time the spell goes off).
+     - Abilities and passives not learned yet are hidden: not in the abilities menu, and their
+       action bar slots stay empty (`slot_ability` returns nothing for them) until the level;
+       then the bar refreshes and the new one pulses in its slot.
+     - Unholy lands: gravestones no longer stand scattered through the forest; each zone has
+       three graveyards instead (world/graveyard.gd): a clearing 60–200 m from the settlement,
+       a wrought-iron fence (one mesh, bars with spear tips, a collider per section) with its
+       gate toward the settlement, a crypt at the back with a faint green light, rows of
+       gravestones on both sides of the path (some missing, leaning or turned), dead trees in
+       the back corners; a cross on the minimap.
+110. **Starting items that explain the look.** Every class starts with what it is seen wearing,
+     as plain common items with 1 point of their stat (Items.STARTER): the warrior a Worn
+     Greatsword, Dented Helm, Squire's Breastplate and Legplates; the casters their staff or
+     mace and a robe (Apprentice's, Initiate's, Acolyte's, Grove Robe); the rogue two daggers;
+     the hunter a Hunting Bow; paladin and shaman a mace and a shield. The look now follows only
+     what is worn (Player._show_weapons): no main hand, empty hands; a bow or a parrying dagger
+     from the item; headgear by armor type; plate legs and pauldrons with plate pieces; a robe
+     with a cloth chest (class colours, a plain brown one for others). Before, an empty slot
+     showed the class's own kit, so a new hero held a sword with nothing equipped. Saves from
+     before get the kit in their empty slots once (`kit` in the save).
+111. **Real robes; stripping down to the plain clothes.**
+     - The robe (after Oldworld2's) is a whole garment now, not a skirt: a standing collar, a
+       bodice hugging the torso, the skirt falling in folds to the ankles, bell sleeves widening
+       down the forearm (robe_layer.py, all measured from the body; the bodice and sleeves
+       skinned from the nearest body skin, the skirt from the hips to the thighs and, toward the
+       hem, the shins). robe.gdshader: an embroidered front panel collar to hem, the collar, a
+       leather belt with gold studs and a round buckle, the hem and the cuffs embroidered, fold
+       valleys shaded. Under it the body's chest, arms and legs aren't drawn, nor a foot kicked
+       up behind in a stride (body_slots `robed`), so nothing pokes through.
+     - Armor is the outfit: each body part (chest, hands, legs, feet) shows the class outfit
+       only while an item is worn there, else the plain shirt, cloth trousers and shoes under it
+       (Humanoid.set_pick); a warrior without his plate stands in shirt and trousers. The
+       starting kits cover all of it now (gloves, boots, trousers, jerkins; the paladin a mail
+       tabard, so no pauldrons); saves with the first kit get the new pieces (kit version 2).
+       Test: `--strip` (all armor off).
+112. **Faces, a more natural robe, the warlock in red.**
+     - Every class has the base body's face now: the outfits' baked heads came out smeared (the
+       druid's face off its place, the mage's skin too dark, the warlock's pink).
+     - The robe sits closer (1 cm over the torso, 2 cm over the legs, half the flare, small bell
+       sleeves, shallower folds) and looks like cloth: muted wool colours, a fine weave and soft
+       drape wrinkles as relief (a procedural normal map), a narrow front panel, thin collar, hem
+       and cuffs in an accent colour with quiet embroidery, a plain leather belt with a small
+       buckle. Robes take [cloth, embroidery, accent]; the warlock's is deep red with black.
+     - Cloth handwraps and slippers show bare hands and the plain shoes (the casters' outfits
+       had coloured gloves and shoes that clashed with their robes).
+113. **Staff grip, quieter casting, Blizzard.**
+     - The robe's fine weave and noise are gone (they shimmered at a distance); only broad drape
+       wrinkles stay.
+     - Staves are held about the middle, upright and a little off the body (Humanoid
+       STAFF_GRIP / STAFF_TILT; they were held at the lower end, leaning in through the robe).
+       Test: `--staff-grip x,y,z,rx,ry,rz`.
+     - The rune circle at the feet only shows for channels and casts of 2.5 s or more; ordinary
+       spells keep the light in the hand.
+     - Mage: Blizzard (level 8), the first channelled spell: 6 s on an 8 m circle at the target
+       (fixed when it starts), every second Ice damage (power 22) and a 50% slow ("Chilled") to
+       each enemy in it; paid when it starts, broken by moving or a stun. SpellFx.Blizzard: an
+       icy rune on the ground, driving snow, ice shards crashing down and bursting, low frost
+       mist, a cold light. Test: `--slot6 blizzard --press 6`.
+114. **Robes from every side, the staff held upright, a camping tip, easing into rest.**
+     - Under a robe the legs and feet are drawn below the hem again (only above 24 cm they're
+       hidden): from the side the ankles and shoes showed nothing between hem and ground.
+     - Staves stay upright in the hand whatever the arm does (Humanoid._staff_update, after the
+       animation every frame): turned about the fist, the shaft a little beside it, the foot
+       leaning slightly out, so it stands clear of the robe; with the hand raised in a cast it
+       is held up, no longer upside down; in a melee swing it swings with the hand.
+     - A new hero gets a tip after the first fight: "press C to camp and recover your health
+       (and mana)" (shown 8 s, once; saves remember tips, older saves count as seen).
+     - Camping eases in: nothing for the first second while the fire catches, then half the rate,
+       rising to the full rate over 4 s.
+     - Fix: an empty action bar key (or one not learned yet) asked about made errors
+       (ability_problem on an empty ability).
 
 
 ## Known issues / next

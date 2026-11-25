@@ -54,7 +54,10 @@ const ABILITIES_MAGE := [
 	{"id": "mana_shield", "name": "Mana Shield", "key": 4, "level": 3, "mana": 30, "cd": 30.0, "cast": 0.0},
 	{"id": "ignite", "name": "Ignite", "key": 5, "level": 4, "mana": 24, "cd": 0.0, "cast": 0.0, "element": "Fire", "range": 30.0},
 	{"id": "blink", "name": "Blink", "key": 6, "level": 6, "mana": 15, "cd": 15.0, "cast": 0.0},
+	{"id": "blizzard", "name": "Blizzard", "key": 7, "level": 8, "mana": 45, "cd": 0.0, "channel": 6.0, "tick": 1.0, "power": 22.0, "element": "Ice", "range": 30.0},
 ]
+## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
+const BLIZZARD_RADIUS := 8.0
 
 ## Rogue abilities (Oldworld2's Rogue in real time). energy: cost.
 const ABILITIES_ROGUE := [
@@ -297,7 +300,7 @@ func _ready() -> void:
 ## The class's look for Humanoid.build (also the title screen's hero preview).
 static func look_of(class_id: String) -> Dictionary:
 	var c: Dictionary = CLASSES[class_id]
-	var look := {"outfit": c.outfit, "pick": c.pick}
+	var look := {"outfit": c.outfit, "pick": [0.0] + Array(c.pick).slice(1)}
 	for k in ["weapon", "offhand", "shield", "bow", "weapon_rot"]:
 		if c.has(k):
 			look[k] = c[k]
@@ -305,7 +308,21 @@ static func look_of(class_id: String) -> Dictionary:
 		look["helmet"] = "res://assets/characters/warrior/helmet.glb"
 	if class_id == "warrior":
 		look["layers"] = {"legs": LEG_LAYERS.plate, "shoulders": SHOULDER_LAYERS.plate}
+	if ROBES.has(class_id):
+		look["robe"] = ROBES[class_id]
 	return look
+
+
+## A robe for anyone else in a cloth chest piece.
+const ROBE_PLAIN := [Color(0.35, 0.3, 0.24), Color(0.6, 0.53, 0.4), Color(0.16, 0.13, 0.1)]
+## The casters' robes (Humanoid.set_robe): [cloth, embroidery, accent (panel, belt, hem, cuffs)];
+## muted, like dyed wool and linen; the warlock red with black.
+const ROBES := {
+	"mage": [Color(0.13, 0.17, 0.32), Color(0.66, 0.6, 0.44), Color(0.06, 0.08, 0.15)],
+	"priest": [Color(0.78, 0.76, 0.7), Color(0.66, 0.55, 0.3), Color(0.5, 0.47, 0.42)],
+	"warlock": [Color(0.28, 0.035, 0.03), Color(0.36, 0.05, 0.04), Color(0.03, 0.025, 0.025)],
+	"druid": [Color(0.22, 0.27, 0.16), Color(0.5, 0.4, 0.24), Color(0.12, 0.14, 0.08)],
+}
 
 
 func set_level(level: int) -> void:
@@ -560,8 +577,10 @@ func ability_by_id(id: String) -> Dictionary:
 
 
 ## The ability in slot i (0-based), {} if empty.
+## The ability in slot i (0-based), {} if empty or not learned yet (an empty slot until then).
 func slot_ability(i: int) -> Dictionary:
-	return ability_by_id(String(loadout[i])) if i >= 0 and i < loadout.size() and loadout[i] != "" else {}
+	var a := ability_by_id(String(loadout[i])) if i >= 0 and i < loadout.size() and loadout[i] != "" else {}
+	return a if not a.is_empty() and stats.level >= int(a.level) else {}
 
 
 func slot_of(id: String) -> int:
@@ -574,6 +593,8 @@ func ability_by_key(key: int) -> Dictionary:
 
 ## Why an ability can't be used right now ("" = it can).
 func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
+	if a.is_empty():
+		return "Nothing on that key"        # an empty slot (or not learned yet)
 	var t := Combatant.now()
 	if stats.level < int(a.level):
 		return "Learned at level %d" % a.level
@@ -654,11 +675,19 @@ func use_ability(key: int) -> void:
 		return
 	break_camp()
 	var t := Combatant.now()
+	if a.has("channel"):
+		# A channel: paid when it starts, then it works every tick while the hero stands still.
+		_spend_and_cooldown(a, t)
+		var c := target.global_position
+		casting = {"a": a, "start": t, "end": t + float(a.channel), "target": target, "channel": true,
+			"next": t + 0.4, "center": c}
+		if a.id == "blizzard":
+			_channel_fx = SpellFx.Blizzard.start(Vector3(c.x, World.height_at(c.x, c.z), c.z), BLIZZARD_RADIUS)
+		return
 	if float(a.get("cast", 0.0)) > 0.0:
 		# Cast time: the spell goes off at the end, if the hero didn't move (see _cast_process).
 		casting = {"a": a, "start": t, "end": t + float(a.cast), "target": target}
 		gcd_until = t + GCD
-		model.anim.play_shot("cast")
 		return
 	_spend_and_cooldown(a, t)
 	_execute(a)
@@ -674,7 +703,9 @@ func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 		stats.last_cast = t
 	if float(a.cd) > 0.0 and not (a.id == "charge" and has_passive("Juggernaut")):
 		cooldowns[a.id] = t + float(a.cd)
-	if a.id != "battle_cry":
+	# The global cooldown follows instant abilities only: a spell with a cast time is free to
+	# chain into the next one the moment it goes off (its cast already took longer).
+	if a.id != "battle_cry" and float(a.get("cast", 0.0)) <= 0.0:
 		gcd_until = maxf(gcd_until, t + GCD)
 
 
@@ -811,13 +842,17 @@ func _execute(a: Dictionary) -> void:
 			Audio.sfx("magic", -4.0)
 			target.engage()
 		"hellfire_rain":
+			# Meteors fall into the circle shown while casting; whoever stands in it when the
+			# first ones land burns.
 			model.anim.play_shot("release")
-			var c := target.global_position
+			var c := _area.global_position if _area else target.global_position
 			Audio.sfx("fireball")
-			for e in World.enemies:
-				if not e.stats.dead and e.global_position.distance_to(c) < 8.0:
-					_spell_hit(e, float(a.power), "Fire")
-					e.engage()
+			var power := float(a.power)
+			SpellFx.hellfire(c, HELLFIRE_RADIUS, func():
+				for e in World.enemies:
+					if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < HELLFIRE_RADIUS:
+						_spell_hit(e, power, "Fire")
+						e.engage())
 		"curse_of_weakness":
 			model.anim.play_shot("release")
 			target.stats.add_buff("curse_of_weakness", 30.0, {"attack": 0.75})
@@ -910,9 +945,14 @@ func _bolt(a: Dictionary) -> void:
 	model.anim.play_shot("release")
 	var ice: bool = a.element == "Ice"
 	Audio.sfx("water" if ice else ("magic" if a.element in ["Holy", "Dark"] else "fireball"), -4.0)
+	if a.id == "moonbeam":
+		# A column of moonlight comes down on the target.
+		SpellFx.beam(e.global_position)
+		_spell_hit(e, float(a.power), a.element)
+		e.engage()
+		return
 	var from := global_position + Vector3(0, 1.5, 0) - global_transform.basis.z * 0.6
-	var col: Color = {"Ice": Color(0.55, 0.85, 1.0), "Fire": Color(1.0, 0.5, 0.15), "Holy": Color(1.0, 0.95, 0.55), "Dark": Color(0.6, 0.3, 0.95)}.get(a.element, Color.WHITE)
-	Projectile.launch(from, e, col, func():
+	Projectile.spell(from, e, String(a.element), func():
 		if e.stats.dead:
 			return
 		_spell_hit(e, float(a.power), a.element)
@@ -955,6 +995,16 @@ func _ring_effect(color: Color, radius: float) -> void:
 func _cast_process(t: float, moving: bool) -> void:
 	if casting.is_empty():
 		return
+	if casting.get("channel", false):
+		if moving or stats.stunned():
+			_end_channel()
+			message.emit("Interrupted")
+		elif t >= float(casting.end):
+			_end_channel()
+		elif t >= float(casting.next):
+			casting.next = float(casting.next) + float(casting.a.tick)
+			_channel_tick(casting.a, casting.center)
+		return
 	var e: Enemy = casting.target
 	var needs_target: bool = not casting.a.get("self", false)
 	if moving or stats.stunned() or (needs_target and (e == null or e.stats.dead)):
@@ -966,8 +1016,65 @@ func _cast_process(t: float, moving: bool) -> void:
 		_spend_and_cooldown(a, t)
 		_execute(a)
 		casting = {}
-	elif int(t * 10) % 5 == 0:
-		model.anim.play_shot("cast")
+
+
+var _channel_fx: Node            ## a channel's effect (SpellFx.Blizzard), stopped when it ends
+
+
+## One tick of a channel: Blizzard hits and slows every enemy in its circle.
+func _channel_tick(a: Dictionary, c: Vector3) -> void:
+	match a.id:
+		"blizzard":
+			for e in World.enemies:
+				if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < BLIZZARD_RADIUS:
+					_spell_hit(e, float(a.power), "Ice")
+					e.stats.slow(2.0, 0.5, "Chilled")
+					e.engage()
+
+
+func _end_channel() -> void:
+	casting = {}
+	if _channel_fx and is_instance_valid(_channel_fx):
+		_channel_fx.stop()
+	_channel_fx = null
+
+
+const HELLFIRE_RADIUS := 8.0
+const HEAL_ELEMENT := {"priest": "Holy", "paladin": "Holy", "shaman": "Water", "druid": "Nature", "hunter": "Nature"}
+var _cast_glow: Node3D            ## the spell gathering in the left hand while casting
+var _cast_rune: Node3D            ## a rune circle at the feet while casting
+var _area: Node3D                 ## Hellfire Rain: its area, marked while casting
+
+
+## Casting looks: light gathering in the hand and a rune circle at the feet, in the spell's
+## colour; Hellfire Rain marks its area on the target.
+func _cast_fx_process() -> void:
+	if casting.is_empty():
+		if _cast_glow:
+			_cast_glow.queue_free()
+			_cast_glow = null
+		if _cast_rune:
+			_cast_rune.queue_free()
+			_cast_rune = null
+		if _area:
+			_area.queue_free()
+			_area = null
+		return
+	var a: Dictionary = casting.a
+	if _cast_glow == null:
+		var el := String(a.get("element", HEAL_ELEMENT.get(cls, "Holy")))
+		_cast_glow = model.attach_to_bone("LeftHand", SpellFx.hand_glow(el), Vector3(0, -0.08, 0.04))
+		# The rune at the feet only for the big ones: channels and casts of 2.5 s or more.
+		if a.has("channel") or float(a.get("cast", 0.0)) >= 2.5:
+			_cast_rune = SpellFx.rune(SpellFx.color(el), 1.1, 0.25, 0.5)
+			add_child(_cast_rune)
+			_cast_rune.position.y = 0.06
+		if a.id == "hellfire_rain":
+			_area = SpellFx.area_marker(HELLFIRE_RADIUS)
+			World.root.add_child(_area)
+	if _area and is_instance_valid(casting.target):
+		var tp: Vector3 = (casting.target as Node3D).global_position
+		_area.global_position = Vector3(tp.x, World.height_at(tp.x, tp.z), tp.z)
 
 
 func _target_distance() -> float:
@@ -1137,7 +1244,22 @@ func _enrage() -> float:
 	return 1.25 if stats.has_buff("enrage") else 1.0
 
 
+signal hint(text: String)            ## a tip shown once, a bit longer than a message
+var tips_shown := {}                 ## tip id -> true (saved)
+var _was_fighting := false
+
+
+## Tips for a new hero: after the first fight, how to rest.
+func _tips_process() -> void:
+	var fighting := stats.in_combat()
+	if _was_fighting and not fighting and kills > 0 and not tips_shown.has("camp") and not stats.dead:
+		tips_shown["camp"] = true
+		hint.emit("Tip: press C to camp and recover your health%s." % (" and mana" if stats.uses_mana else ""))
+	_was_fighting = fighting
+
+
 func _combat_process(t: float) -> void:
+	_tips_process()
 	# Demon Armor (warlock, level 4): regenerates 1/32 max HP every 3 s while fighting.
 	if has_passive("Demon Armor") and stats.in_combat() and not stats.dots.has("demon_armor"):
 		stats.add_dot("demon_armor", 9.0, 1.0 / 32.0, stats, true)
@@ -1241,6 +1363,7 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 func _on_died(_killer: Combatant) -> void:
 	_dead_at = Combatant.now()
 	auto_attacking = false
+	_end_channel()
 	_stop_whirl()
 	model.anim.set_move("death")
 	Audio.sfx("defeat")
@@ -1308,6 +1431,7 @@ func _gain_xp(gained: int) -> void:
 				learned.append(("New passive: %s" % ps[1]) if ps[1] in passive_loadout else "New passive: %s  (put it in a passive slot in the abilities menu, N)" % ps[1])
 		_level_passives()
 		leveled_up.emit(stats.level)
+		loadout_changed.emit()            # newly learned abilities appear on the bar
 		level_banner.emit(stats.level, learned)
 		Audio.sfx("level_up")
 		World.float_text(global_position + Vector3(0, 2.6, 0), "Level %d!" % stats.level, Color(1, 0.85, 0.2), 64, self)
@@ -1326,6 +1450,11 @@ const CAMP_HP := 0.10
 const CAMP_MANA := 0.20
 var camp: Node3D                    ## the fire while camping
 var _camp_hp := 0.0
+var _camp_since := 0.0
+## Resting eases in: nothing for CAMP_DELAY s while the fire catches, then half the rate,
+## rising to the full rate over CAMP_RAMP s.
+const CAMP_DELAY := 1.0
+const CAMP_RAMP := 4.0
 var _crackle_at := 0.0
 
 
@@ -1363,6 +1492,7 @@ func toggle_camp() -> void:
 	camp.set_meta("light", light)
 	model.rotation.y = 0.0
 	_camp_hp = 0.0
+	_camp_since = Combatant.now()
 	_crackle_at = Combatant.now() + 0.8
 	Audio.sfx("light")
 	message.emit("You rest at a camp fire.")
@@ -1428,12 +1558,14 @@ func _camp_process(dt: float) -> void:
 	if stats.dead:
 		break_camp()
 		return
-	_camp_hp += stats.max_hp * CAMP_HP * dt
+	var since := Combatant.now() - _camp_since
+	var rate := 0.0 if since < CAMP_DELAY else 0.5 + 0.5 * clampf((since - CAMP_DELAY) / CAMP_RAMP, 0.0, 1.0)
+	_camp_hp += stats.max_hp * CAMP_HP * rate * dt
 	if _camp_hp >= 1.0:
 		stats.hp = mini(stats.max_hp, stats.hp + int(_camp_hp))
 		_camp_hp -= int(_camp_hp)
 	if stats.uses_mana:
-		stats.mana = minf(stats.max_mana, stats.mana + stats.max_mana * CAMP_MANA * dt)
+		stats.mana = minf(stats.max_mana, stats.mana + stats.max_mana * CAMP_MANA * rate * dt)
 	var light: OmniLight3D = camp.get_meta("light")
 	if light.light_energy > 1.5:          # flicker once the fire is lit
 		light.light_energy = 2.2 + 0.35 * sin(Combatant.now() * 17.0) * sin(Combatant.now() * 5.3)
@@ -1572,6 +1704,8 @@ func _animate(local: Vector3, speed: float, dt: float) -> void:
 
 
 func _process(dt: float) -> void:
+	model.anim.set_cast(not casting.is_empty(), dt)
+	_cast_fx_process()
 	if cls == "hunter":
 		# The bow turns to its shooting hold in combat (and for any shot), slanted at rest.
 		model.set_bow_aim(auto_attacking or stats.in_combat() or not casting.is_empty(), dt)
@@ -1728,6 +1862,23 @@ func buy(item: Dictionary) -> bool:
 	return true
 
 
+## Puts the class's starting items (Items.starter_kit) into the empty slots: a new hero, or a
+## save from before there were starting items (once: kit_given).
+var kit_given := 0                    ## the version of the starting kit given (KIT)
+const KIT := 2                         ## 2: gloves, boots, trousers etc. joined the kits
+
+
+func give_starter_kit() -> void:
+	if kit_given >= KIT:
+		return
+	kit_given = KIT
+	var kit := Items.starter_kit(cls)
+	for slot in kit:
+		if not equipped.has(slot):
+			equipped[slot] = kit[slot]
+	apply_gear()
+
+
 ## Puts the equipped items' stats onto the combat numbers and the weapons into the hands.
 func apply_gear() -> void:
 	stats.gear = Items.totals(equipped)
@@ -1757,37 +1908,45 @@ const WEAPON_MODELS := {
 }
 
 
+## The hero's look follows what is worn (the starting items explain the class look): the main
+## hand's weapon (empty hands without one; the class's own model when it is of the same kind),
+## a bow, the off hand's shield or dagger, headgear by armor type, plate legs and pauldrons with
+## plate pieces, a robe with a cloth chest.
 func _show_weapons() -> void:
 	var c: Dictionary = CLASSES[cls]
 	var main: Dictionary = equipped.get("main", {})
-	if main.is_empty() or main.kind == "bow" or not WEAPON_MODELS.has(main.kind):
-		if c.has("weapon"):
-			model.equip_model("weapon", c.weapon, c.get("weapon_rot", null))
-	else:
-		var path: String = WEAPON_MODELS[main.kind]
-		if c.has("weapon") and String(c.weapon).get_file().begins_with(String(main.kind)):
+	var kind := String(main.get("kind", ""))
+	if WEAPON_MODELS.has(kind):
+		var path: String = WEAPON_MODELS[kind]
+		if c.has("weapon") and String(c.weapon).get_file().begins_with(kind):
 			path = c.weapon
-		model.equip_model("weapon", path, Vector3.ZERO if main.kind == "staff" else null)
-	var off: Dictionary = equipped.get("off", {})
-	var shield: bool = off.get("kind", "") == "shield" or c.has("shield")
-	model.equip_model("shield", "res://assets/weapons/shield.glb" if shield else "")
-	# Head items show by armor type; without one the class look (the warrior's helm) stays.
+		model.equip_model("weapon", path, Vector3.ZERO if kind == "staff" else null)
+	else:
+		model.equip_model("weapon", "")
+	model.equip_model("bow", "res://assets/weapons/bow.glb" if kind == "bow" else "")
+	var off_kind := String(equipped.get("off", {}).get("kind", ""))
+	model.equip_model("shield", "res://assets/weapons/shield.glb" if off_kind == "shield" else "")
+	model.equip_model("offhand", "res://assets/weapons/dagger.glb" if off_kind == "offdagger" else "")
 	var head: Dictionary = equipped.get("head", {})
-	var helm := "res://assets/characters/warrior/helmet.glb" if c.helmet else ""
-	if not head.is_empty():
-		helm = String(HEADGEAR.get(head.kind, helm))
-		if not ResourceLoader.exists(helm):
-			helm = "res://assets/characters/warrior/helmet.glb" if c.helmet else ""
-	model.equip_model("helmet", helm)
-	# Leg armor layer: plate legs (geometry over the body) with plate leg items, or the warrior's
-	# own look while nothing is worn there.
-	var legs: Dictionary = equipped.get("legs", {})
-	var plate_legs: bool = legs.get("kind", "") == "plate" if not legs.is_empty() else cls == "warrior"
-	model.set_layer("legs", LEG_LAYERS.plate if plate_legs else "")
-	# Pauldrons with a plate chest piece (or the warrior's own look).
-	var chest: Dictionary = equipped.get("chest", {})
-	var plate_chest: bool = chest.get("kind", "") == "plate" if not chest.is_empty() else cls == "warrior"
-	model.set_layer("shoulders", SHOULDER_LAYERS.plate if plate_chest else "")
+	var helm := String(HEADGEAR.get(head.get("kind", ""), "")) if not head.is_empty() else ""
+	model.equip_model("helmet", helm if ResourceLoader.exists(helm) else "")
+	var legs_kind := String(equipped.get("legs", {}).get("kind", ""))
+	model.set_layer("legs", LEG_LAYERS.plate if legs_kind == "plate" else "")
+	var chest_kind := String(equipped.get("chest", {}).get("kind", ""))
+	model.set_layer("shoulders", SHOULDER_LAYERS.plate if chest_kind == "plate" else "")
+	var robe: Array = ROBES.get(cls, ROBE_PLAIN)
+	model.set_robe(robe[0] if chest_kind == "cloth" else Color.TRANSPARENT, robe[1], robe[2])
+	# The class outfit shows where armor is worn; elsewhere the plain shirt, cloth trousers and
+	# shoes under it. Every class has the base body's face (the outfits' baked heads came out
+	# smeared: wrong skin tones, faces off their place).
+	var pick := [0.0]
+	for slot in ["chest", "hands", "legs", "feet"]:
+		# Cloth handwraps and slippers: bare hands and the plain shoes (the casters' outfits
+		# had coloured gloves and shoes that clashed with their robes).
+		var it: Dictionary = equipped.get(slot, {})
+		var cloth_extremity: bool = slot in ["hands", "feet"] and it.get("kind", "") == "cloth"
+		pick.append(1.0 if not it.is_empty() and not cloth_extremity else 0.0)
+	model.set_pick(pick)
 
 
 # --- quests (scripts/items/quests.gd) ----------------------------------------------------

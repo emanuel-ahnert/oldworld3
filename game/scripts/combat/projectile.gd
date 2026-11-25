@@ -35,6 +35,43 @@ static func launch(from: Vector3, p_target: Node3D, color: Color, p_on_hit: Call
 
 
 const ARROW_SPEED := 38.0
+const SPELL_SPEED := {"Fire": 22.0, "Ice": 28.0, "Air": 30.0, "Dark": 20.0, "Holy": 24.0, "Nature": 26.0, "Water": 24.0}
+
+var _element := ""               ## a spell: its element (the look, the impact)
+var _pointed := false            ## turns along its path (shards, thorns)
+
+
+## A spell from `from` to the target: SpellFx.bolt(element), its own speed, the element's
+## impact where it lands.
+static func spell(from: Vector3, p_target: Node3D, element: String, p_on_hit: Callable) -> Projectile:
+	var p := Projectile.new()
+	p.target = p_target
+	p.on_hit = p_on_hit
+	p.speed = SPELL_SPEED.get(element, 24.0)
+	p._element = element
+	p._pointed = SpellFx.pointed(element)
+	p.add_child(SpellFx.bolt(element))
+	World.root.add_child(p)
+	p.global_position = from
+	return p
+
+
+## The trails (particles, ribbons) stay where they are and fade out; the rest goes.
+func _leave_trails() -> void:
+	for c in find_children("*", "MeshInstance3D", true, false):
+		if c is SpellFx.Tail:
+			var tail := c as SpellFx.Tail
+			tail.get_parent().remove_child(tail)
+			World.root.add_child(tail)
+			tail.stop()
+	for c in find_children("*", "GPUParticles3D", true, false):
+		var gp := c as GPUParticles3D
+		var at := gp.global_position
+		gp.get_parent().remove_child(gp)
+		World.root.add_child(gp)
+		gp.global_position = at
+		gp.emitting = false
+		get_tree().create_timer(gp.lifetime + 0.2).timeout.connect(gp.queue_free)
 const ARROW_STICK := 2.0         ## seconds an arrow stays in its target
 static var _arrow_parts: Array = []  ## [mesh, material] of shaft, head, fletching (shared)
 
@@ -122,11 +159,16 @@ func _process(dt: float) -> void:
 		return
 	var d := goal - global_position
 	if d.length() < speed * dt + 0.3:
+		if _element != "":
+			SpellFx.impact(goal, _element)
+			_leave_trails()
 		if on_hit.is_valid():
 			on_hit.call()
 		queue_free()
 		return
 	global_position += d.normalized() * speed * dt
+	if _pointed:
+		global_basis = Basis.looking_at(d.normalized())
 
 
 ## Homes in like a bolt (on `_flat`) with a shallow arc on top, nose along its path. On arrival

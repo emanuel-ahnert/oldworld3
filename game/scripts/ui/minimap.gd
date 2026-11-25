@@ -85,6 +85,10 @@ func _draw_map() -> void:
 			var cw := Vector2(ch.global_position.x, ch.global_position.z)
 			if not ch.opened and cw.distance_to(_center) < 40.0:
 				v.draw_rect(Rect2(_w(cw) - Vector2(3, 3), Vector2(6, 6)), Color(1, 0.8, 0.2))
+		for c in z.graveyards:
+			var gm := _w(o + Vector2(c.x, c.z))
+			v.draw_line(gm + Vector2(0, -5), gm + Vector2(0, 5), Color(0.75, 0.75, 0.72), 2.0)
+			v.draw_line(gm + Vector2(-3.5, -1.5), gm + Vector2(3.5, -1.5), Color(0.75, 0.75, 0.72), 2.0)
 		for c in z.landmarks:
 			var m := _w(o + Vector2(c.x, c.z))
 			v.draw_colored_polygon(PackedVector2Array([m + Vector2(0, -6), m + Vector2(6, 4), m + Vector2(-6, 4)]), Color(0.9, 0.78, 0.5))

@@ -18,10 +18,14 @@ extends Node3D
 ##   --swing CLIP      test: play a one-shot (attack1, strike, hit, cast...) every 50 frames
 ##   --burst N         test: also save N pictures every --burst-step frames before the shot
 ##   --fight KIND      test: start next to the nearest group of KIND and fight automatically
+##   --strip           test: no armor worn (the plain clothes under it)
 ##   --nohelp          the HUD without the controls list (screenshots)
+##   --slot6 ID        test: put ability ID on key 6 (with --press 6)
+##   --nobot           test (--fight): target the group but don't fight (use --press)
 ##   --hold M          test (--fight): the group stands stunned, the hero M m away
 ##   --gear RARITY     test: wear a full set of generated gear of the hero's level
 ##   --whirl           test: Whirlwind at frame --press-at (default 100), full rage (--level 12)
+##   --chase-from X,Z  test: the nearest enemy starts at X,Z and chases the hero (pathfinding)
 ##   --strafe-at F     test: from frame F strafe left (ending a Whirlwind first)
 ##   --pos X,Z         start position (default: in front of the plaza)
 ##   --to-north        test: run through the start zone's north crossing
@@ -38,6 +42,8 @@ var hud: Hud
 var _frame := 0
 var _fighting := false
 var _min_hp := 1.0            ## test fights: the hero's lowest health (fraction)
+var _chaser: Enemy                ## test (--chase-from)
+var _chase_start := 0.0
 var _taken := {}              ## test fights: source -> [damage, hits, biggest hit]; "healed"
 var zones: ZoneManager
 var _env: Environment
@@ -55,6 +61,11 @@ var _bench_frames := 0
 func _ready() -> void:
 	_parse_args()
 	_setup_input()
+	Enemy.steering = not args.has("no-steer")
+	if args.has("staff-grip"):          # test: "x,y,z,rx,ry,rz" (the staff's hold)
+		var g: PackedStringArray = String(args["staff-grip"]).split(",")
+		Humanoid.STAFF_GRIP = Vector3(float(g[0]), float(g[1]), float(g[2]))
+		Humanoid.STAFF_TILT = Vector3(float(g[3]), float(g[4]), float(g[5]))
 	if args.has("whirl-at"):
 		CharAnimator.WHIRL_AT = float(args["whirl-at"])     # test: the Whirlwind pose's frame
 	var seed := int(args.get("seed", Game.seed))
@@ -156,6 +167,11 @@ func _ready() -> void:
 	player.checkpoint = player.global_position
 	player.rotation.y = face          # facing the plaza (south)
 	_apply_save(Game.loaded)
+	if args.has("strip"):
+		# Test: all armor off (the plain clothes under it); weapons stay.
+		for slot in ["head", "chest", "legs", "hands", "feet"]:
+			player.equipped.erase(slot)
+		player.apply_gear()
 	player.leveled_up.connect(func(_l): Game.write_save(player))
 	player.saved_point.connect(func(): Game.write_save(player))
 	print("enemies: %d" % World.enemies.size())
@@ -179,6 +195,7 @@ func _ready() -> void:
 	if args.has("lineup"):
 		_lineup()
 	player.message.connect(hud.show_message)
+	player.hint.connect(hud.show_hint)
 	if args.has("nohud"):
 		hud.visible = false            # test: clean pictures (title background)
 	if args.has("nohelp"):
@@ -376,6 +393,8 @@ func _setup_fight(kind: String) -> void:
 	if args.has("notarget"):
 		return              # test: the hero just stands there; does it target the attacker?
 	player.set_target(best)
+	if args.has("nobot"):
+		return              # test: targeted, but the hero only does what --press says
 	_fighting = true
 	player.stats.damaged.connect(func(amount: int, _crit: bool, src: Combatant) -> void:
 		var k := src.display_name if src else "ticks"
@@ -432,12 +451,20 @@ func _apply_save(d: Dictionary) -> void:
 		var start := Items.POTION.duplicate(true)
 		start.count = 3
 		player.add_item(start)
+		player.give_starter_kit()
 		return
 	player.set_level(int(d.get("level", 1)))
 	var bag = d.get("bag", [])
 	player.bag = bag if bag is Array else []
 	var eq = d.get("equipped", {})
 	player.equipped = eq if eq is Dictionary else {}
+	# Tips seen; a save from before tips counts as seen them all (it's no new player).
+	var tips = d.get("tips", ["camp"])
+	for k in (tips if tips is Array else []):
+		player.tips_shown[String(k)] = true
+	var kit = d.get("kit", 0)
+	player.kit_given = (1 if kit else 0) if kit is bool else int(kit)
+	player.give_starter_kit()          # saves from before the starting items: into empty slots
 	player.apply_gear()
 	_daynight.time = float(d.get("time", 0.3))
 	var oc = d.get("chests", [])
@@ -594,6 +621,25 @@ func _process(_dt: float) -> void:
 			ev.physical_keycode = ev.keycode
 			ev.pressed = true
 			Input.parse_input_event(ev)
+	if args.has("chase-from") and player:
+		# Test: an enemy starts at X,Z (behind an obstacle) and chases the hero standing still;
+		# prints when it arrives (pathfinding).
+		if _frame == 60:
+			var c: PackedStringArray = String(args["chase-from"]).split(",")
+			var near: Enemy = null
+			for e in World.enemies:
+				if near == null or e.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
+					near = e
+			_chaser = near
+			var at := Vector3(float(c[0]), 0, float(c[1]))
+			near.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
+			near.home = near.global_position
+			near.stats.slow_until = 0.0
+			near.engage()
+			_chase_start = Time.get_ticks_msec() / 1000.0
+		elif _chaser and _chase_start > 0.0 and _chaser.global_position.distance_to(player.global_position) < 3.0:
+			print("CHASE reached in %.1f s" % (Time.get_ticks_msec() / 1000.0 - _chase_start))
+			_chase_start = -1.0
 	if args.has("strafe-at") and player and _frame >= int(args["strafe-at"]):
 		# Test: Whirlwind (if on) ends, then the hero strafes left.
 		if _frame == int(args["strafe-at"]):
@@ -622,6 +668,9 @@ func _process(_dt: float) -> void:
 		player.stats.rage = 100.0
 		player.gcd_until = 0.0
 		player.use_ability(6)
+	if args.has("slot6") and _frame == 50:
+		player.loadout[5] = String(args.slot6)       # test: an ability on key 6 (--press 6)
+		player.loadout_changed.emit()
 	if args.has("press") and _frame == int(args.get("press-at", 450)):
 		player.use_ability(int(args.press))           # test: press an ability key
 	if args.has("camp") and _frame == 30:

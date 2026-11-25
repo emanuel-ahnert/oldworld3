@@ -100,6 +100,8 @@ func build(zone: Zone, seed: int) -> void:
 	for s in shrine_spots(terrain):
 		_place("res://assets/buildings/shrine.glb", terrain, s, 2.8, rng.randf() * TAU, true)
 		checkpoints.append({"name": "the shrine", "pos": s + origin, "spawn": s + Vector3(2.5, 0, 0) + origin})
+	for i in zone.graveyards.size():
+		Graveyard.build(self, terrain, zone.graveyards[i], seed + 300 + i)
 	if zone.info.get("landmarks", false):
 		# Two obelisks in front of the temple (inn); each pyramid group: a big pyramid facing the
 		# settlement, two small ones beside it, a pharaoh statue or a sphinx in front.

@@ -16,6 +16,9 @@ uniform vec4 tint_b : source_color = vec4(1.0);
 uniform float pick[5];
 uniform float stealth = 0.0;    // rogue in stealth: dark and bluish          // 0 = outfit A, 1 = outfit B; head, chest, hands, legs, feet
 uniform bool show_slots = false;
+// Wearing a robe (robe_layer.py): the chest (arms included) and the legs above the hem are
+// under it and not drawn, so nothing pokes through it.
+uniform bool robed = false;
 
 // Helmet worn (WoW style): head vertices above the neck are pulled toward the head center, so
 // hair and ears end up inside the helmet instead of clipping through it. Positions are in the
@@ -26,9 +29,11 @@ uniform vec3 neck_pos = vec3(0.0, 1.6, 0.0);
 uniform vec3 head_up = vec3(0.0, 1.0, 0.0);
 
 varying float slot;
+varying float height;      // above the feet (the mesh's origin is on the ground)
 
 void vertex() {
 	slot = COLOR.r * 8.0 - 0.5;
+	height = VERTEX.y;
 	if (head_shrink > 0.0 && slot < 0.5) {
 		float above = smoothstep(0.0, 0.05, dot(VERTEX - neck_pos, head_up));
 		VERTEX = mix(VERTEX, head_center + (VERTEX - head_center) * 0.45, above * head_shrink);
@@ -37,6 +42,12 @@ void vertex() {
 
 void fragment() {
 	int s = clamp(int(round(slot)), 0, 4);
+	// Under a robe: the chest and arms aren't drawn, the legs and feet only below the hem (the
+	// ankles and shoes show from any side; a foot kicked up behind in a stride doesn't float
+	// behind the hem).
+	if (robed && (s == 1 || ((s == 3 || s == 4) && height > 0.24))) {
+		discard;
+	}
 	vec3 a = texture(tex_a, UV).rgb * tint_a.rgb;
 	vec3 b = texture(tex_b, UV).rgb * tint_b.rgb;
 	ALBEDO = mix(a, b, pick[s]);

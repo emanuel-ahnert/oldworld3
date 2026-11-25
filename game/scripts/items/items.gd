@@ -34,6 +34,50 @@ const ARMOR_NOUNS := {
 	"leather": {"head": "Cap", "chest": "Jerkin", "legs": "Breeches", "hands": "Gloves", "feet": "Boots"},
 	"cloth": {"head": "Hood", "chest": "Robe", "legs": "Trousers", "hands": "Handwraps", "feet": "Slippers"},
 }
+## What each class starts with, worn: plain common items (1 point of their stat) that are what
+## the hero is seen wearing, the weapon in the hand, the casters' robe, the warrior's plate. They
+## are replaced as better ones drop. [slot, kind, name, stat]
+## The armor pieces are the class's outfit: without them the hero is in the plain shirt, cloth
+## trousers and shoes under it (Player._show_weapons, Humanoid.set_pick).
+const STARTER := {
+	"warrior": [["main", "sword", "Worn Greatsword", "attack"], ["head", "plate", "Dented Helm", "defense"],
+		["chest", "plate", "Squire's Breastplate", "defense"], ["legs", "plate", "Squire's Legplates", "defense"],
+		["hands", "plate", "Squire's Gauntlets", "defense"], ["feet", "plate", "Squire's Sabatons", "defense"]],
+	"mage": [["main", "staff", "Apprentice's Staff", "magic"], ["chest", "cloth", "Apprentice's Robe", "resistance"],
+		["legs", "cloth", "Apprentice's Trousers", "resistance"], ["hands", "cloth", "Apprentice's Handwraps", "resistance"],
+		["feet", "cloth", "Apprentice's Slippers", "resistance"]],
+	"rogue": [["main", "dagger", "Rusty Dagger", "attack"], ["off", "offdagger", "Old Parrying Dagger", "attack"],
+		["chest", "leather", "Worn Leather Jerkin", "defense"], ["legs", "leather", "Worn Leather Breeches", "defense"],
+		["hands", "leather", "Worn Leather Gloves", "defense"], ["feet", "leather", "Soft Leather Boots", "defense"]],
+	"priest": [["main", "mace", "Initiate's Mace", "magic"], ["chest", "cloth", "Initiate's Robe", "resistance"],
+		["legs", "cloth", "Initiate's Trousers", "resistance"], ["hands", "cloth", "Initiate's Handwraps", "resistance"],
+		["feet", "cloth", "Initiate's Sandals", "resistance"]],
+	"paladin": [["main", "mace", "Squire's Mace", "attack"], ["off", "shield", "Squire's Shield", "defense"],
+		["chest", "mail", "Novice's Tabard", "defense"], ["legs", "mail", "Novice's Chausses", "defense"],
+		["hands", "mail", "Novice's Gloves", "defense"], ["feet", "mail", "Novice's Boots", "defense"]],
+	"warlock": [["main", "staff", "Acolyte's Staff", "magic"], ["chest", "cloth", "Acolyte's Robe", "resistance"],
+		["legs", "cloth", "Acolyte's Trousers", "resistance"], ["hands", "cloth", "Acolyte's Handwraps", "resistance"],
+		["feet", "cloth", "Acolyte's Slippers", "resistance"]],
+	"hunter": [["main", "bow", "Hunting Bow", "attack"],
+		["chest", "leather", "Ranger's Jerkin", "defense"], ["legs", "leather", "Ranger's Breeches", "defense"],
+		["hands", "leather", "Ranger's Gloves", "defense"], ["feet", "leather", "Ranger's Boots", "defense"]],
+	"shaman": [["main", "mace", "Tribal Mace", "attack"], ["off", "shield", "Hide Shield", "defense"],
+		["chest", "leather", "Hide Vest", "defense"], ["legs", "leather", "Hide Breeches", "defense"],
+		["hands", "leather", "Hide Gloves", "defense"], ["feet", "leather", "Hide Boots", "defense"]],
+	"druid": [["main", "staff", "Grove Staff", "magic"], ["chest", "cloth", "Grove Robe", "resistance"],
+		["legs", "cloth", "Grove Trousers", "resistance"], ["hands", "cloth", "Grove Handwraps", "resistance"],
+		["feet", "cloth", "Grove Sandals", "resistance"]],
+}
+
+
+## The class's starting items: slot -> item.
+static func starter_kit(cls: String) -> Dictionary:
+	var out := {}
+	for e: Array in STARTER.get(cls, []):
+		out[e[0]] = {"name": e[2], "slot": e[0], "kind": e[1], "ilvl": 1, "rarity": "common", "stats": {e[3]: 1}}
+	return out
+
+
 ## Materials by item level: 1-7, 8-15, 16+.
 const MATERIALS := {
 	"plate": ["Iron", "Steel", "Mithril"], "mail": ["Ringmail", "Chain", "Scale"],

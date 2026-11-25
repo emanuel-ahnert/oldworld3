@@ -48,6 +48,13 @@ var silenced_until := 0.0    ## Stone Shock: no special abilities until then
 var champion := ""           ## the name of a champion, "" for ordinary enemies
 var modifier := ""           ## champions: Burning, Swift, Shielded, Thorned or Winged
 var _aura_at := 0.0
+var _steer_dir := Vector3.ZERO   ## the way around an obstacle chosen last (Vector3.ZERO: none)
+var _steer_side := 0             ## which side it goes around (1 left, -1 right), kept a while
+var _side_until := 0.0
+var _steer_frame := 0
+var _progress_at := 0.0          ## stuck check: where it was, and when
+var _progress_pos := Vector3.ZERO
+var _detour_until := 0.0
 var _shield_at := 0.0
 
 
@@ -235,6 +242,8 @@ func _physics_process(dt: float) -> void:
 			else:
 				want = h.normalized()
 				speed = data.speed * 1.2
+	if want != Vector3.ZERO and speed > 0.5 and steering:
+		want = _steer(want, speed, t)
 	if want != Vector3.ZERO:
 		_face(want, dt, 8.0)
 	velocity.x = want.x * speed
@@ -245,6 +254,70 @@ func _physics_process(dt: float) -> void:
 	nameplate.visible = state == State.CHASE or (p != null and p.target == self)
 	if nameplate.visible:
 		nameplate.text = plate_name() + ("  %d%%" % roundi(100.0 * stats.hp / stats.max_hp) if stats.hp < stats.max_hp else "")
+
+
+## Going around obstacles (tree trunks, houses, crates, cliffs): probes ahead along `want`;
+## when blocked, takes the clear direction closest to it, going around on one side and keeping
+## that side for a while (no dithering at a wall). When it still makes no headway for half a
+## second, it sidesteps along the wall for a moment. Probes run every third frame.
+const PROBE_ANGLES := [30.0, 55.0, 80.0, 110.0, 140.0]
+static var steering := true           ## off: straight at the goal (test: --no-steer)
+
+
+func _steer(want: Vector3, speed: float, t: float) -> Vector3:
+	# Stuck check: less than a quarter of the expected way in half a second.
+	if t - _progress_at > 0.5:
+		var moved := Vector2(global_position.x - _progress_pos.x, global_position.z - _progress_pos.z).length()
+		if _progress_at > 0.0 and moved < speed * 0.5 * 0.25 and t > _detour_until:
+			if _steer_side == 0:
+				_steer_side = 1 if randf() < 0.5 else -1
+			_side_until = t + 2.0
+			_detour_until = t + 0.8
+		_progress_at = t
+		_progress_pos = global_position
+	if t < _detour_until:
+		var d := want.rotated(Vector3.UP, deg_to_rad(80.0) * _steer_side)
+		return d if _clear(d) else want.rotated(Vector3.UP, deg_to_rad(120.0) * _steer_side)
+	_steer_frame += 1
+	if _steer_frame % 3 != 0 and _steer_dir != Vector3.ZERO:
+		# Between probes keep the way found, turned with the goal.
+		return _steer_dir
+	if _clear(want):
+		_steer_dir = Vector3.ZERO
+		if t > _side_until:
+			_steer_side = 0
+		return want
+	var sides := [_steer_side] if _steer_side != 0 else [1, -1]
+	if _steer_side == 0:
+		sides.shuffle()
+	for a: float in PROBE_ANGLES:
+		for side: int in sides:
+			var d := want.rotated(Vector3.UP, deg_to_rad(a) * side)
+			if _clear(d):
+				_steer_side = side
+				_side_until = t + 2.0
+				_steer_dir = d
+				return d
+	# Boxed in on the committed side: try the other one next time.
+	_steer_side = -_steer_side if _steer_side != 0 else 1
+	_steer_dir = Vector3.ZERO
+	return want
+
+
+## Nothing that blocks within reach along `dir` (horizontal rays at knee height in the middle
+## and at both shoulders); walkable slopes don't count.
+func _clear(dir: Vector3) -> bool:
+	var space := get_world_3d().direct_space_state
+	var r: float = data.radius
+	var from := global_position + Vector3(0, 0.6, 0)
+	var side := Vector3(-dir.z, 0, dir.x) * r * 0.8
+	var reach := r + 1.4
+	for off: Vector3 in [Vector3.ZERO, side, -side]:
+		var q := PhysicsRayQueryParameters3D.create(from + off, from + off + dir * reach, 1, [get_rid()])
+		var hit := space.intersect_ray(q)
+		if not hit.is_empty() and (hit.normal as Vector3).y < 0.6:
+			return false
+	return true
 
 
 func _separation(to_player: Vector3, dist: float) -> Vector3:
@@ -452,12 +525,11 @@ func _auto_attack() -> void:
 	if data.has("ranged"):
 		# Casters shoot a bolt instead of hitting (Frost Wisp: ice shard).
 		var p := World.player
-		var col: Color = {"Fire": Color(1, 0.55, 0.2), "Nature": Color(0.5, 0.9, 0.3), "Dark": Color(0.6, 0.3, 0.8), "Air": Color(0.85, 0.95, 1.0)}.get(String(data.get("element", "Ice")), Color(0.6, 0.85, 1.0))
-		Projectile.launch(global_position + Vector3(0, float(data.get("float", 1.0)), 0), p, col, func():
+		Projectile.spell(global_position + Vector3(0, float(data.get("float", 1.0)), 0), p, String(data.get("element", "Ice")), func():
 			if stats.dead or p.stats.dead:
 				return
 			var r := stats.roll_spell(p.stats, Rules.swing_power(stats.swing_time), String(data.get("element", "Ice")))
-			p.stats.take_damage(r.amount, r.crit, stats), 0.14)
+			p.stats.take_damage(r.amount, r.crit, stats))
 		return
 	_strike()
 	if humanoid:

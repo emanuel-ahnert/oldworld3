@@ -10,7 +10,9 @@ extends RefCounted
 const UPPER := ["Spine", "Chest", "UpperChest", "Neck", "Head",
 	"LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
 	"RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
-const LOOPING := ["idle", "walk", "run", "ready"]
+const LOOPING := ["idle", "walk", "run", "ready", "cast_loop"]
+const ARMS := ["LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+	"RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
 ## Ground speed (m/s) each locomotion clip covers at playback rate 1, so feet don't slide:
 ## rate = speed / CLIP_SPEED. Printed by tools/pipeline/anim_dev.py on export ("speed").
 const CLIP_SPEED := {"run": 7.0, "walk": 1.6}
@@ -32,6 +34,7 @@ var _state := "idle"
 var _loco: AnimationNodeTransition
 var _shot := ""             ## the last one-shot started
 var _has := {}               ## clip name -> true for the clips this body has
+var keep_arms_in_air := false ## staff wielders: no arm swing in the jump (Humanoid)
 
 
 func _init(body: Node3D) -> void:
@@ -63,10 +66,25 @@ func _init(body: Node3D) -> void:
 	var ts := AnimationNodeTimeScale.new()
 	bt.add_node("speed", ts)
 	bt.connect_node("speed", 0, "loco")
+	# Staff wielders keep their arms still in a jump (the jump's arm swing tipped the staff over
+	# backward): the idle pose on the arms over the jump (keep_arms_in_air).
+	var ai := AnimationNodeAnimation.new()
+	ai.animation = "idle"
+	bt.add_node("arms_idle", ai)
+	var arms := AnimationNodeBlend2.new()
+	arms.filter_enabled = true
+	var root0 := ap.get_node(ap.root_node)
+	var skel_path0 := String(root0.get_path_to(skel))
+	for b in ARMS:
+		if skel.find_bone(b) >= 0:
+			arms.set_filter_path(NodePath(skel_path0 + ":" + b), true)
+	bt.add_node("arms_mix", arms)
+	bt.connect_node("arms_mix", 0, "speed")
+	bt.connect_node("arms_mix", 1, "arms_idle")
 
 	# Whole body (under) and upper body (over), each with its own clip picker.
 	bt.add_node("full", _shot_node(bt, "pick_full"))
-	bt.connect_node("full", 0, "speed")
+	bt.connect_node("full", 0, "arms_mix")
 	bt.connect_node("full", 1, "pick_full")
 	var one := _shot_node(bt, "pick")
 	one.filter_enabled = true
@@ -76,7 +94,19 @@ func _init(body: Node3D) -> void:
 		if skel.find_bone(b) >= 0:
 			one.set_filter_path(NodePath(skel_path + ":" + b), true)
 	bt.add_node("oneshot", one)
-	bt.connect_node("oneshot", 0, "full")
+	# Casting (set_cast): the channelling loop over the whole body (casting needs standing still),
+	# under the one-shots so the release plays over it.
+	if lib.has_animation("cast_loop"):
+		var ca := AnimationNodeAnimation.new()
+		ca.animation = "cast_loop"
+		bt.add_node("cast_loop", ca)
+		bt.add_node("cast_mix", AnimationNodeBlend2.new())
+		bt.connect_node("cast_mix", 0, "full")
+		bt.connect_node("cast_mix", 1, "cast_loop")
+		bt.connect_node("oneshot", 0, "cast_mix")
+		_has["cast_loop"] = true
+	else:
+		bt.connect_node("oneshot", 0, "full")
 	bt.connect_node("oneshot", 1, "pick")
 	# Over everything: the Whirlwind pose on the upper body, faded in and out (set_whirl).
 	var whirl_out := "oneshot"
@@ -128,6 +158,18 @@ static func _pose_of(src: Animation, frac: float) -> Animation:
 
 
 var _whirl := 0.0
+var _cast := 0.0
+
+
+## Casting a spell: the channelling loop fades in (0.15 s) and out again (call every frame).
+func set_cast(on: bool, dt: float) -> void:
+	if not _has.get("cast_loop", false):
+		return
+	var goal := 1.0 if on else 0.0
+	if _cast == goal:
+		return
+	_cast = move_toward(_cast, goal, dt * 7.0)
+	tree.set("parameters/cast_mix/blend_amount", _cast)
 
 
 ## Whirlwind pose on the upper body: fades toward `on` (call every frame while it changes).
@@ -173,6 +215,7 @@ func set_move(state: String, rate := 1.0) -> void:
 		_loco.xfade_time = 0.05 if state == "jump" else 0.2
 		_state = state
 		tree.set("parameters/loco/transition_request", state)
+		tree.set("parameters/arms_mix/blend_amount", 1.0 if state == "jump" and keep_arms_in_air else 0.0)
 	tree.set("parameters/speed/scale", rate)
 
 
@@ -191,6 +234,11 @@ func play_shot(name: String) -> void:
 		tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	elif tree.get("parameters/full/active"):
 		tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+
+
+## A melee swing playing (the staff then swings with the hand, Humanoid._staff_update).
+func swinging() -> bool:
+	return _shot in ["attack1", "attack2", "attack3", "strike"] and tree.get("parameters/oneshot/active")
 
 
 func is_dead_state() -> bool:

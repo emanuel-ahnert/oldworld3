@@ -15,6 +15,7 @@ var spawner: Spawner
 var enemies: Array[Enemy] = []
 var chests: Array[Chest] = []
 var landmarks: Array[Vector3] = []   ## pyramid groups (Ancient Desert), zone-local
+var graveyards: Array[Vector3] = []  ## graveyards (Unholy lands), zone-local
 
 
 var _seed := 0
@@ -51,7 +52,8 @@ func compute(p_cell: Vector2i, world_seed: int, with_enemies := true) -> void:
 	scatter = Scatter.new()
 	scatter.name = "Scatter"
 	scatter.view_range = minf(World.view_range, float(info.get("view_range", 1000.0)))
-	scatter.compute(terrain, seed, Settlement.shrine_spots(terrain), info, landmarks)
+	graveyards = Graveyard.spots(terrain, int(info.get("graveyards", 0)), seed)
+	scatter.compute(terrain, seed, Settlement.shrine_spots(terrain), info, landmarks, graveyards)
 
 
 ## The node part, one step per frame on the main thread (ZoneManager): 0 terrain meshes,

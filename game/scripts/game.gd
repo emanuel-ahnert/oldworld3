@@ -33,7 +33,7 @@ static func write_save(p: Player) -> void:
 	var d := {
 		"version": 1, "seed": seed, "class": p.cls, "home": [home.x, home.y],
 		"level": p.stats.level, "xp": p.xp, "money": p.money,
-		"bag": p.bag, "equipped": p.equipped, "quests": p.quests.to_save(), "visited": p.visited.keys(), "chests": p.opened_chests.keys(),
+		"bag": p.bag, "equipped": p.equipped, "kit": p.kit_given, "tips": p.tips_shown.keys(), "quests": p.quests.to_save(), "visited": p.visited.keys(), "chests": p.opened_chests.keys(),
 		"time": DayNight.instance.time if DayNight.instance else 0.3,
 		"hp": p.stats.hp, "loadout": p.loadout, "passives": p.passive_loadout,
 		"pos": [p.global_position.x, p.global_position.y, p.global_position.z],

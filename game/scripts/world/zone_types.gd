@@ -73,7 +73,8 @@ const TYPES := {
 		# (BushEyes). grass_tint: color the grass is pulled toward, alpha = how far.
 		"ground_tint": Color(1, 1, 1), "grass_tint": Color(0.4, 0.45, 0.33, 0.35), "snow": 0.5, "bare": 0.9, "tree_density": 1.5, "forest_min": 0.52, "view_range": 105.0,
 		"trees": {"deadtree": 0.4, "darkpine": 0.6},
-		"bushes": true, "bush_kind": {"deadbush": 0.75, "gravestone": 0.25}, "bush_density": 2.5, "eyes": true,
+		"bushes": true, "bush_kind": "deadbush", "bush_density": 2.5, "eyes": true,
+		"graveyards": 3,      # fenced graveyards with a crypt (Graveyard), not stones in the woods
 		"enemies": {"dire_wolf": 14, "bat_swarm": 10, "cultist": 6, "vampire": 4},
 		"inn": "res://assets/buildings/gothichouse.glb", "houses": ["res://assets/buildings/gothichouse.glb", "res://assets/buildings/crypt.glb"],
 		"music": "unholy", "village_music": "chapel", "names": "unholy",

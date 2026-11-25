@@ -15,6 +15,9 @@ done
 # The cloth hood with its cape, fitted to the body (worn as the "head" layer).
 blender -b --python tools/pipeline/hood_layer.py -- spike/body game_src/raw/gear/hood.glb spike/body/hood_layer.glb 2>&1 | grep -E "Error|Traceback" || true
 cp spike/body/hood_layer.glb game/assets/gear/
+# The casters' robe skirt (tools/pipeline/robe_layer.py), coloured per class in the game.
+blender -b --python tools/pipeline/robe_layer.py -- spike/body spike/body/robe_layer.glb 2>&1 | grep -E "Error|Traceback" || true
+cp spike/body/robe_layer.glb game/assets/gear/
 # outfit name : source model : game folder
 for spec in "plate:spike/ctl/knight2_s32.glb:warrior" "bandit:game_src/raw/outfits/bandit.glb:bandit" \
             "goblin:game_src/raw/outfits/goblin.glb:goblin" "mage:game_src/raw/outfits/mage.glb:mage" \
