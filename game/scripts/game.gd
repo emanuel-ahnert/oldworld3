@@ -14,10 +14,18 @@ static var cls := "warrior"              ## the hero's class for a new game
 static var loaded: Dictionary = {}      ## save data to apply when the world starts ({} = new game)
 
 
-## Quits the game. A tooltip still open at exit leaves its popup's signal connections behind
-## (engine errors on stdout): the root viewport is told the mouse left, which closes it.
+## Quits the game cleanly (also on closing the window: title.gd and main.gd turn off
+## auto_accept_quit and come here). Music still playing at exit leaks its playback objects and
+## a tooltip still open leaves its popup's connections behind (engine errors on stdout): the
+## players are stopped and the audio server gets two frames to let go of them, the root
+## viewport is told the mouse left (closing tooltips).
 static func quit(tree: SceneTree) -> void:
 	tree.root.notification(Viewport.NOTIFICATION_VP_MOUSE_EXIT)
+	for p: AudioStreamPlayer in tree.root.find_children("*", "AudioStreamPlayer", true, false):
+		p.stop()
+		p.stream = null
+	await tree.process_frame
+	await tree.process_frame
 	tree.quit()
 
 

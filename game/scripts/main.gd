@@ -506,9 +506,9 @@ func _apply_save(d: Dictionary) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		get_tree().root.notification(Viewport.NOTIFICATION_VP_MOUSE_EXIT)   # close tooltips (Game.quit)
 		if player and not args.has("shot") and not args.has("bench"):
 			Game.write_save(player)
+		Game.quit(get_tree())
 
 
 func _parse_args() -> void:

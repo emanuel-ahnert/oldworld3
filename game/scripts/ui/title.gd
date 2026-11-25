@@ -58,7 +58,8 @@ func _ready() -> void:
 		return
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	GameMenu.apply_volumes()
-	if _shot == "":
+	get_tree().auto_accept_quit = false       # closing the window: Game.quit (_notification)
+	if _shot == "" or OS.get_environment("TITLE_QUIT") != "":
 		var m := AudioStreamPlayer.new()
 		var st: AudioStreamOggVorbis = load("res://assets/audio/music/title.ogg")
 		st.loop = true
@@ -327,6 +328,11 @@ func _show_hero(cid: String) -> void:
 	_hero.anim.set_move("idle")
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		Game.quit(get_tree())
+
+
 # --- input -----------------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -479,4 +485,7 @@ func _process(dt: float) -> void:
 			print("TITLE page %d class %s zone %s seed %s" % [_page, CLASS_IDS[_class], ZoneTypes.START_TYPES[_zone], _seed])
 		if _frames == 26:
 			get_viewport().get_texture().get_image().save_png(_shot)
-			get_tree().quit()
+			if OS.get_environment("TITLE_QUIT") != "":
+				Game.quit(get_tree())             # test: the normal way out (no leaks at exit)
+			else:
+				get_tree().quit()
