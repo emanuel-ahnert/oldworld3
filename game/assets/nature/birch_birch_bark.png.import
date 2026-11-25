@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cx05othgkp4m7"
-path="res://.godot/imported/cypress_Image_1.png-e1fc90f65e95dd1d355796b9438788af.ctex"
+uid="uid://be3p5j1qbwqaw"
+path="res://.godot/imported/birch_birch_bark.png-76970ecb55bb34046e29278671d8248b.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "987f9606ad3e7a22fb04d162b671a7af"
+"md5": "89a08a74d73dd0df597b4d7065ee645b"
 }
 
 [deps]
 
-source_file="res://assets/nature/cypress_Image_1.png"
-dest_files=["res://.godot/imported/cypress_Image_1.png-e1fc90f65e95dd1d355796b9438788af.ctex"]
+source_file="res://assets/nature/birch_birch_bark.png"
+dest_files=["res://.godot/imported/birch_birch_bark.png-76970ecb55bb34046e29278671d8248b.ctex"]
 
 [params]
 

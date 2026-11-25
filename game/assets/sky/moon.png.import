@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bebg7i4rgsho3"
-path="res://.godot/imported/cypress_1.png-4919c97c73140f4e0f783198b3c57a21.ctex"
+uid="uid://jtdfl2pww1uc"
+path="res://.godot/imported/moon.png-049ea1b4976859199f87e8acf155b80a.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "4a4a8941a19fed7361eeeac64510b450"
 }
 
 [deps]
 
-source_file="res://assets/nature/cypress_1.png"
-dest_files=["res://.godot/imported/cypress_1.png-4919c97c73140f4e0f783198b3c57a21.ctex"]
+source_file="res://assets/sky/moon.png"
+dest_files=["res://.godot/imported/moon.png-049ea1b4976859199f87e8acf155b80a.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ba3dfwbt6e4da"
-path="res://.godot/imported/linden_1.png-7bb262734bbfc934f8edbb7807472068.ctex"
+uid="uid://c8bijiunv8nk6"
+path="res://.godot/imported/cypress_cypress_leaves.png-cabffc263aa1c39d356f5427e880feba.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "202354752e28d7ef50016997db53c694"
+"md5": "1ee718ee4ee2e9dc068c50a58f76ac5c"
 }
 
 [deps]
 
-source_file="res://assets/nature/linden_1.png"
-dest_files=["res://.godot/imported/linden_1.png-7bb262734bbfc934f8edbb7807472068.ctex"]
+source_file="res://assets/nature/cypress_cypress_leaves.png"
+dest_files=["res://.godot/imported/cypress_cypress_leaves.png-cabffc263aa1c39d356f5427e880feba.ctex"]
 
 [params]
 

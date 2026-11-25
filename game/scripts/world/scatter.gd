@@ -25,7 +25,7 @@ const KINDS := {
 	"cactus": {"path": "res://assets/nature/cactus.glb", "h": Vector2(3.0, 5.5), "sink": 0.3, "trunk": 0.35},
 	"drybush": {"path": "res://assets/nature/drybush.glb", "h": Vector2(1.0, 1.8), "sink": 0.1, "trunk": 0.0},
 	"olive": {"path": "res://assets/nature/olive.glb", "h": Vector2(5.0, 8.0), "sink": 0.2, "trunk": 0.4},
-	"cypress": {"path": "res://assets/nature/cypress.glb", "h": Vector2(9.0, 14.0), "sink": 0.1, "trunk": 0.3, "tint": Color(1.35, 1.4, 1.3)},
+	"cypress": {"path": "res://assets/nature/cypress.glb", "h": Vector2(9.0, 14.0), "sink": 0.1, "trunk": 0.3},
 	"lavender": {"path": "res://assets/nature/lavender.glb", "h": Vector2(0.6, 1.1), "sink": 0.05, "trunk": 0.0},
 	"deadtree": {"path": "res://assets/nature/deadtree.glb", "h": Vector2(6.0, 10.0), "sink": 0.2, "trunk": 0.35},
 	"darkpine": {"path": "res://assets/nature/darkpine.glb", "h": Vector2(11.0, 16.0), "sink": 0.2, "trunk": 0.35, "tint": Color(0.27, 0.34, 0.26)},
@@ -36,6 +36,14 @@ const KINDS := {
 	"deadbush": {"path": "res://assets/nature/shrub.glb", "h": Vector2(0.9, 1.5), "sink": 0.08, "trunk": 0.0, "tint": Color(0.3, 0.42, 0.27)},
 	"boulder": {"path": "res://assets/nature/boulder.glb", "h": Vector2(0.8, 2.6), "sink": 0.25, "trunk": 0.0},
 }
+
+## How wide each model is at the ground (roots, low branches), as a fraction of its height
+## (measured from the meshes). On a slope a wide base would hang in the air on the downhill side:
+## the tree is sunk to the lowest point under it, or, when that is more than MAX_DROP m, a
+## narrow-based tree of the zone grows there instead (or none).
+const BASE := {"beech": 0.04, "linden": 0.05, "birch": 0.02, "oak": 0.37, "palm": 0.2, "cactus": 0.35,
+	"olive": 0.1, "cypress": 0.02, "deadtree": 0.48, "darkpine": 0.06, "pine1": 0.34, "pine2": 0.4}
+const MAX_DROP := 0.45
 
 ## Forest trees and how often each species is picked; the gnarled oak is the rare one.
 const TREES := {"beech": 0.35, "linden": 0.3, "birch": 0.25, "oak": 0.1}
@@ -125,7 +133,23 @@ func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dict
 				placed[kind][key] = []
 			var spec: Dictionary = KINDS[kind]
 			var hgt := rng.randf_range(spec.h.x, spec.h.y)
-			var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(px, terrain.height_at(px, pz) - spec.sink, pz))
+			var ground := terrain.height_at(px, pz)
+			var drop := _drop(terrain, px, pz, ground, float(BASE.get(kind, 0.0)) * hgt)
+			if drop > MAX_DROP:
+				# Too steep for this tree's wide base: the narrowest tree of the zone, if it fits.
+				var alt := _narrowest()
+				if alt == "" or alt == kind:
+					continue
+				kind = alt
+				spec = KINDS[kind]
+				hgt = rng.randf_range(spec.h.x, spec.h.y)
+				drop = _drop(terrain, px, pz, ground, float(BASE.get(kind, 0.0)) * hgt)
+				if drop > MAX_DROP:
+					continue
+				key = Vector2i(floori(px / CHUNK), floori(pz / CHUNK))
+				if not placed[kind].has(key):
+					placed[kind][key] = []
+			var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(px, ground - spec.sink - drop, pz))
 			placed[kind][key].append([t, hgt])
 			if spec.trunk > 0.0:
 				_trunks.append([t.origin, hgt, float(spec.trunk)])
@@ -231,6 +255,28 @@ func _pick(weights: Dictionary, r: float) -> String:
 		if r < acc:
 			return k
 	return weights.keys()[-1]
+
+
+## How far the ground falls below `ground` (at the middle) within `radius` m: 8 points on the
+## circle and 4 halfway.
+func _drop(terrain: Terrain, x: float, z: float, ground: float, radius: float) -> float:
+	if radius < 0.3:
+		return 0.0
+	var low := ground
+	for k in 12:
+		var r := radius if k < 8 else radius * 0.5
+		var a := TAU * k / (8.0 if k < 8 else 4.0)
+		low = minf(low, terrain.height_at(x + cos(a) * r, z + sin(a) * r))
+	return ground - low
+
+
+## The zone's tree with the narrowest base ("" without trees).
+func _narrowest() -> String:
+	var best := ""
+	for k in _trees:
+		if best == "" or float(BASE.get(k, 0.0)) < float(BASE.get(best, 0.0)):
+			best = k
+	return best
 
 
 func _pick_tree(r: float) -> String:

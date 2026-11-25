@@ -650,6 +650,39 @@ What was built overnight while the user slept, in order. Start the game from VS 
      - Fix: an empty action bar key (or one not learned yet) asked about made errors
        (ability_problem on an empty ability).
 
+115. **Real trees, a real moon, distance fog, options, combat feel.**
+     - Trees: the grassland's beech, linden and birch, the Mediterranean's olive and cypress and
+       the bushes are built procedurally (`tools/pipeline/tree.py`, `tools/build_trees.sh`):
+       trunk, limbs and branches as tubes, leaves as sprig cards rooted on the branches (the
+       generated models were clouds of leaf flakes with nothing holding them). Normals bent out
+       of the crown, darker sprigs inside it. Old models: v0.2.0. ~6% fewer FPS.
+     - Trees with a wide base sink to the lowest ground under them on slopes, or a narrow tree
+       of the zone grows there instead (scatter.gd `BASE`, `MAX_DROP`).
+     - The moon: a generated near side (`tools/textures/moon.py`: the maria at their real
+       places, faint craters, Tycho's rays) on a quad in the sky with a halo
+       (`shaders/moon.gdshader`); the sky's blurry disc is off at night.
+     - Dense distance fog in all zones but the deserts (full at 210 m; the Unholy lands at
+       170 m), the sky's horizon band in the fog's color so the rim mountains fade into it.
+     - Options (title screen and Esc menu): quality, day and night, sound effects and music
+       volume (buses "SFX" and "Music", saved in settings.cfg).
+     - Blows land at the swing's moment of impact (CharAnimator.IMPACT), for the hero and the
+       enemies: damage, hit sound and riders (stuns, poison) then, if the target is still in
+       reach. Combat ends as soon as no enemy is after the hero (Charge works again at once);
+       crossed swords at the top while in combat; a "You died" banner shows the penalty.
+     - Nameplates like WoW's: a health bar with a black border over the name, no level, no %;
+       about the same size on screen at any distance. Combat text twice as large. No sound on
+       a kill.
+     - Mage: Fireball (level 10, 25 mana, cast 2 s, power 60, ignites the target).
+     - Cloth hood: snug around the head, ending just under the jaw (no gap over a robe).
+     - Running: the weapon hand swings with the arm (75% of the forearm's swing) instead of
+       holding the blade at one angle.
+     - Chests mostly in elite camps (up to three). Wolves and other creatures are matte (the
+       generated metal maps made fur shine in the moonlight).
+     - Items: a weapon's own stat takes the whole budget and the suffix comes on top (an
+       iron dagger of the Owl had less Magic and Mana than a plain one two levels lower).
+     - Exit: no more leaked music playback (streams released on exit), tooltips closed before
+       quitting.
+
 
 ## Known issues / next
 

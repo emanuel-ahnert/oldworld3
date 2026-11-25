@@ -17,6 +17,7 @@ const INK := Color(0.95, 0.92, 0.86)
 const FADED := Color(0.72, 0.68, 0.6)
 
 var _page := Page.MAIN
+var _opts: GameMenu              ## the options (GameMenu's page), opened from the main page
 var _cursor := 0
 var _class := 0
 var _zone := 0
@@ -56,14 +57,19 @@ func _ready() -> void:
 		get_tree().change_scene_to_file.call_deferred("res://scenes/main.tscn")
 		return
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	GameMenu.apply_volumes()
 	if _shot == "":
 		var m := AudioStreamPlayer.new()
 		var st: AudioStreamOggVorbis = load("res://assets/audio/music/title.ogg")
 		st.loop = true
 		m.stream = st
 		m.volume_db = -8
+		m.bus = "Music"
 		add_child(m)
 		m.play()
+		tree_exiting.connect(func():       # a stream playing at exit leaks (engine warnings)
+			m.stop()
+			m.stream = null)
 	_has_save = Game.has_save()
 	_class = maxi(0, CLASS_IDS.find(Game.cls))
 	_zone = maxi(0, ZoneTypes.START_TYPES.find(Game.start_type))
@@ -197,7 +203,7 @@ func _fancy_panel() -> PanelContainer:
 func _items() -> Array:
 	match _page:
 		Page.MAIN:
-			return (["Continue"] if _has_save else []) + ["New game", "Quit"]
+			return (["Continue"] if _has_save else []) + ["New game", "Options", "Quit"]
 		Page.CONFIRM:
 			return ["Start the new game", "Back"]
 	return ROWS
@@ -324,7 +330,7 @@ func _show_hero(cid: String) -> void:
 # --- input -----------------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed:
+	if not (event is InputEventKey) or not event.pressed or (_opts and _opts.visible):
 		return
 	var k := (event as InputEventKey).keycode
 	var handled := true
@@ -387,8 +393,17 @@ func _select() -> void:
 				"New game":
 					_page = Page.SETUP
 					_cursor = 0
+				"Options":
+					if _opts == null:
+						_opts = GameMenu.new()
+						_opts.options_only = true
+						add_child(_opts)
+						_opts.closed.connect(func(): _panel.visible = true)
+					_panel.visible = false
+					_opts.open()
+					return
 				"Quit":
-					get_tree().quit()
+					Game.quit(get_tree())
 					return
 		Page.SETUP:
 			match item:

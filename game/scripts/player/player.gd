@@ -10,6 +10,7 @@ extends CharacterBody3D
 signal leveled_up(level: int)
 signal level_banner(level: int, learned: Array)   ## new abilities and passives as text lines
 signal message(text: String)
+signal death_banner(lines: Array)   ## after waking up: what the death cost
 signal saved_point                  ## something worth an autosave happened (checkpoint, death)
 signal loadout_changed              ## the action bar's abilities changed (abilities menu)
 
@@ -54,6 +55,7 @@ const ABILITIES_MAGE := [
 	{"id": "mana_shield", "name": "Mana Shield", "key": 4, "level": 3, "mana": 30, "cd": 30.0, "cast": 0.0},
 	{"id": "ignite", "name": "Ignite", "key": 5, "level": 4, "mana": 24, "cd": 0.0, "cast": 0.0, "element": "Fire", "range": 30.0},
 	{"id": "blink", "name": "Blink", "key": 6, "level": 6, "mana": 15, "cd": 15.0, "cast": 0.0},
+	{"id": "fireball", "name": "Fireball", "key": 8, "level": 10, "mana": 25, "cd": 0.0, "cast": 2.0, "power": 60.0, "element": "Fire", "range": 30.0},
 	{"id": "blizzard", "name": "Blizzard", "key": 7, "level": 8, "mana": 45, "cd": 0.0, "channel": 6.0, "tick": 1.0, "power": 22.0, "element": "Ice", "range": 30.0},
 ]
 ## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
@@ -395,6 +397,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		zoom = clampf(zoom * (1.1 if _zoom_key(event as InputEventKey) > 0 else 0.9), ZOOM_MIN, ZOOM_MAX)
 	elif event is InputEventKey and event.pressed and not event.echo:
 		var k := (event as InputEventKey).physical_keycode
+		if k >= KEY_KP_1 and k <= KEY_KP_6:
+			k = k - KEY_KP_1 + KEY_1
 		if k >= KEY_1 and k <= KEY_6:
 			use_ability(k - KEY_1 + 1)
 		elif k == KEY_R:
@@ -709,6 +713,11 @@ func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 		gcd_until = maxf(gcd_until, t + GCD)
 
 
+func _stun(e: Enemy, seconds: float) -> void:
+	e.stats.stun_until = Combatant.now() + seconds
+	World.float_text(e.global_position + Vector3(0, 1.6, 0), "Stunned", Color(1, 0.8, 0.3), 36, e)
+
+
 func _execute(a: Dictionary) -> void:
 	match a.id:
 		"heavy_strike":
@@ -745,7 +754,7 @@ func _execute(a: Dictionary) -> void:
 			model.anim.play_shot("attack1")
 			target.stats.add_dot("rend", 15.0, 1.0 / 32.0, stats)
 			target.engage()
-		"fire_bolt", "ice_bolt", "smite", "hex_bolt", "storm_bolt", "thorn_lash", "moonbeam":
+		"fire_bolt", "fireball", "ice_bolt", "smite", "hex_bolt", "storm_bolt", "thorn_lash", "moonbeam":
 			_bolt(a)
 		"steady_shot", "venom_arrow":
 			_arrow(target, float(a.power), String(a.element), a.id)
@@ -866,9 +875,7 @@ func _execute(a: Dictionary) -> void:
 		"righteous_strike":
 			_melee_hit(float(a.power), "strike", 1.0, false, 0.0, "Holy")
 		"judgment_hammer":
-			_melee_hit(float(a.power), "attack2", 1.0, false, 0.0, "Holy")
-			target.stats.stun_until = Combatant.now() + 2.5
-			World.float_text(target.global_position + Vector3(0, 1.6, 0), "Stunned", Color(1, 0.8, 0.3), 36, target)
+			_melee_hit(float(a.power), "attack2", 1.0, false, 0.0, "Holy", _stun.bind(2.5))
 		"holy_seal":
 			stats.add_buff("holy_seal", 30.0, {})
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Holy Seal", Color(1, 0.95, 0.6), 40, self)
@@ -886,12 +893,10 @@ func _execute(a: Dictionary) -> void:
 		"gut_slash":
 			_melee_hit(float(a.power), "strike", 1.0)
 		"poisoned_blade":
-			_melee_hit(float(a.power), "attack2", 1.0)
-			target.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats)
+			_melee_hit(float(a.power), "attack2", 1.0, false, 0.0, "Physical", func(e: Enemy):
+				e.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats))
 		"cheap_shot":
-			_melee_hit(float(a.power), "attack1", 1.0)
-			target.stats.stun_until = Combatant.now() + 3.0
-			World.float_text(target.global_position + Vector3(0, 1.6, 0), "Stunned", Color(1, 0.8, 0.3), 36, target)
+			_melee_hit(float(a.power), "attack1", 1.0, false, 0.0, "Physical", _stun.bind(3.0))
 		"knife_throw":
 			model.anim.play_shot("release")
 			var e := target
@@ -958,7 +963,10 @@ func _bolt(a: Dictionary) -> void:
 		_spell_hit(e, float(a.power), a.element)
 		if ice:
 			e.stats.slow(6.0, 0.6)
-		e.engage())
+		if a.id == "fireball" and not e.stats.dead:
+			# Fireball: sets the target alight (Ignite's burn).
+			e.stats.add_dot("ignite", 24.0, 1.0 / 32.0, stats)
+		e.engage(), 1.7 if a.id == "fireball" else 1.0)
 
 
 func _spell_hit(e: Enemy, power: float, element: String) -> void:
@@ -1109,12 +1117,26 @@ func weapon_sound() -> String:
 	return "staff"
 
 
-func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extra_crit := 0.0, element := "Physical") -> void:
+## A melee blow: the swing starts now, the blow lands (hit, miss or dodge, the damage, the sound
+## and `on_hit`) at the clip's moment of impact (CharAnimator.impact), if the target is still
+## alive and within reach then.
+func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extra_crit := 0.0, element := "Physical", on_hit := Callable()) -> void:
 	model.anim.play_shot(anim)
 	extra *= _ambush()
 	_break_stealth()
 	var e := target
 	e.engage()
+	stats.mark_combat()
+	get_tree().create_timer(CharAnimator.impact(anim), false).timeout.connect(func():
+		if is_instance_valid(e) and not e.stats.dead and not stats.dead:
+			_melee_land(e, power, anim, extra, no_miss, extra_crit, element, on_hit))
+
+
+func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bool, extra_crit: float, element: String, on_hit: Callable) -> void:
+	var to_me := global_position - e.global_position
+	if to_me.length() > MELEE_RANGE + float(e.data.radius) + 1.5:
+		Audio.sfx("miss", -4.0)              # it got away during the swing
+		return
 	stats.mark_combat()
 	if not no_miss and (World.in_smoke(global_position) or e.is_flying()) and randf() < 0.5:
 		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Miss", Color(0.8, 0.8, 0.8), 40, e)
@@ -1122,7 +1144,6 @@ func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extr
 		overwhelm_until = Combatant.now() + 5.0
 		return
 	# Dodge: only facing the attacker (not from behind), like WoW; it opens Overwhelm too.
-	var to_me := global_position - e.global_position
 	if not no_miss and randf() < e.stats.dodge_chance and to_me.dot(-e.global_transform.basis.z) > 0.0:
 		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Dodge", Color(0.8, 0.8, 0.8), 40, e)
 		Audio.sfx("miss")
@@ -1140,6 +1161,8 @@ func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extr
 	if power >= 40.0:
 		Audio.sfx("slash", -6.0)          # strong blows: the blade's swish over the impact
 	stats.rage = minf(100.0, stats.rage + (16.0 if r.crit else 8.0) * (1.0 if power < 40.0 else 0.0))
+	if on_hit.is_valid() and not e.stats.dead:
+		on_hit.call(e)
 
 
 ## Rogue: the first hit out of stealth deals 50% more.
@@ -1247,6 +1270,22 @@ func _enrage() -> float:
 signal hint(text: String)            ## a tip shown once, a bit longer than a message
 var tips_shown := {}                 ## tip id -> true (saved)
 var _was_fighting := false
+var _combat_check_at := 0.0
+
+
+## Combat ends as soon as no living enemy is after the hero (not only 5 s after the last hit):
+## after the last kill, Charge and camping are free again. A short grace after a hit, while a
+## missile is on its way or the struck enemy turns to fight.
+func _combat_end_check(t: float) -> void:
+	if t < _combat_check_at or not stats.in_combat():
+		return
+	_combat_check_at = t + 0.25
+	if t - stats.last_combat < 1.0:
+		return
+	for e in World.enemies:
+		if e.state == Enemy.State.CHASE and not e.stats.dead:
+			return
+	stats.last_combat = -100.0
 
 
 ## Tips for a new hero: after the first fight, how to rest.
@@ -1259,6 +1298,7 @@ func _tips_process() -> void:
 
 
 func _combat_process(t: float) -> void:
+	_combat_end_check(t)
 	_tips_process()
 	# Demon Armor (warlock, level 4): regenerates 1/32 max HP every 3 s while fighting.
 	if has_passive("Demon Armor") and stats.in_combat() and not stats.dots.has("demon_armor"):
@@ -1368,6 +1408,7 @@ func _on_died(_killer: Combatant) -> void:
 	model.anim.set_move("death")
 	Audio.sfx("defeat")
 	message.emit("You died. You wake up at the last checkpoint…")
+	stats.last_combat = -100.0
 	for e in World.enemies:
 		if e.state == Enemy.State.CHASE:
 			e._go_home()
@@ -1379,8 +1420,14 @@ var deaths := 0
 func _respawn() -> void:
 	deaths += 1
 	# Death penalty (design/game-design.md, 7): 10% of the money and the XP toward the next level.
-	money = int(money * 0.9)
+	var lost_money := money - int(money * 0.9)
+	var lost_xp := xp
+	money -= lost_money
 	xp = 0
+	var lines: Array = []
+	lines.append("Lost %s (10%% of your money)" % Items.money_text(lost_money) if lost_money > 0 else "No money lost")
+	lines.append("Lost %d XP (the progress toward level %d)" % [lost_xp, stats.level + 1] if lost_xp > 0 else "No XP lost")
+	death_banner.emit.call_deferred(lines)
 	stats.revive()
 	if World.zones:
 		World.zones.ensure(World.zones.cell_of(checkpoint))   # the checkpoint's zone may be unloaded
@@ -1399,7 +1446,6 @@ func on_kill(e: Enemy) -> void:
 	kills += 1
 	var gained := Rules.enemy_xp(e.stats.level, stats.level, e.stats.tier)
 	money += e.stats.level * ({"elite": 8, "champion": 40}.get(e.stats.tier, 3) as int)
-	Audio.sfx("coins", -6.0)
 	_loot(e)
 	for q in quests.on_kill(e.kind):
 		message.emit("%s: complete! Return to the inn." % q.title)

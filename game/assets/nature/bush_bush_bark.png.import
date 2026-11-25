@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://duss4qyy51gvq"
-path="res://.godot/imported/beech_1.png-1d5cf5e52cca8a549eaff6b21a1baf69.ctex"
+uid="uid://c7e6v17fvdsre"
+path="res://.godot/imported/bush_bush_bark.png-739dc8660bbe0cfd7d127eaeecdbb406.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7d092b2ed924174fc7e70e46e0469c1e"
+"md5": "6c840cdd8caf42f9564919c4ded4c75a"
 }
 
 [deps]
 
-source_file="res://assets/nature/beech_1.png"
-dest_files=["res://.godot/imported/beech_1.png-1d5cf5e52cca8a549eaff6b21a1baf69.ctex"]
+source_file="res://assets/nature/bush_bush_bark.png"
+dest_files=["res://.godot/imported/bush_bush_bark.png-739dc8660bbe0cfd7d127eaeecdbb406.ctex"]
 
 [params]
 

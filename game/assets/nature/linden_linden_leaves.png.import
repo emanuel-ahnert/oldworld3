@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://citdowc2jlhla"
-path="res://.godot/imported/birch_1.png-eb999c4d99894e9c427b914d67962598.ctex"
+uid="uid://dt1t7mobjywwk"
+path="res://.godot/imported/linden_linden_leaves.png-5c1ba87a0fe26528e77f150b3937c33a.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "c5b78c5c27f1d3d919f335c41157d7ea"
+"md5": "50532fe57644609d4af650132bc25b75"
 }
 
 [deps]
 
-source_file="res://assets/nature/birch_1.png"
-dest_files=["res://.godot/imported/birch_1.png-eb999c4d99894e9c427b914d67962598.ctex"]
+source_file="res://assets/nature/linden_linden_leaves.png"
+dest_files=["res://.godot/imported/linden_linden_leaves.png-5c1ba87a0fe26528e77f150b3937c33a.ctex"]
 
 [params]
 

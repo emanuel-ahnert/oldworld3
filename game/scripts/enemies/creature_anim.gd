@@ -167,6 +167,13 @@ func move(speed: float) -> void:
 
 
 ## A one-shot ("attack", "hit"); a hit does not cut off an attack.
+## When a clip's blow lands (s after its start): a little before the middle of the clip.
+func impact(clip: String) -> float:
+	if tree == null or not player.has_animation(clip):
+		return 0.3
+	return clampf(player.get_animation(clip).length * 0.42, 0.15, 0.7)
+
+
 func shot(clip: String) -> void:
 	if dead or tree == null or not player.has_animation(clip):
 		return

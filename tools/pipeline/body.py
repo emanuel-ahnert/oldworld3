@@ -35,6 +35,14 @@ def render_views(objs, out, frames, prefix, size=512):
         cam.data.type = "ORTHO"
         cam.data.ortho_scale = 2.2
     sc.camera = cam
+    # No metadata in the PNGs: Blender writes the .blend's full path into them (a local path in
+    # a public repository; tools/check_private.sh blocks it).
+    sc.render.use_stamp = False
+    for k in ("use_stamp_date", "use_stamp_time", "use_stamp_render_time", "use_stamp_frame", "use_stamp_camera",
+              "use_stamp_lens", "use_stamp_scene", "use_stamp_marker", "use_stamp_filename", "use_stamp_memory",
+              "use_stamp_hostname", "use_stamp_frame_range", "use_stamp_sequencer_strip"):
+        if hasattr(sc.render, k):
+            setattr(sc.render, k, False)
     paths = []
     for f in frames:
         sc.frame_set(f)

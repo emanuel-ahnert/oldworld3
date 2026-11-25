@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dkh15gg03nhje"
-path="res://.godot/imported/olive_1.png-a3fce4722b0bd5aafd16977fa0fd4b02.ctex"
+uid="uid://dfd6g1wg1tofj"
+path="res://.godot/imported/olive_olive_bark.png-552e5a0f02e1a9aa80b1b77c185b654e.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "8ad477f97ed64c27b9ad7dff7a32078e"
+"md5": "0ef987704127be5aa8480a754c1a98e8"
 }
 
 [deps]
 
-source_file="res://assets/nature/olive_1.png"
-dest_files=["res://.godot/imported/olive_1.png-a3fce4722b0bd5aafd16977fa0fd4b02.ctex"]
+source_file="res://assets/nature/olive_olive_bark.png"
+dest_files=["res://.godot/imported/olive_olive_bark.png-552e5a0f02e1a9aa80b1b77c185b654e.ctex"]
 
 [params]
 

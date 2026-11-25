@@ -38,19 +38,23 @@ const ARROW_SPEED := 38.0
 const SPELL_SPEED := {"Fire": 22.0, "Ice": 28.0, "Air": 30.0, "Dark": 20.0, "Holy": 24.0, "Nature": 26.0, "Water": 24.0}
 
 var _element := ""               ## a spell: its element (the look, the impact)
+var size := 1.0                  ## a spell: the bolt's and the impact's scale (Fireball 1.7)
 var _pointed := false            ## turns along its path (shards, thorns)
 
 
 ## A spell from `from` to the target: SpellFx.bolt(element), its own speed, the element's
 ## impact where it lands.
-static func spell(from: Vector3, p_target: Node3D, element: String, p_on_hit: Callable) -> Projectile:
+static func spell(from: Vector3, p_target: Node3D, element: String, p_on_hit: Callable, p_size := 1.0) -> Projectile:
 	var p := Projectile.new()
+	p.size = p_size
 	p.target = p_target
 	p.on_hit = p_on_hit
 	p.speed = SPELL_SPEED.get(element, 24.0)
 	p._element = element
 	p._pointed = SpellFx.pointed(element)
-	p.add_child(SpellFx.bolt(element))
+	var b := SpellFx.bolt(element)
+	b.scale = Vector3.ONE * p_size
+	p.add_child(b)
 	World.root.add_child(p)
 	p.global_position = from
 	return p
@@ -160,7 +164,7 @@ func _process(dt: float) -> void:
 	var d := goal - global_position
 	if d.length() < speed * dt + 0.3:
 		if _element != "":
-			SpellFx.impact(goal, _element)
+			SpellFx.impact(goal, _element, size)
 			_leave_trails()
 		if on_hit.is_valid():
 			on_hit.call()

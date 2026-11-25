@@ -22,7 +22,10 @@ var home := Vector3.ZERO
 var group: Array[Enemy] = []
 var state := State.IDLE
 var humanoid: Humanoid
-var nameplate: Label3D
+var nameplate: Node3D           ## name and health bar over the head (visible in a fight or targeted)
+var _plate_name: Label3D
+var _plate_bar: MeshInstance3D
+static var _plate_mat: ShaderMaterial
 
 var _model: Node3D
 var _visual: Node3D          ## creature mesh (procedural motion)
@@ -110,6 +113,7 @@ func _ready() -> void:
 		if ResourceLoader.exists(rigged) and not OS.get_cmdline_user_args().has("--static-creatures"):
 			path = rigged
 		_visual = load(path).instantiate()
+		_matte(_visual, path)
 		_visual.rotation.y = PI          # models face +Z; units face -Z
 		_model.add_child(_visual)
 		_canim = CreatureAnim.attach(_visual, path)
@@ -118,16 +122,17 @@ func _ready() -> void:
 		_model.add_child(humanoid)
 		humanoid.build(_humanoid_cfg(m.trim_prefix("humanoid:")))
 		_model.scale = Vector3.ONE * float(data.get("scale", 1.0))
-	nameplate = Label3D.new()
-	nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	nameplate.font_size = 36
-	nameplate.outline_size = 8
-	nameplate.pixel_size = 0.005
+	nameplate = Node3D.new()
 	nameplate.position.y = (2.1 * float(data.get("scale", 1.0))) if humanoid else 1.6
-	nameplate.text = plate_name()
-	nameplate.modulate = Color(1, 0.85, 0.3) if data.behavior == "defensive" else Color(1, 0.4, 0.35)
+	_plate_name = Label3D.new()
+	_plate_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_plate_name.font_size = 34
+	_plate_name.outline_size = 8
+	_plate_name.pixel_size = 0.005
+	_plate_name.text = plate_name()
+	var tint := Color(1, 0.85, 0.3) if data.behavior == "defensive" else Color(1, 0.4, 0.35)
 	if champion != "":
-		nameplate.modulate = Color(1, 0.6, 0.15)
+		tint = Color(1, 0.6, 0.15)
 		nameplate.position.y *= 1.2
 		_model.scale *= 1.2
 		if modifier == "Burning":
@@ -137,6 +142,20 @@ func _ready() -> void:
 			glow.omni_range = 5.0
 			glow.position.y = 1.2
 			add_child(glow)
+	_plate_name.modulate = tint
+	nameplate.add_child(_plate_name)
+	if _plate_mat == null:
+		_plate_mat = ShaderMaterial.new()
+		_plate_mat.shader = load("res://shaders/nameplate.gdshader")
+	_plate_bar = MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.1, 0.13)
+	_plate_bar.mesh = quad
+	_plate_bar.material_override = _plate_mat
+	_plate_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_plate_bar.position.y = 0.2
+	_plate_bar.set_instance_shader_parameter("color", Color(0.85, 0.7, 0.1) if data.behavior == "defensive" else Color(0.8, 0.1, 0.07))
+	nameplate.add_child(_plate_bar)
 	nameplate.visible = false
 	add_child(nameplate)
 	for gi in _model.find_children("*", "GeometryInstance3D", true, false):
@@ -145,10 +164,37 @@ func _ready() -> void:
 	rotation.y = randf() * TAU
 
 
+static var _matted := {}
+const FURRED := ["wolf", "direwolf", "snowwolf", "bear", "boar", "bats", "spider"]
+
+
+## The generated models come with a metal map (metallic 1.0): fur and hide then shine like
+## steel in the moonlight. Creatures are never metal; furred ones are fully rough (matte).
+## Once per model (the materials are shared by all its instances).
+static func _matte(n: Node, path: String) -> void:
+	if _matted.has(path):
+		return
+	_matted[path] = true
+	var furred := FURRED.has(path.get_file().get_basename().trim_suffix("_rig"))
+	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh == null:
+			continue
+		for i in mi.mesh.get_surface_count():
+			var mat := mi.mesh.surface_get_material(i) as StandardMaterial3D
+			if mat == null:
+				continue
+			mat.metallic = 0.0
+			mat.metallic_texture = null
+			mat.metallic_specular = 0.25 if furred else 0.4
+			if furred:
+				mat.roughness_texture = null
+				mat.roughness = 1.0
+
+
 func plate_name() -> String:
 	if champion != "":
-		return "%s  %d  (%s Champion)" % [champion, stats.level, modifier] if modifier != "" else "%s  %d  (Champion)" % [champion, stats.level]
-	return "%s  %d" % [data.name, stats.level] + ("  (Elite)" if data.tier == "elite" else "")
+		return "%s  (%s Champion)" % [champion, modifier] if modifier != "" else "%s  (Champion)" % champion
+	return data.name + ("  (Elite)" if data.tier == "elite" else "")
 
 
 func _humanoid_cfg(outfit: String) -> Dictionary:
@@ -253,7 +299,12 @@ func _physics_process(dt: float) -> void:
 	_animate(dt, speed)
 	nameplate.visible = state == State.CHASE or (p != null and p.target == self)
 	if nameplate.visible:
-		nameplate.text = plate_name() + ("  %d%%" % roundi(100.0 * stats.hp / stats.max_hp) if stats.hp < stats.max_hp else "")
+		_plate_bar.set_instance_shader_parameter("fill", float(stats.hp) / stats.max_hp)
+		# About the same size on screen near and far (like WoW's nameplates).
+		var cam := get_viewport().get_camera_3d()
+		if cam:
+			var d := cam.global_position.distance_to(nameplate.global_position)
+			nameplate.scale = Vector3.ONE * clampf(d * 0.085, 0.3, 2.6) / maxf(scale.x, 0.01)
 
 
 ## Going around obstacles (tree trunks, houses, crates, cliffs): probes ahead along `want`;
@@ -406,9 +457,9 @@ func _use_abilities(t: float, dist: float) -> void:
 					_cooldowns[a] = t + 12.0
 					var p := World.player
 					p.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats)
-					_hit_player(20.0, "Poisoned Blade")
 					if humanoid:
 						humanoid.anim.play_shot("attack2")
+					_hit_later(CharAnimator.impact("attack2") if humanoid else _strike(), 20.0, "Poisoned Blade")
 			"hard_shell", "shield_wall":
 				if stats.hp < stats.max_hp * 0.6 and not stats.has_buff(a):
 					_cooldowns[a] = t + 20.0
@@ -440,18 +491,23 @@ func _use_abilities(t: float, dist: float) -> void:
 					var p := World.player
 					var dot: String = {"venom_bite": "poison", "fire_brand": "burn", "savage_bite": "bleed"}[a]
 					p.stats.add_dot(dot, 15.0, 1.0 / 32.0, stats)
-					_hit_player(30.0 if a == "venom_bite" else 35.0, a)
 					World.float_text(global_position + Vector3(0, 1.6, 0), String(a).replace("_", " ").capitalize(), Color(0.6, 1, 0.4) if a == "venom_bite" else Color(1, 0.55, 0.2), 32, self)
-					_strike()
+					var delay := _strike()
 					if humanoid:
 						humanoid.anim.play_shot("attack2")
+						delay = CharAnimator.impact("attack2")
+					_hit_later(delay, 30.0 if a == "venom_bite" else 35.0, a)
 			"troll_smash", "cleave":
 				if dist < float(data.reach) + 0.6:
 					_cooldowns[a] = t + (8.0 if a == "troll_smash" else 7.0)
+					var delay := 0.3
 					if humanoid:
 						humanoid.anim.play_shot("strike")
+						delay = CharAnimator.impact("strike")
+					else:
+						delay = _strike()
 					World.float_text(global_position + Vector3(0, 2.4, 0), "Troll Smash" if a == "troll_smash" else "Cleave", Color(1, 0.6, 0.3), 36, self)
-					_hit_player(60.0 if a == "troll_smash" else 55.0, a)
+					_hit_later(delay, 60.0 if a == "troll_smash" else 55.0, a)
 			"berserk":
 				if stats.hp < stats.max_hp * 0.5 and not stats.has_buff("berserk"):
 					stats.add_buff("berserk", 30.0, {"attack": 1.5, "defense": 0.75})
@@ -466,11 +522,11 @@ func _use_abilities(t: float, dist: float) -> void:
 				# Mummy: bandages slow the hero by 30% for 5 s.
 				if dist < float(data.reach) + 0.6:
 					_cooldowns[a] = t + 12.0
-					_hit_player(40.0, a)
 					World.player.stats.slow(5.0, 0.7)
 					World.float_text(global_position + Vector3(0, 2.0, 0), "Wrap", Color(0.9, 0.85, 0.6), 36, self)
 					if humanoid:
 						humanoid.anim.play_shot("attack2")
+					_hit_later(CharAnimator.impact("attack2") if humanoid else _strike(), 40.0, a)
 			"ancient_curse":
 				# Mummy: the hero's Attack drops by a quarter for 10 s.
 				if dist < 15.0 and not World.player.stats.has_buff(a):
@@ -531,18 +587,34 @@ func _auto_attack() -> void:
 			var r := stats.roll_spell(p.stats, Rules.swing_power(stats.swing_time), String(data.get("element", "Ice")))
 			p.stats.take_damage(r.amount, r.crit, stats))
 		return
-	_strike()
+	var delay := _strike()
 	if humanoid:
-		humanoid.anim.play_shot(["attack1", "attack2", "attack3"][randi() % 3])
-	_hit_player(Rules.swing_power(stats.swing_time), "")
+		var clip: String = ["attack1", "attack2", "attack3"][randi() % 3]
+		humanoid.anim.play_shot(clip)
+		delay = CharAnimator.impact(clip)
+	_hit_later(delay, Rules.swing_power(stats.swing_time), "")
 
 
-## A creature's blow: its attack clip, or the procedural lunge.
-func _strike() -> void:
+## A creature's blow: its attack clip, or the procedural lunge. Returns when it lands (s).
+func _strike() -> float:
 	if _canim:
 		_canim.shot("attack")
-	else:
-		_lunge = 1.0
+		return _canim.impact("attack")
+	_lunge = 1.0
+	return 0.17                          # the lunge's furthest point
+
+
+## A blow that lands `delay` s from now (at the swing's impact), if both are still standing
+## and the hero is still in reach (else a whoosh).
+func _hit_later(delay: float, power: float, label: String) -> void:
+	get_tree().create_timer(delay, false).timeout.connect(func():
+		var p := World.player
+		if stats.dead or state != State.CHASE or p == null or p.stats.dead or stats.stunned():
+			return
+		if p.global_position.distance_to(global_position) > float(data.reach) + 2.5:
+			Audio.sfx("miss", -8.0)
+			return
+		_hit_player(power, label))
 
 
 func _hit_player(power: float, label: String) -> void:

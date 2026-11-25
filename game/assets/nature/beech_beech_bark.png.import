@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b5m6g01mdw6oc"
-path="res://.godot/imported/cypress_Image_0.png-c329f75a7b98291d76f9a5bcfe45e545.ctex"
+uid="uid://2tqmst1kscn0"
+path="res://.godot/imported/beech_beech_bark.png-a3f820517d62053d31525943681bdb3f.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "0f4213033da31de6cedfe120400185c5"
+"md5": "bab7503f7882f29d27106338ec16e54a"
 }
 
 [deps]
 
-source_file="res://assets/nature/cypress_Image_0.png"
-dest_files=["res://.godot/imported/cypress_Image_0.png-c329f75a7b98291d76f9a5bcfe45e545.ctex"]
+source_file="res://assets/nature/beech_beech_bark.png"
+dest_files=["res://.godot/imported/beech_beech_bark.png-a3f820517d62053d31525943681bdb3f.ctex"]
 
 [params]
 

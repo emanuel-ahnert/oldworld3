@@ -28,6 +28,8 @@ extends Node3D
 ##   --chase-from X,Z  test: the nearest enemy starts at X,Z and chases the hero (pathfinding)
 ##   --strafe-at F     test: from frame F strafe left (ending a Whirlwind first)
 ##   --pos X,Z         start position (default: in front of the plaza)
+##   --cam-pitch DEG   test: camera pitch (positive looks up; the moon: --time 0.02 --cam-pitch 35)
+##   --lineup-move S   test (--lineup): every class plays gait S (run, walk) on the spot, side-on
 ##   --to-north        test: run through the start zone's north crossing
 ##   --zone X,Z        start in that zone of the grid (e.g. 0,-1: north of the start)
 ##   --bench SECONDS   run forward with vsync off and print the average FPS, then quit
@@ -181,6 +183,8 @@ func _ready() -> void:
 		player.cam_yaw = deg_to_rad(float(args["cam-yaw"]))
 	if args.has("zoom"):
 		player.zoom = float(args.zoom)
+	if args.has("cam-pitch"):
+		player.cam_pitch = deg_to_rad(float(args["cam-pitch"]))     # test: positive looks up
 	player.camera.current = true
 	World.set_view(World.view_range, float(vq.far))
 	_daynight.apply()
@@ -328,6 +332,10 @@ func _lineup() -> void:
 		var p := player.global_position + Vector3(x, 0, 0)
 		h.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
 		h.rotation.y = PI       # facing south, toward the camera in front of the hero
+		if args.has("lineup-move"):
+			# Test: a gait on the spot, side-on (the sword arm toward the camera).
+			h.anim.set_move(String(args["lineup-move"]))
+			h.rotation.y = PI / 2
 	player.visible = false
 
 
@@ -497,8 +505,10 @@ func _apply_save(d: Dictionary) -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and player and not args.has("shot") and not args.has("bench"):
-		Game.write_save(player)
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		get_tree().root.notification(Viewport.NOTIFICATION_VP_MOUSE_EXIT)   # close tooltips (Game.quit)
+		if player and not args.has("shot") and not args.has("bench"):
+			Game.write_save(player)
 
 
 func _parse_args() -> void:

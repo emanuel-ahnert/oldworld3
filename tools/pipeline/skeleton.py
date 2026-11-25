@@ -398,6 +398,9 @@ WALK_LEG = {
 }
 
 
+HAND_FOLLOW = 0.75
+
+
 def make_cycle(armature, name, frames, keys, leg, stance, arm_swing, arm_center, elbow_base,
                elbow_swing, pelvis_tilt, trunk_lean, pelvis_turn, chest_turn, adduct, shin_in,
                flight=0.0, arm_out=6.0, obliquity=0.0, hand=35.0):
@@ -443,9 +446,10 @@ def make_cycle(armature, name, frames, keys, leg, stance, arm_swing, arm_center,
             "Head": [(X, -(pelvis_tilt + trunk_lean) * 0.85), (Z, -chest_turn * 0.4 * turn)],
             "LeftUpperArm": [(Y, arm_out), (X, -al)], "RightUpperArm": [(Y, -arm_out), (X, -ar)],
             "LeftLowerArm": [(X, -el)], "RightLowerArm": [(X, -er)],
-            # The sword hand: blade down-forward, held steady (the wrist takes back most of the
-            # forearm's swing, or the blade waves around and cuts through the leg).
-            "LeftHand": [(X, -8)], "RightHand": [(X, hand + 0.8 * ((ar + er) - (arm_center + elbow_base)))],
+            # The sword hand swings with the arm (HAND_FOLLOW of the forearm's swing; holding the
+            # blade at one angle the whole stride looked stiff), the wrist taking back the rest so
+            # the blade doesn't wave through the leg.
+            "LeftHand": [(X, -8)], "RightHand": [(X, hand + (1 - HAND_FOLLOW) * ((ar + er) - (arm_center + elbow_base)))],
         }
         keyframe_pose(armature, f, pose)
         hips.location = (0, 0, 0)

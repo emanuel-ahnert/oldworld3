@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://hkldn20bexf1"
-path="res://.godot/imported/cypress_0.png-1128cd4c3f7235d5d238d308ed4f0708.ctex"
+uid="uid://bfm5qpvjdiwj2"
+path="res://.godot/imported/bush_bush_leaves.png-f2eb5f30768d46d69f709db09aa6e04b.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "04d56cc7a6a8176a5725941fe787f7bd"
+"md5": "713fe2ce919636c99ea43438e172d6f8"
 }
 
 [deps]
 
-source_file="res://assets/nature/cypress_0.png"
-dest_files=["res://.godot/imported/cypress_0.png-1128cd4c3f7235d5d238d308ed4f0708.ctex"]
+source_file="res://assets/nature/bush_bush_leaves.png"
+dest_files=["res://.godot/imported/bush_bush_leaves.png-f2eb5f30768d46d69f709db09aa6e04b.ctex"]
 
 [params]
 

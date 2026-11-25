@@ -26,7 +26,7 @@ static func float_text(pos: Vector3, text: String, color: Color, size := 48, fol
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
 	l.fixed_size = false
-	l.pixel_size = 0.004
+	l.pixel_size = 0.008
 	root.add_child(l)
 	var start := pos + Vector3(randf_range(-0.3, 0.3), 0, randf_range(-0.3, 0.3))
 	var offset := start - follow.global_position if follow else Vector3.ZERO

@@ -174,9 +174,11 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 			var w: Dictionary = WEAPONS[kind]
 			# Weapons are worth more than armor: they carry most of the damage.
 			var stat: String = "magic" if (cls in CASTERS and kind in ["staff", "dagger", "mace"]) else String(w.stat)
-			_add(stats, stat, main_b * 2.2)
+			# A weapon's own stat takes the whole budget, the suffix comes on top: a better rarity
+			# never lowers it.
+			_add(stats, stat, b * 2.2)
 			if stat == "magic":
-				_add(stats, "mana", main_b * 0.6)
+				_add(stats, "mana", b * 0.6)
 			name = "%s %s" % [MATERIALS[w.mat][tier], w.noun]
 		"off":
 			var kinds := OFFHANDS.keys().filter(func(k): return cls in OFFHANDS[k].classes)
@@ -184,7 +186,7 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 				kinds = OFFHANDS.keys()
 			kind = kinds[rng.randi() % kinds.size()]
 			var o: Dictionary = OFFHANDS[kind]
-			_add(stats, o.stat, main_b * 1.5)
+			_add(stats, o.stat, b * 1.5)
 			name = "%s %s" % [MATERIALS[o.mat][tier], o.noun]
 		"neck", "ring":
 			kind = "jewel"

@@ -20,9 +20,9 @@ paladin-hoplites|300|--class paladin --level 8 --start mediterranean --fight hop
 rogue-bandits|300|--class rogue --level 6 --start grassland --fight bandit --cam-yaw 40 --zoom 6
 priest-ancient|185|--class priest --level 5 --start ancient --fight mummy --hold 12 --nobot --press 1 --press-at 150 --cam-yaw 60 --zoom 5
 shaman-north|150|--class shaman --level 4 --start north --fight ice_troll --cam-yaw 35 --zoom 6
-druid-moonbeam|204|--class druid --level 8 --start mediterranean --fight crab --hold 10 --nobot --press 5 --press-at 150 --cam-yaw 40 --zoom 6
+druid-moonbeam|204|--class druid --level 8 --start mediterranean --fight crab --hold 10 --nobot --press 5 --press-at 150 --cam-yaw 330 --zoom 6
 hunter-nomads|150|--class hunter --level 6 --start desert --fight nomad --hold 16 --cam-yaw 15 --zoom 6
-mage-fireball|195|--class mage --level 6 --start ancient --fight scarab --hold 15 --nobot --press 1 --press-at 150 --cam-yaw 70 --zoom 5.5
+mage-fireball|213|--class mage --level 10 --start ancient --fight scarab --hold 15 --nobot --slot6 fireball --press 6 --press-at 150 --cam-yaw 70 --zoom 5.5
 druid-bear|320|--class druid --level 8 --start grassland --fight boar --cam-yaw 40 --zoom 6.5
 warlock-unholy|240|--class warlock --level 8 --start unholy --fight bat_swarm --hold 10 --cam-yaw 20 --zoom 5 --time 0.5
 camp-grassland|200|--class paladin --level 4 --start grassland --camp --no-enemies --time 0.72 --cam-yaw 120 --zoom 4

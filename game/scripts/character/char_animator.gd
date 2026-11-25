@@ -236,6 +236,15 @@ func play_shot(name: String) -> void:
 		tree.set("parameters/full/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
 
 
+## When a swing's blow lands (s after its start): the frame where the blade meets the target
+## (tools/pipeline/skeleton.py, 25 fps). Damage and the hit sound wait for it.
+const IMPACT := {"attack1": 0.44, "attack2": 0.44, "attack3": 0.36, "strike": 0.54}
+
+
+static func impact(name: String) -> float:
+	return float(IMPACT.get(name, 0.3))
+
+
 ## A melee swing playing (the staff then swings with the hand, Humanoid._staff_update).
 func swinging() -> bool:
 	return _shot in ["attack1", "attack2", "attack3", "strike"] and tree.get("parameters/oneshot/active")

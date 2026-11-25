@@ -38,7 +38,7 @@ const TYPES := {
 		"enemies": {"sand_snake": 12, "scorpion": 12, "ember_spirit": 8, "nomad": 6},
 		"inn": "res://assets/buildings/sandinn.glb", "houses": ["res://assets/buildings/domehouse.glb"],
 		"music": "desert", "village_music": "oasis", "names": "desert",
-		"fog": Color(0.92, 0.84, 0.7), "sun": Color(1.0, 0.92, 0.78), "frozen_lakes": false,
+		"fog": Color(0.92, 0.84, 0.7), "distance_fog": false, "sun": Color(1.0, 0.92, 0.78), "frozen_lakes": false,
 		"sky": [Color(0.3, 0.52, 0.85), Color(0.9, 0.82, 0.68)],
 	},
 	"ancient": {
@@ -51,7 +51,7 @@ const TYPES := {
 		"inn": "res://assets/buildings/temple.glb", "houses": ["res://assets/buildings/mudhouse.glb"],
 		"landmarks": true,
 		"music": "ancient", "village_music": "oasis", "names": "ancient",
-		"fog": Color(0.95, 0.86, 0.68), "sun": Color(1.0, 0.9, 0.72), "frozen_lakes": false,
+		"fog": Color(0.95, 0.86, 0.68), "distance_fog": false, "sun": Color(1.0, 0.9, 0.72), "frozen_lakes": false,
 		"sky": [Color(0.28, 0.5, 0.85), Color(0.95, 0.85, 0.65)],
 	},
 	"mediterranean": {
@@ -78,7 +78,7 @@ const TYPES := {
 		"enemies": {"dire_wolf": 14, "bat_swarm": 10, "cultist": 6, "vampire": 4},
 		"inn": "res://assets/buildings/gothichouse.glb", "houses": ["res://assets/buildings/gothichouse.glb", "res://assets/buildings/crypt.glb"],
 		"music": "unholy", "village_music": "chapel", "names": "unholy",
-		"fog": Color(0.34, 0.37, 0.33), "fog_density": 0.011, "sun": Color(0.8, 0.88, 0.66), "sun_energy": 0.68, "frozen_lakes": false,
+		"fog": Color(0.34, 0.37, 0.33), "fog_density": 0.011, "fog_end": 170.0, "sun": Color(0.8, 0.88, 0.66), "sun_energy": 0.68, "frozen_lakes": false,
 		"sky": [Color(0.16, 0.12, 0.2), Color(0.36, 0.42, 0.3)],
 		"rock_tint": Color(0.86, 0.78, 0.95), "rock_moss": Color(0.3, 0.38, 0.16, 0.45),
 		"night_fog": Color(0.1, 0.15, 0.11), "night_sky": [Color(0.02, 0.05, 0.03), Color(0.07, 0.12, 0.08)],

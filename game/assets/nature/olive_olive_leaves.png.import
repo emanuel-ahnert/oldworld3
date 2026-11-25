@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dhl0txhot2qdu"
-path="res://.godot/imported/olive_0.png-1d2eca5d2906272c1fa37ab0315c5b11.ctex"
+uid="uid://b3bxtt5ibm54s"
+path="res://.godot/imported/olive_olive_leaves.png-da268001b0f4d7af881a1890c7d972f1.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "3a6bc1e70f2ed760d1ee68a70c460ac7"
+"md5": "62ae2d67f291ef31be1db0e2fa4a1b04"
 }
 
 [deps]
 
-source_file="res://assets/nature/olive_0.png"
-dest_files=["res://.godot/imported/olive_0.png-1d2eca5d2906272c1fa37ab0315c5b11.ctex"]
+source_file="res://assets/nature/olive_olive_leaves.png"
+dest_files=["res://.godot/imported/olive_olive_leaves.png-da268001b0f4d7af881a1890c7d972f1.ctex"]
 
 [params]
 

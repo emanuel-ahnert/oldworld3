@@ -78,6 +78,7 @@ interrupts them. Magic damage uses Magic vs. Resistance and the element chart.
 | 4 | Ignite | Instant, Fire burn: 1/32 max HP every 3 s for 24 s | 24 | GCD |
 | 6 | Blink | Teleport 15 m forward, breaks roots and slows | 15 | 15 s |
 | 8 | Blizzard (new) | Channelled 6 s: snow and ice on an 8 m circle at the target, Ice damage (power 22) every second to each enemy in it and a 50% slow for 2 s; moving or a stun breaks it. Not on the bar by default (abilities menu, N) | 45 | — |
+| 10 | Fireball (new) | Cast 2.0 s, power 60, a big Fire projectile; ignites the target (Ignite's burn, 24 s). Not on the bar by default (abilities menu, N) | 25 | GCD |
 
 Later (Oldworld2's pool): Arcane Explosion, Frostfire Bolt, Ice Block, Time Warp, Meteor.
 The look: a blue embroidered tunic (ControlNet outfit on the base body) and a staff with a

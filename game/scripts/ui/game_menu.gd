@@ -1,9 +1,10 @@
 class_name GameMenu
 extends CanvasLayer
-## The in-game menu (Esc): resume, quality, day and night, save and back to the title, save and
-## quit. Keyboard like the title screen (Oldworld2 style): Up/Down (W/S) choose, Left/Right
-## (A/D) change a setting, Enter/Space select, Esc close; the mouse works too.
-## Quality is stored in user://settings.cfg and applied at once.
+## The in-game menu (Esc): resume, options, save and back to the title, save and quit. Options
+## (also from the title screen, options_only): quality, day and night, sound effects and music
+## volume. Keyboard like the title screen (Oldworld2 style): Up/Down (W/S) choose, Left/Right
+## (A/D) change a setting, Enter/Space select, Esc back/close; the mouse works too.
+## Settings are stored in user://settings.cfg and applied at once.
 
 const SETTINGS := "user://settings.cfg"
 const QUALITY := {
@@ -18,7 +19,9 @@ const QUALITY := {
 const GILT := Color(0.95, 0.8, 0.45)
 const INK := Color(0.95, 0.92, 0.86)
 const FADED := Color(0.72, 0.68, 0.6)
-const ITEMS := ["Resume", "Quality", "Day and night", "Save and back to the title", "Save and quit"]
+const MAIN_ITEMS := ["Resume", "Options", "Save and back to the title", "Save and quit"]
+const OPTION_ITEMS := ["Quality", "Day and night", "Sound effects", "Music", "Back"]
+const VOLUME_STEP := 10           ## % per Left/Right
 
 var player: Player
 var sun: DirectionalLight3D
@@ -26,6 +29,37 @@ var daynight: DayNight
 var _panel: PanelContainer
 var _rows: VBoxContainer
 var _cursor := 0
+var _options := false             ## on the options page
+var options_only := false         ## opened from the title screen: only the options, no pausing
+var _title: Label
+signal closed
+
+
+func _items() -> Array:
+	return OPTION_ITEMS if _options else MAIN_ITEMS
+
+
+## Volume in % (0–100) of "sfx" or "music", from the settings.
+static func load_volume(kind: String) -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS) == OK:
+		return int(cfg.get_value("audio", kind, 100 if kind == "sfx" else 80))
+	return 100 if kind == "sfx" else 80
+
+
+## The "SFX" and "Music" buses (made here if missing) at the saved volumes.
+static func apply_volumes() -> void:
+	for kind in ["sfx", "music"]:
+		var bus := "SFX" if kind == "sfx" else "Music"
+		var i := AudioServer.get_bus_index(bus)
+		if i < 0:
+			i = AudioServer.bus_count
+			AudioServer.add_bus(i)
+			AudioServer.set_bus_name(i, bus)
+			AudioServer.set_bus_send(i, "Master")
+		var v := load_volume(kind)
+		AudioServer.set_bus_mute(i, v <= 0)
+		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 1) / 100.0))
 
 
 static func load_quality() -> String:
@@ -60,7 +94,7 @@ func _ready() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.35)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP     # nothing under the menu takes clicks
 	add_child(dim)
 	_panel = PanelContainer.new()
 	var st := StyleBoxFlat.new()
@@ -81,6 +115,7 @@ func _ready() -> void:
 	box.add_theme_constant_override("separation", 8)
 	_panel.add_child(box)
 	var t := Label.new()
+	_title = t
 	t.text = "Menu"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.add_theme_font_size_override("font_size", 32)
@@ -99,15 +134,24 @@ func _ready() -> void:
 
 func open() -> void:
 	visible = true
-	get_tree().paused = true
+	if not options_only:
+		get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_cursor = 0
+	_options = options_only
 	_refresh()
 
 
 func close() -> void:
+	if _options and not options_only:
+		_options = false              # Esc on the options page: back to the menu
+		_cursor = 1
+		_refresh()
+		return
 	visible = false
-	get_tree().paused = false
+	if not options_only:
+		get_tree().paused = false
+	closed.emit()
 
 
 func _value(item: String) -> String:
@@ -116,12 +160,24 @@ func _value(item: String) -> String:
 			return "<  %s  >" % load_quality()
 		"Day and night":
 			return "<  %s  >" % ("on" if load_daynight() else "off (morning)")
+		"Sound effects":
+			return _bar(load_volume("sfx"))
+		"Music":
+			return _bar(load_volume("music"))
 	return ""
 
 
+## "<  ■■■■■■□□□□  60%  >"
+func _bar(v: int) -> String:
+	var n := v / VOLUME_STEP
+	return "<  %s%s  %d%%  >" % ["■".repeat(n), "□".repeat(100 / VOLUME_STEP - n), v]
+
+
 func _refresh() -> void:
+	_title.text = "Options" if _options else "Menu"
 	for c in _rows.get_children():
 		c.queue_free()
+	var ITEMS := _items()
 	for i in ITEMS.size():
 		var h := HBoxContainer.new()
 		h.custom_minimum_size = Vector2(0, 40)
@@ -161,6 +217,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not (event is InputEventKey) or not event.pressed:
 		return
 	var handled := true
+	var ITEMS := _items()
 	match (event as InputEventKey).keycode:
 		KEY_UP, KEY_W:
 			_cursor = (_cursor + ITEMS.size() - 1) % ITEMS.size()
@@ -185,28 +242,49 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _change(step: int) -> void:
-	match ITEMS[_cursor]:
+	match _items()[_cursor]:
 		"Quality":
 			_cycle_quality(step)
 		"Day and night":
 			_toggle_daynight()
+		"Sound effects":
+			_set_volume("sfx", step)
+			Audio.sfx("miss")           # a sample at the new volume
+		"Music":
+			_set_volume("music", step)
+
+
+func _set_volume(kind: String, step: int) -> void:
+	var v := clampi(load_volume(kind) + step * VOLUME_STEP, 0, 100)
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS)
+	cfg.set_value("audio", kind, v)
+	cfg.save(SETTINGS)
+	apply_volumes()
 
 
 func _select() -> void:
-	match ITEMS[_cursor]:
+	match _items()[_cursor]:
 		"Resume":
+			close()
+		"Options":
+			_options = true
+			_cursor = 0
+		"Back":
 			close()
 		"Quality":
 			_cycle_quality(1)
 		"Day and night":
 			_toggle_daynight()
+		"Sound effects", "Music":
+			_change(1)
 		"Save and back to the title":
 			Game.write_save(player)
 			get_tree().paused = false
 			get_tree().change_scene_to_file("res://scenes/title.tscn")
 		"Save and quit":
 			Game.write_save(player)
-			get_tree().quit()
+			Game.quit(get_tree())
 	if visible:
 		_refresh()
 

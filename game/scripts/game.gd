@@ -14,6 +14,13 @@ static var cls := "warrior"              ## the hero's class for a new game
 static var loaded: Dictionary = {}      ## save data to apply when the world starts ({} = new game)
 
 
+## Quits the game. A tooltip still open at exit leaves its popup's signal connections behind
+## (engine errors on stdout): the root viewport is told the mouse left, which closes it.
+static func quit(tree: SceneTree) -> void:
+	tree.root.notification(Viewport.NOTIFICATION_VP_MOUSE_EXIT)
+	tree.quit()
+
+
 static func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_FILE)
 

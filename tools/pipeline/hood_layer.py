@@ -99,18 +99,29 @@ bm.free()
 me.update()
 print(f"SPLIT to {len(me.vertices)} vertices, {len(me.polygons)} faces")
 
-# Only the hood and a short collar: the cape below clipped through arms, weapons, shields and
-# shoulder armor in every swing. Faces below CUT under the head's base go.
-CUT = 0.07
+# Only the hood, ending a little under the jaw: the cape below clipped through arms, weapons,
+# shields and shoulder armor in every swing, and its flared collar stood off the chest (a gap
+# over a robe's collar). Faces lower than CUT_FRONT under the head's base go at the front (the
+# chin is 3.5 cm under it), CUT_BACK at the back of the neck.
+CUT_FRONT, CUT_BACK = 0.05, 0.07
 neck_z = float((rig.matrix_world @ rig.data.bones["Head"].head_local).z)
+head_mid_y = head_y
+
+
+def cut_at(c):
+    back = min(max((c.y - head_mid_y + 0.06) / 0.12, 0.0), 1.0)   # 0 at the face (-y) .. 1 behind
+    back = back * back * (3 - 2 * back)
+    return neck_z - (CUT_FRONT + (CUT_BACK - CUT_FRONT) * back)
+
+
 bm = bmesh.new()
 bm.from_mesh(me)
-bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().z < neck_z - CUT], context="FACES")
+bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().z < cut_at(f.calc_center_median())], context="FACES")
 bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
 bm.to_mesh(me)
 bm.free()
 me.update()
-print(f"CUT below {neck_z - CUT:.2f} m: {len(me.polygons)} faces left")
+print(f"CUT below {neck_z - CUT_FRONT:.2f} (front) .. {neck_z - CUT_BACK:.2f} m (back): {len(me.polygons)} faces left")
 
 # --- out of the body ----------------------------------------------------------------------------
 # The body (arms hanging in the rest pose included) as two smooth radius maps: around the torso's
@@ -190,16 +201,65 @@ for e in me.edges:
     nbr[i].append(j)
     nbr[j].append(i)
 N = len(me.vertices)
+
+
+def push_out(label):
+    co = np.array([v.co for v in me.vertices])
+    req = np.array([need_move(c) for c in co])
+    need = np.linalg.norm(req, axis=1) > 1e-5
+    push = req.copy()
+    for _ in range(10):
+        avg = np.array([push[nb].mean(0) if nb else push[i] for i, nb in enumerate(nbr)])
+        push = np.where(need[:, None], np.where((np.linalg.norm(avg, axis=1) > np.linalg.norm(req, axis=1))[:, None], avg, req), avg)
+    for v, p in zip(me.vertices, push):
+        v.co += Vector(p)
+    print(f"PUSHED ({label}) {int(need.sum())} of {N} vertices out of the body (deepest {np.linalg.norm(req, axis=1).max():.3f} m)")
+
+
+push_out("fit")
+
+# --- snug ----------------------------------------------------------------------------------------
+# The generated hood stands off the head and flares toward the shoulders. Pulled in: around the
+# neck and under the jaw to NECK_AIR of its air (toward the torso's axis), over the head to
+# HEAD_AIR (toward the head's middle) but not in front of the face (the opening stays open).
+# The move is smoothed over the cloth (both its sides together), then pushed out once more.
+NECK_AIR, HEAD_AIR = 0.2, 0.55
+
+
+def snug_move(c):
+    move = np.zeros(3)
+    # 1 below the jaw .. 0 a little above the head's base
+    low = min(max((NECK + 0.03 - c[2]) / 0.05, 0.0), 1.0)
+    if low > 0.0:
+        dxy = c[:2] - AX
+        r = float(np.hypot(*dxy))
+        zi = min(max(int(c[2] / ZB), 0), zr - 1)
+        ti = int((np.arctan2(dxy[1], dxy[0]) + np.pi) / (2 * np.pi) * TB) % TB
+        want = R_cyl[zi, ti] + MARGIN
+        if R_cyl[zi, ti] > 0 and r > want:
+            move += low * np.array([dxy[0], dxy[1], 0.0]) / r * -(r - want) * (1 - NECK_AIR)
+    if low < 1.0:
+        v = c - HC
+        r = float(np.linalg.norm(v))
+        e = min(max(int((np.arcsin(np.clip(v[2] / max(r, 1e-6), -1, 1)) + np.pi / 2) / np.pi * EB), 0), EB - 1)
+        t = int((np.arctan2(v[1], v[0]) + np.pi) / (2 * np.pi) * TB) % TB
+        want = R_sph[e, t] + MARGIN
+        # The face: within ~75 degrees of straight ahead (-y), below the brow.
+        ahead = -v[1] / max(np.hypot(v[0], v[1]), 1e-6)
+        face = min(max((ahead - 0.15) / 0.35, 0.0), 1.0) * min(max((0.09 - v[2]) / 0.05, 0.0), 1.0)
+        if R_sph[e, t] > 0 and r > want:
+            move += (1 - low) * (1 - face) * -(v / r) * (r - want) * (1 - HEAD_AIR)
+    return move
+
+
 co = np.array([v.co for v in me.vertices])
-req = np.array([need_move(c) for c in co])
-need = np.linalg.norm(req, axis=1) > 1e-5
-push = req.copy()
-for _ in range(10):
-    avg = np.array([push[nb].mean(0) if nb else push[i] for i, nb in enumerate(nbr)])
-    push = np.where(need[:, None], np.where((np.linalg.norm(avg, axis=1) > np.linalg.norm(req, axis=1))[:, None], avg, req), avg)
-for v, p in zip(me.vertices, push):
-    v.co += Vector(p)
-print(f"PUSHED {int(need.sum())} of {N} vertices out of the body (deepest {np.linalg.norm(req, axis=1).max():.3f} m)")
+snug = np.array([snug_move(c) for c in co])
+for _ in range(8):
+    snug = 0.5 * snug + 0.5 * np.array([snug[nb].mean(0) if nb else snug[i] for i, nb in enumerate(nbr)])
+for v, m in zip(me.vertices, snug):
+    v.co += Vector(m)
+print(f"SNUG: moved in up to {np.linalg.norm(snug, axis=1).max():.3f} m (mean {np.linalg.norm(snug, axis=1).mean():.3f})")
+push_out("after snug")
 
 # --- weights from the nearest skin --------------------------------------------------------------
 gi = {body.vertex_groups[b].index: k for k, b in enumerate(BONES)}

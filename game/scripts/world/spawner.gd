@@ -105,19 +105,28 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 	_place_chests(rng, terrain)
 
 
-## Treasure chests: one beside an elite camp, one or two hidden in the woods (or in front of a
-## pyramid in the Ancient Desert). Deterministic per zone; opened ones are saved by key.
+## Treasure chests: mostly in elite camps (one in each of up to three, guarded), one in front
+## of a pyramid in the Ancient Desert; only a zone with fewer than two elite camps gets one
+## hidden in the woods. Deterministic per zone; opened ones are saved by key.
 func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:
 	var spots: Array[Vector3] = []
 	for g in groups:
-		if EnemyData.get_kind(g.kind).tier == "elite" and not g.has("champion"):
-			spots.append(g.pos + Vector3(-4.0, 0, -3.5))
+		if spots.size() >= 3:
 			break
+		if EnemyData.get_kind(g.kind).tier == "elite" and not g.has("champion"):
+			# In the camp, a few metres from its middle, on level ground.
+			for k in 8:
+				var a := rng.randf() * TAU
+				var q: Vector3 = g.pos + Vector3(cos(a), 0, sin(a)) * rng.randf_range(2.5, 4.5)
+				if terrain.normal_at(q.x, q.z).y > 0.9 and terrain.lake_distance(q.x, q.z) > 3.0:
+					spots.append(q)
+					break
+	var camps := spots.size()
 	for c in zone.landmarks:
 		var fwd := Vector3(-c.x, 0, -c.z).normalized()
 		spots.append(c + fwd * 22.0)
 		break
-	var want := 3
+	var want := spots.size() + (1 if camps < 2 else 0)
 	for tries in 1500:
 		if spots.size() >= want:
 			break

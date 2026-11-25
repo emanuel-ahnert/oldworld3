@@ -22,16 +22,30 @@ var _last_play := {}
 
 func _ready() -> void:
 	instance = self
+	GameMenu.apply_volumes()
 	for i in 2:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -80
+		p.bus = "Music"
 		add_child(p)
 		_players.append(p)
 	for i in 8:
 		var s := AudioStreamPlayer.new()
 		s.volume_db = -4
+		s.bus = "SFX"
 		add_child(s)
 		_sfx.append(s)
+
+
+## On quit or leaving the game: streams still playing at exit leak their playback objects
+## (engine warnings on stdout), so stop and release them.
+func _exit_tree() -> void:
+	for p in _players + _sfx:
+		p.stop()
+		p.stream = null
+	_cache.clear()
+	if instance == self:
+		instance = null
 
 
 static func sfx(name: String, volume_db := 0.0) -> void:

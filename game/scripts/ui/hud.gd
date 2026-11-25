@@ -23,6 +23,7 @@ var _quests: Label
 var _hero_auras: HFlowContainer
 var _target_auras: HFlowContainer
 var _auras_at := 0.0
+var _combat: Control      ## the crossed swords while in combat
 var _fresh := {}          ## ability id -> time until its slot stops glowing (just learned)
 
 
@@ -54,6 +55,40 @@ class Sweep extends Control:
 		var tx := INF if absf(d.x) < 1e-4 else ((size.x - c.x) / d.x if d.x > 0.0 else -c.x / d.x)
 		var ty := INF if absf(d.y) < 1e-4 else ((size.y - c.y) / d.y if d.y > 0.0 else -c.y / d.y)
 		draw_line(c, c + d * minf(tx, ty), Color(1, 0.9, 0.55, 0.85), 1.5)
+
+
+## Two crossed swords (in combat), drawn: blades, cross-guards, grips and pommels, outlined.
+class CombatIcon extends Control:
+	func _draw() -> void:
+		var c := size / 2.0
+		var r := minf(size.x, size.y) / 2.0
+		var dark := Color(0, 0, 0, 0.85)
+		for pass_ in 2:                       # all outlines first, then the swords over them
+			for side in [-1.0, 1.0]:
+				var d := Vector2(side, -1.0).normalized()      # from the hilt (bottom) to the tip (top)
+				var n := Vector2(-d.y, d.x)
+				var hilt := c - d * r * 0.62
+				var guard := hilt + d * r * 0.3
+				var tip := c + d * r * 0.95
+				var blade := PackedVector2Array([guard + n * r * 0.1, tip - d * r * 0.18 + n * r * 0.1, tip,
+					tip - d * r * 0.18 - n * r * 0.1, guard - n * r * 0.1])
+				var g0 := guard + n * r * 0.32
+				var g1 := guard - n * r * 0.32
+				if pass_ == 0:
+					var mid := (guard + tip) / 2.0
+					var ol := PackedVector2Array()
+					for q in blade:
+						ol.append(q + (q - mid).normalized() * 2.0)
+					draw_colored_polygon(ol, dark)
+					draw_line(hilt, guard, dark, r * 0.17 + 4.0)
+					draw_line(g0 + n * 2.0, g1 - n * 2.0, dark, r * 0.1 + 4.0)
+					draw_circle(hilt, r * 0.1 + 2.0, dark)
+				else:
+					draw_colored_polygon(blade, Color(0.86, 0.86, 0.9))
+					draw_line(guard + d * r * 0.02, tip - d * r * 0.12, Color(0.62, 0.62, 0.7), maxf(1.0, r * 0.04))
+					draw_line(hilt, guard, Color(0.45, 0.25, 0.12), r * 0.17)
+					draw_line(g0, g1, Color(0.95, 0.72, 0.25), r * 0.1)
+					draw_circle(hilt, r * 0.1, Color(0.95, 0.72, 0.25))
 
 
 const HELP := """W/S forward/back   A/D turn (strafe with right mouse)   Q/E strafe   Space jump   Shift sprint
@@ -312,6 +347,19 @@ func show_zone(name: String, subtitle: String) -> void:
 ## Level up: "Level N" in large letters and below it what was learned; the new abilities'
 ## slots glow on the bar for a while.
 func show_level(level: int, learned: Array) -> void:
+	_banner("Level %d" % level, learned, Color(1, 0.85, 0.25), Color(0.75, 0.95, 1.0))
+	for ab in player.abilities():
+		if int(ab.level) == level:
+			_fresh[ab.id] = Combatant.now() + 12.0
+
+
+## After a death: the penalty, under a red "You died".
+func show_death(lines: Array) -> void:
+	_banner("You died", lines, Color(0.95, 0.25, 0.2), Color(1.0, 0.85, 0.75))
+
+
+## A big title in the upper middle with lines under it, fading in and out.
+func _banner(title: String, lines: Array, title_color: Color, line_color: Color) -> void:
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	box.offset_left = -500
@@ -320,23 +368,20 @@ func show_level(level: int, learned: Array) -> void:
 	box.add_theme_constant_override("separation", 6)
 	add_child(box)
 	var t := _label(Vector2.ZERO, 58, box)
-	t.text = "Level %d" % level
+	t.text = title
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	t.add_theme_color_override("font_color", Color(1, 0.85, 0.25))
-	for line: String in learned:
+	t.add_theme_color_override("font_color", title_color)
+	for line: String in lines:
 		var l := _label(Vector2.ZERO, 24, box)
 		l.text = line
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.add_theme_color_override("font_color", Color(0.75, 0.95, 1.0))
+		l.add_theme_color_override("font_color", line_color)
 	box.modulate.a = 0.0
 	var tw := box.create_tween()
 	tw.tween_property(box, "modulate:a", 1.0, 0.4)
-	tw.tween_interval(4.0 + 1.5 * learned.size())
+	tw.tween_interval(4.0 + 1.5 * lines.size())
 	tw.tween_property(box, "modulate:a", 0.0, 1.2)
 	tw.tween_callback(box.queue_free)
-	for ab in player.abilities():
-		if int(ab.level) == level:
-			_fresh[ab.id] = Combatant.now() + 12.0
 
 
 func show_message(text: String, seconds := 2.5) -> void:
@@ -376,6 +421,14 @@ func _process(_dt: float) -> void:
 		_quests.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		player.quests_changed.connect(_update_quests)
 		player.level_banner.connect(show_level)
+		player.death_banner.connect(show_death)
+		_combat = CombatIcon.new()
+		_combat.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_combat.offset_left = -26
+		_combat.offset_right = 26
+		_combat.offset_top = 14
+		_combat.offset_bottom = 66
+		add_child(_combat)
 		_update_quests()
 		if player.stats.uses_mana or player.stats.uses_energy:
 			var fill := StyleBoxFlat.new()
@@ -427,6 +480,7 @@ func _process(_dt: float) -> void:
 		sl.style.border_color = Color(1, 0.85, 0.3) if (a.id == "overwhelm" and after_gcd == "" and learned) else Color(0.55, 0.45, 0.3)
 		if t < float(_fresh.get(a.id, 0.0)):      # just learned: the border pulses
 			sl.style.border_color = Color(0.55, 0.45, 0.3).lerp(Color(0.5, 0.95, 1.0), 0.5 + 0.5 * sin(t * 6.0))
+	_combat.visible = s.in_combat() and not s.dead
 	_stamina.value = player.stamina
 	_stamina.visible = player.stamina < 0.999
 	var need := Rules.xp_to_next(s.level)

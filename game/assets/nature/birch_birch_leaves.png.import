@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://tfoxki1qoeav"
-path="res://.godot/imported/bush_1.png-a168238663213a5aee89c26d3a10279b.ctex"
+uid="uid://f1gfej1v4ivp"
+path="res://.godot/imported/birch_birch_leaves.png-07707090cb4a0836b87f93c3b7791d05.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "4e586a5ea5827f611ab80eab92aec7eb"
+"md5": "7558a8c243cf7b73f7c6675a6e7ac185"
 }
 
 [deps]
 
-source_file="res://assets/nature/bush_1.png"
-dest_files=["res://.godot/imported/bush_1.png-a168238663213a5aee89c26d3a10279b.ctex"]
+source_file="res://assets/nature/birch_birch_leaves.png"
+dest_files=["res://.godot/imported/birch_birch_leaves.png-07707090cb4a0836b87f93c3b7791d05.ctex"]
 
 [params]
 

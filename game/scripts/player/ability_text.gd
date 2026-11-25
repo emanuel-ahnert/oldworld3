@@ -19,6 +19,7 @@ const TEXT := {
 	"hunter:Volley": "Nature area",
 	"mage:Blink": "Teleport 15 m forward, breaks roots and slows",
 	"mage:Fire Bolt": "Cast 1.6 s, power 40, Fire projectile (filler)",
+	"mage:Fireball": "Cast 2.0 s, power 60, a big Fire projectile; ignites the target (Ignite's burn)",
 	"mage:Frost Ring": "Instant, all enemies within 8 m: power 45 Ice, rooted 5 s",
 	"mage:Ice Bolt": "Cast 2.0 s, power 55, Ice; slows the target 40% for 6 s",
 	"mage:Ignite": "Instant, Fire burn: 1/32 max HP every 3 s for 24 s",

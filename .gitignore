@@ -24,3 +24,6 @@ spike/anim_compare/
 
 # Release builds (tools/release.sh)
 dist/
+
+# Old generated tree models (in the history at v0.2.0), kept locally for comparison
+spike/trees_old/
