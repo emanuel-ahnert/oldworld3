@@ -1,0 +1,19 @@
+{
+  "job": "e4d126c2bb",
+  "files": [
+    "gear/cowl.glb",
+    "gear/cowl.preview.png",
+    "gear/cowl.image.png"
+  ],
+  "seed": 1904,
+  "timings": {
+    "text-to-image": 58.3,
+    "check-image": 3.8,
+    "image-to-3d": 77.0,
+    "preview": 1.4,
+    "export-glb": 6.2,
+    "total": 216.6
+  },
+  "server_dir": "2026-11-13/140452-e4d126c2bb-medieval-brown-leather-cowl-hood-coverin",
+  "used_seed": 1904
+}

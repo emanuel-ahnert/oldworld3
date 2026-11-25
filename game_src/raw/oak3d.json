@@ -1,0 +1,15 @@
+{
+  "job": "4b55b17231",
+  "files": [
+    "oak3d.glb",
+    "oak3d.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 182.9,
+    "preview": 2.6,
+    "export-glb": 17.1,
+    "total": 202.6
+  },
+  "server_dir": "2026-11-12/225702-4b55b17231-oak3d"
+}

@@ -1,0 +1,15 @@
+{
+  "job": "3a5be6a082",
+  "files": [
+    "beech_s502.glb",
+    "beech_s502.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 159.2,
+    "preview": 1.5,
+    "export-glb": 17.2,
+    "total": 177.8
+  },
+  "server_dir": "2026-11-13/004144-3a5be6a082-beech-s502"
+}

@@ -1,0 +1,15 @@
+{
+  "job": "fb790c7d4d",
+  "files": [
+    "shaman.glb",
+    "shaman.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 41.8,
+    "preview": 0.9,
+    "export-glb": 8.8,
+    "total": 51.5
+  },
+  "server_dir": "2026-11-13/021207-fb790c7d4d-shaman"
+}

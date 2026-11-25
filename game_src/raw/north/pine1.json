@@ -1,0 +1,19 @@
+{
+  "job": "cd1fe284d1",
+  "files": [
+    "pine1.glb",
+    "pine1.preview.png",
+    "pine1.image.png"
+  ],
+  "seed": 811,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 63.0,
+    "preview": 1.2,
+    "export-glb": 8.5,
+    "total": 106.2
+  },
+  "server_dir": "2026-11-13/012435-cd1fe284d1-3d-render-of-a-tall-straight-snowy-pine",
+  "used_seed": 811
+}

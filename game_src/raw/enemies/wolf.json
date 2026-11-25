@@ -1,0 +1,19 @@
+{
+  "job": "ab2f7bc966",
+  "files": [
+    "enemies/wolf.glb",
+    "enemies/wolf.preview.png",
+    "enemies/wolf.image.png"
+  ],
+  "seed": 601,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 47.4,
+    "preview": 1.0,
+    "export-glb": 5.0,
+    "total": 86.9
+  },
+  "server_dir": "2026-11-13/004955-ab2f7bc966-3d-render-of-a-grey-wolf-standing-on-all",
+  "used_seed": 601
+}

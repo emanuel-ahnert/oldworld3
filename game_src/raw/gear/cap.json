@@ -1,0 +1,19 @@
+{
+  "job": "0f8625ad8e",
+  "files": [
+    "gear/cap.glb",
+    "gear/cap.preview.png",
+    "gear/cap.image.png"
+  ],
+  "seed": 1902,
+  "timings": {
+    "text-to-image": 48.5,
+    "check-image": 3.1,
+    "image-to-3d": 101.4,
+    "preview": 1.9,
+    "export-glb": 8.9,
+    "total": 163.8
+  },
+  "server_dir": "2026-11-13/133426-0f8625ad8e-medieval-brown-leather-cap-with-ear-flap",
+  "used_seed": 1902
+}

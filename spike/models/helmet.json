@@ -1,0 +1,18 @@
+{
+  "job": "a861d35b9b",
+  "files": [
+    "helmet.glb",
+    "helmet.preview.png",
+    "helmet.image.png"
+  ],
+  "seed": 21,
+  "timings": {
+    "text-to-image": 31.3,
+    "check-image": 2.3,
+    "image-to-3d": 60.8,
+    "preview": 1.1,
+    "export-glb": 6.1,
+    "total": 101.6
+  },
+  "server_dir": "2026-11-12/211622-a861d35b9b-medieval-steel-great-helm-rounded-top-ey"
+}

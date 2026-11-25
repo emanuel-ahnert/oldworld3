@@ -1,0 +1,19 @@
+{
+  "job": "1be03f4ee1",
+  "files": [
+    "med/whitehouse.glb",
+    "med/whitehouse.preview.png",
+    "med/whitehouse.image.png"
+  ],
+  "seed": 1231,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.4,
+    "image-to-3d": 66.4,
+    "preview": 1.1,
+    "export-glb": 6.1,
+    "total": 107.1
+  },
+  "server_dir": "2026-11-13/023448-1be03f4ee1-3d-render-of-a-small-whitewashed-greek-i",
+  "used_seed": 1231
+}

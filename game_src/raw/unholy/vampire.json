@@ -1,0 +1,15 @@
+{
+  "job": "796fab387f",
+  "files": [
+    "unholy/vampire.glb",
+    "unholy/vampire.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.1,
+    "preview": 0.9,
+    "export-glb": 7.5,
+    "total": 48.6
+  },
+  "server_dir": "2026-11-13/025905-796fab387f-vampire"
+}

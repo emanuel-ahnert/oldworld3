@@ -1,0 +1,19 @@
+{
+  "job": "c210b5b824",
+  "files": [
+    "buildings/inn.glb",
+    "buildings/inn.preview.png",
+    "buildings/inn.image.png"
+  ],
+  "seed": 701,
+  "timings": {
+    "text-to-image": 31.3,
+    "check-image": 2.3,
+    "image-to-3d": 62.0,
+    "preview": 1.2,
+    "export-glb": 10.8,
+    "total": 107.6
+  },
+  "server_dir": "2026-11-13/005317-c210b5b824-3d-render-of-a-medieval-two-story-timber",
+  "used_seed": 701
+}

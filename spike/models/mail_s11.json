@@ -1,0 +1,15 @@
+{
+  "job": "a4dd826def",
+  "files": [
+    "mail_s11.glb",
+    "mail_s11.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.9,
+    "preview": 0.9,
+    "export-glb": 8.9,
+    "total": 50.8
+  },
+  "server_dir": "2026-11-12/211513-a4dd826def-mail-s11"
+}

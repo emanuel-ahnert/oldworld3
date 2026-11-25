@@ -1,0 +1,142 @@
+[
+  {
+    "name": "runa",
+    "repeat": 0,
+    "prompt": "a person sprints forward in a straight line as fast as possible",
+    "frames": 80,
+    "file": "batch2/runa_0.npy"
+  },
+  {
+    "name": "runa",
+    "repeat": 1,
+    "prompt": "a person sprints forward in a straight line as fast as possible",
+    "frames": 80,
+    "file": "batch2/runa_1.npy"
+  },
+  {
+    "name": "runa",
+    "repeat": 2,
+    "prompt": "a person sprints forward in a straight line as fast as possible",
+    "frames": 80,
+    "file": "batch2/runa_2.npy"
+  },
+  {
+    "name": "runa",
+    "repeat": 3,
+    "prompt": "a person sprints forward in a straight line as fast as possible",
+    "frames": 80,
+    "file": "batch2/runa_3.npy"
+  },
+  {
+    "name": "runb",
+    "repeat": 0,
+    "prompt": "a person runs fast forward in a straight line",
+    "frames": 80,
+    "file": "batch2/runb_0.npy"
+  },
+  {
+    "name": "runb",
+    "repeat": 1,
+    "prompt": "a person runs fast forward in a straight line",
+    "frames": 80,
+    "file": "batch2/runb_1.npy"
+  },
+  {
+    "name": "runb",
+    "repeat": 2,
+    "prompt": "a person runs fast forward in a straight line",
+    "frames": 80,
+    "file": "batch2/runb_2.npy"
+  },
+  {
+    "name": "runb",
+    "repeat": 3,
+    "prompt": "a person runs fast forward in a straight line",
+    "frames": 80,
+    "file": "batch2/runb_3.npy"
+  },
+  {
+    "name": "walka",
+    "repeat": 0,
+    "prompt": "a person walks forward in a straight line",
+    "frames": 100,
+    "file": "batch2/walka_0.npy"
+  },
+  {
+    "name": "walka",
+    "repeat": 1,
+    "prompt": "a person walks forward in a straight line",
+    "frames": 100,
+    "file": "batch2/walka_1.npy"
+  },
+  {
+    "name": "walka",
+    "repeat": 2,
+    "prompt": "a person walks forward in a straight line",
+    "frames": 100,
+    "file": "batch2/walka_2.npy"
+  },
+  {
+    "name": "walka",
+    "repeat": 3,
+    "prompt": "a person walks forward in a straight line",
+    "frames": 100,
+    "file": "batch2/walka_3.npy"
+  },
+  {
+    "name": "walkb",
+    "repeat": 0,
+    "prompt": "a man walks straight ahead at a normal speed",
+    "frames": 100,
+    "file": "batch2/walkb_0.npy"
+  },
+  {
+    "name": "walkb",
+    "repeat": 1,
+    "prompt": "a man walks straight ahead at a normal speed",
+    "frames": 100,
+    "file": "batch2/walkb_1.npy"
+  },
+  {
+    "name": "walkb",
+    "repeat": 2,
+    "prompt": "a man walks straight ahead at a normal speed",
+    "frames": 100,
+    "file": "batch2/walkb_2.npy"
+  },
+  {
+    "name": "walkb",
+    "repeat": 3,
+    "prompt": "a man walks straight ahead at a normal speed",
+    "frames": 100,
+    "file": "batch2/walkb_3.npy"
+  },
+  {
+    "name": "jumpa",
+    "repeat": 0,
+    "prompt": "a person runs forward and jumps up high, then lands and keeps running",
+    "frames": 60,
+    "file": "batch2/jumpa_0.npy"
+  },
+  {
+    "name": "jumpa",
+    "repeat": 1,
+    "prompt": "a person runs forward and jumps up high, then lands and keeps running",
+    "frames": 60,
+    "file": "batch2/jumpa_1.npy"
+  },
+  {
+    "name": "jumpa",
+    "repeat": 2,
+    "prompt": "a person runs forward and jumps up high, then lands and keeps running",
+    "frames": 60,
+    "file": "batch2/jumpa_2.npy"
+  },
+  {
+    "name": "jumpa",
+    "repeat": 3,
+    "prompt": "a person runs forward and jumps up high, then lands and keeps running",
+    "frames": 60,
+    "file": "batch2/jumpa_3.npy"
+  }
+]

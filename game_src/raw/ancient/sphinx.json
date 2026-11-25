@@ -1,0 +1,19 @@
+{
+  "job": "e0f2bd281b",
+  "files": [
+    "ancient/sphinx.glb",
+    "ancient/sphinx.preview.png",
+    "ancient/sphinx.image.png"
+  ],
+  "seed": 1503,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 45.7,
+    "preview": 0.9,
+    "export-glb": 4.6,
+    "total": 84.7
+  },
+  "server_dir": "2026-11-13/031356-e0f2bd281b-3d-render-of-an-ancient-egyptian-sandsto",
+  "used_seed": 1503
+}

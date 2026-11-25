@@ -1,0 +1,15 @@
+{
+  "job": "4a6cca4138",
+  "files": [
+    "troll.glb",
+    "troll.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 42.8,
+    "preview": 0.9,
+    "export-glb": 8.1,
+    "total": 51.8
+  },
+  "server_dir": "2026-11-13/013953-4a6cca4138-troll"
+}

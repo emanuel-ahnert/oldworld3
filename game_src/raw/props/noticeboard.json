@@ -1,0 +1,19 @@
+{
+  "job": "947aa0175b",
+  "files": [
+    "props/noticeboard.glb",
+    "props/noticeboard.preview.png",
+    "props/noticeboard.image.png"
+  ],
+  "seed": 1401,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 55.9,
+    "preview": 1.0,
+    "export-glb": 5.9,
+    "total": 96.2
+  },
+  "server_dir": "2026-11-13/030434-947aa0175b-3d-render-of-a-medieval-wooden-village-n",
+  "used_seed": 1401
+}

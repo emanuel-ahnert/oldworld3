@@ -1,0 +1,15 @@
+{
+  "job": "fb06de8c79",
+  "files": [
+    "npc/villager2.glb",
+    "npc/villager2.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.2,
+    "preview": 0.9,
+    "export-glb": 7.3,
+    "total": 48.4
+  },
+  "server_dir": "2026-11-13/033202-fb06de8c79-villager2"
+}

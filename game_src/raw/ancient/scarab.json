@@ -1,0 +1,19 @@
+{
+  "job": "4c8243fa9c",
+  "files": [
+    "ancient/scarab.glb",
+    "ancient/scarab.preview.png",
+    "ancient/scarab.image.png"
+  ],
+  "seed": 1511,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.2,
+    "image-to-3d": 50.3,
+    "preview": 1.0,
+    "export-glb": 4.9,
+    "total": 89.7
+  },
+  "server_dir": "2026-11-13/032121-4c8243fa9c-3d-render-of-a-giant-golden-green-scarab",
+  "used_seed": 1511
+}

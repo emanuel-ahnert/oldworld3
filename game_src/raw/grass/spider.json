@@ -1,0 +1,19 @@
+{
+  "job": "cf335569a5",
+  "files": [
+    "grass/spider.glb",
+    "grass/spider.preview.png",
+    "grass/spider.image.png"
+  ],
+  "seed": 1701,
+  "timings": {
+    "text-to-image": 32.9,
+    "check-image": 2.3,
+    "image-to-3d": 47.0,
+    "preview": 1.2,
+    "export-glb": 5.2,
+    "total": 152.5
+  },
+  "server_dir": "2026-11-13/041059-cf335569a5-3d-render-of-a-giant-hairy-forest-spider",
+  "used_seed": 1701
+}

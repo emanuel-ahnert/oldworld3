@@ -1,0 +1,19 @@
+{
+  "job": "efb7d7750c",
+  "files": [
+    "scorpion.glb",
+    "scorpion.preview.png",
+    "scorpion.image.png"
+  ],
+  "seed": 921,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 47.2,
+    "preview": 1.0,
+    "export-glb": 5.0,
+    "total": 86.7
+  },
+  "server_dir": "2026-11-13/014844-efb7d7750c-3d-render-of-a-giant-desert-scorpion-wit",
+  "used_seed": 921
+}

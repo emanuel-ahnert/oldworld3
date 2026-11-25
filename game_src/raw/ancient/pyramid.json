@@ -1,0 +1,19 @@
+{
+  "job": "81a69ee8d6",
+  "files": [
+    "ancient/pyramid.glb",
+    "ancient/pyramid.preview.png",
+    "ancient/pyramid.image.png"
+  ],
+  "seed": 1501,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 54.6,
+    "preview": 1.0,
+    "export-glb": 5.4,
+    "total": 94.4
+  },
+  "server_dir": "2026-11-13/030939-81a69ee8d6-3d-render-of-an-ancient-egyptian-sandsto",
+  "used_seed": 1501
+}

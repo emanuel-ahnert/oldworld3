@@ -1,0 +1,19 @@
+{
+  "job": "4ef863655d",
+  "files": [
+    "shield.glb",
+    "shield.preview.png",
+    "shield.image.png"
+  ],
+  "seed": 1031,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 54.7,
+    "preview": 1.0,
+    "export-glb": 5.5,
+    "total": 94.7
+  },
+  "server_dir": "2026-11-13/020509-4ef863655d-3d-render-of-a-round-wooden-shield-with",
+  "used_seed": 1031
+}

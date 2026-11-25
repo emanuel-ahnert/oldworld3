@@ -1,0 +1,19 @@
+{
+  "job": "155a4a6ca8",
+  "files": [
+    "unholy/darkpine.glb",
+    "unholy/darkpine.preview.png",
+    "unholy/darkpine.image.png"
+  ],
+  "seed": 1312,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.6,
+    "image-to-3d": 54.4,
+    "preview": 1.1,
+    "export-glb": 6.8,
+    "total": 129.2
+  },
+  "server_dir": "2026-11-13/024540-155a4a6ca8-3d-render-of-a-tall-dark-gloomy-pine-tre",
+  "used_seed": 1313
+}

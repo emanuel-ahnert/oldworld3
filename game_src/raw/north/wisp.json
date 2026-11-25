@@ -1,0 +1,19 @@
+{
+  "job": "8cf4fa91b5",
+  "files": [
+    "wisp.glb",
+    "wisp.preview.png",
+    "wisp.image.png"
+  ],
+  "seed": 841,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 43.8,
+    "preview": 0.9,
+    "export-glb": 4.3,
+    "total": 82.5
+  },
+  "server_dir": "2026-11-13/013225-8cf4fa91b5-3d-render-of-a-floating-icy-blue-glowing",
+  "used_seed": 841
+}

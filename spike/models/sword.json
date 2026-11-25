@@ -1,0 +1,18 @@
+{
+  "job": "e58cc8cb86",
+  "files": [
+    "sword.glb",
+    "sword.preview.png",
+    "sword.image.png"
+  ],
+  "seed": 33,
+  "timings": {
+    "text-to-image": 95.1,
+    "check-image": 6.7,
+    "image-to-3d": 38.5,
+    "preview": 0.9,
+    "export-glb": 3.4,
+    "total": 144.7
+  },
+  "server_dir": "2026-11-12/211806-e58cc8cb86-one-handed-steel-arming-sword-with-a-bro"
+}

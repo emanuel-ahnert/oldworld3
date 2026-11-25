@@ -1,0 +1,15 @@
+{
+  "job": "2def46ea5f",
+  "files": [
+    "linden_s511.glb",
+    "linden_s511.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 166.0,
+    "preview": 2.9,
+    "export-glb": 14.6,
+    "total": 183.6
+  },
+  "server_dir": "2026-11-13/004444-2def46ea5f-linden-s511"
+}

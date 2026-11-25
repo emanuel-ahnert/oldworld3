@@ -1,0 +1,19 @@
+{
+  "job": "ca57743ce7",
+  "files": [
+    "pine2.glb",
+    "pine2.preview.png",
+    "pine2.image.png"
+  ],
+  "seed": 812,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 120.8,
+    "preview": 1.5,
+    "export-glb": 16.5,
+    "total": 172.2
+  },
+  "server_dir": "2026-11-13/012622-ca57743ce7-3d-render-of-a-slender-young-fir-tree-co",
+  "used_seed": 812
+}

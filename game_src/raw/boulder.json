@@ -1,0 +1,19 @@
+{
+  "job": "44289effd5",
+  "files": [
+    "boulder.glb",
+    "boulder.preview.png",
+    "boulder.image.png"
+  ],
+  "seed": 202,
+  "timings": {
+    "text-to-image": 55.5,
+    "check-image": 3.8,
+    "image-to-3d": 117.1,
+    "preview": 3.7,
+    "export-glb": 6.5,
+    "total": 186.6
+  },
+  "server_dir": "2026-11-12/224428-44289effd5-mossy-grey-granite-boulder-stylized-fant",
+  "used_seed": 202
+}

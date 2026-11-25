@@ -1,0 +1,15 @@
+{
+  "job": "e7fd2bfaef",
+  "files": [
+    "warlock.glb",
+    "warlock.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 7.4,
+    "total": 48.7
+  },
+  "server_dir": "2026-11-13/020335-e7fd2bfaef-warlock"
+}

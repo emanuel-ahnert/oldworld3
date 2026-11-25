@@ -1,0 +1,19 @@
+{
+  "job": "f2c3d6fbb0",
+  "files": [
+    "ember.glb",
+    "ember.preview.png",
+    "ember.image.png"
+  ],
+  "seed": 923,
+  "timings": {
+    "text-to-image": 93.6,
+    "check-image": 6.8,
+    "image-to-3d": 45.9,
+    "preview": 0.9,
+    "export-glb": 4.4,
+    "total": 151.5
+  },
+  "server_dir": "2026-11-13/015208-f2c3d6fbb0-3d-render-of-a-floating-fire-spirit-made",
+  "used_seed": 925
+}

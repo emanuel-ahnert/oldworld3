@@ -1,0 +1,19 @@
+{
+  "job": "e29381d5e6",
+  "files": [
+    "gear/hood.glb",
+    "gear/hood.preview.png",
+    "gear/hood.image.png"
+  ],
+  "seed": 1903,
+  "timings": {
+    "text-to-image": 48.4,
+    "check-image": 3.5,
+    "image-to-3d": 76.2,
+    "preview": 1.7,
+    "export-glb": 6.4,
+    "total": 136.2
+  },
+  "server_dir": "2026-11-13/133713-e29381d5e6-medieval-dark-blue-cloth-hood-with-a-sho",
+  "used_seed": 1903
+}

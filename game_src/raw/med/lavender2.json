@@ -1,0 +1,19 @@
+{
+  "job": "dd7d08c2b1",
+  "files": [
+    "med/lavender2.glb",
+    "med/lavender2.preview.png",
+    "med/lavender2.image.png"
+  ],
+  "seed": 1215,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 87.3,
+    "preview": 1.4,
+    "export-glb": 14.8,
+    "total": 136.9
+  },
+  "server_dir": "2026-11-13/030216-dd7d08c2b1-3d-render-of-a-low-round-lavender-shrub",
+  "used_seed": 1215
+}

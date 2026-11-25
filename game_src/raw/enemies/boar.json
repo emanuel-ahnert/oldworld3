@@ -1,0 +1,19 @@
+{
+  "job": "c68571f34b",
+  "files": [
+    "enemies/boar.glb",
+    "enemies/boar.preview.png",
+    "enemies/boar.image.png"
+  ],
+  "seed": 611,
+  "timings": {
+    "text-to-image": 62.6,
+    "check-image": 4.5,
+    "image-to-3d": 40.8,
+    "preview": 0.9,
+    "export-glb": 3.9,
+    "total": 112.8
+  },
+  "server_dir": "2026-11-13/005123-c68571f34b-3d-render-of-a-wild-boar-with-tusks-stan",
+  "used_seed": 612
+}

@@ -1,0 +1,19 @@
+{
+  "job": "952493819e",
+  "files": [
+    "ancient/cobra.glb",
+    "ancient/cobra.preview.png",
+    "ancient/cobra.image.png"
+  ],
+  "seed": 1512,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 54.7,
+    "preview": 1.0,
+    "export-glb": 5.1,
+    "total": 94.2
+  },
+  "server_dir": "2026-11-13/032252-952493819e-3d-render-of-a-giant-cobra-snake-rearing",
+  "used_seed": 1512
+}

@@ -1,0 +1,19 @@
+{
+  "job": "29f294b522",
+  "files": [
+    "gear/coif.glb",
+    "gear/coif.preview.png",
+    "gear/coif.image.png"
+  ],
+  "seed": 1901,
+  "timings": {
+    "text-to-image": 97.1,
+    "check-image": 6.5,
+    "image-to-3d": 81.1,
+    "preview": 1.5,
+    "export-glb": 6.9,
+    "total": 193.2
+  },
+  "server_dir": "2026-11-13/133110-29f294b522-medieval-chainmail-coif-hood-covering-th",
+  "used_seed": 1902
+}

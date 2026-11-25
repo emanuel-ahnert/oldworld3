@@ -1,0 +1,1352 @@
+{
+  "_about": "Generated assets used by the game (design/asset-pipeline.md, section 5). seed = the seed passed to gen3d. Every job is archived on the GPU box; server_dir is its folder there (<date>/<time>-<job>-*).",
+  "assets": {
+    "characters/warrior/body.glb": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "job": null,
+          "seed": 11,
+          "object": true,
+          "prompt": "one adult human man, standing in A-pose, arms straight and held 45 degrees away from the body, hands open, legs slightly apart, wearing a plain beige linen shirt, brown trousers and simple leather shoes, short brown hair, bare hands, front view, symmetrical, full body visible from head to feet, stylized fantasy game character, hand-painted texture style",
+          "negative": "T-pose, arms down, arms touching body, hands on hips, crossed legs, multiple people, weapon, shield, cape, cloak, cropped, cut off feet, side view, back view",
+          "file": "spike/img/body_s11.png"
+        },
+        {
+          "gen3d": "model --image",
+          "job": "ece2a26ce7",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        },
+        {
+          "script": "tools/pipeline/body.py",
+          "args": "<model> <out_dir> 1.85"
+        }
+      ],
+      "also": [
+        "body_color.png",
+        "body_mr.png",
+        "body_normal.png"
+      ]
+    },
+    "characters/warrior/plate_color.png": {
+      "steps": [
+        {
+          "script": "tools/pipeline/control.py",
+          "args": "body.blend <out_dir> 1024"
+        },
+        {
+          "gen3d": "image",
+          "seed": 32,
+          "object": true,
+          "control": "depth.png (depth, scale 0.7, end 0.8)",
+          "file": "spike/ctl/knight2_s32.png",
+          "prompt": "full body adult human knight in detailed articulated steel plate armor, segmented pauldrons, breastplate with rivets, plate tassets over the hips, segmented knee guards, steel greaves and sabatons, leather straps and buckles, brown leather belt, chainmail visible at the joints, no helmet, bare head, short brown hair, front view, stylized fantasy game character, hand-painted texture style"
+        },
+        {
+          "gen3d": "model --image",
+          "job": "cb087c9497",
+          "seed": 7,
+          "faces": 80000,
+          "texture": 2048
+        },
+        {
+          "script": "tools/pipeline/outfit.py",
+          "args": "<body_dir> <model> plate 1.85"
+        }
+      ],
+      "also": [
+        "plate_mr.png",
+        "plate_normal.png"
+      ],
+      "note": "replaces the plainer knight (image seed 22, job c1f1c1bfe2)"
+    },
+    "characters/warrior/helmet.glb": {
+      "steps": [
+        {
+          "gen3d": "model",
+          "job": "a861d35b9b",
+          "seed": 21,
+          "faces": 8000,
+          "texture": 1024,
+          "prompt": "medieval steel great helm, rounded top, eye slit, stylized fantasy game asset, hand-painted texture style"
+        }
+      ],
+      "attach": {
+        "bone": "Head",
+        "offset": [
+          0,
+          0.115,
+          0.05
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 0.42
+      }
+    },
+    "characters/warrior/sword.glb": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "job": null,
+          "seed": 6,
+          "object": true,
+          "prompt": "a single one-handed steel arming sword standing upright, vertical, point down, straight broad blade, simple crossguard, brown leather grip, round pommel, whole sword visible, stylized fantasy game asset, hand-painted texture style",
+          "negative": "two swords, crossed swords, multiple swords, scabbard, sheath, hand, person, cropped, diagonal"
+        },
+        {
+          "gen3d": "model --image",
+          "job": "f68973f4ac",
+          "seed": 7,
+          "faces": 6000,
+          "texture": 1024
+        },
+        {
+          "script": "tools/pipeline/weapon.py",
+          "args": "<model> <out> 0.8"
+        }
+      ],
+      "attach": {
+        "bone": "RightHand",
+        "offset": [
+          0,
+          -0.075,
+          0.01
+        ],
+        "rotation": [
+          90,
+          0,
+          0
+        ],
+        "scale": 1.0
+      }
+    },
+    "terrain/grass.png": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "seed": 403,
+          "file": "game_src/raw/grass2_s403.png",
+          "prompt": "close-up texture of dense lush green grass blades, thick meadow lawn, slight color variation, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "stones, cobblestones, rocks, pebbles, bricks, tiles, pavement, path, flowers, objects, text"
+        },
+        {
+          "script": "tools/pipeline/seamless.py",
+          "args": "<in> <out> 1024"
+        }
+      ],
+      "note": "replaces the flowery grass (seed 101); toned down in terrain.gdshader"
+    },
+    "terrain/dirt.png": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "seed": 413,
+          "file": "game_src/raw/dirt2_s413.png",
+          "prompt": "texture of soft packed brown earth, fine dry soil with footprints and a few short grass tufts, very few tiny pebbles, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "cobblestones, stones, rocks, bricks, tiles, pavement, cracks, objects, text"
+        },
+        {
+          "script": "tools/pipeline/seamless.py",
+          "args": "<in> <out> 1024"
+        }
+      ],
+      "note": "SDXL gave cobblestones, stripes or flat color for most dirt prompts; this sandy soil with clods is recolored to earth brown in terrain.gdshader, which also lets grass grow into the road edges"
+    },
+    "terrain/rock.png": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "job": "c3ed0c794b",
+          "seed": 103,
+          "prompt": "texture of grey rough rock cliff surface with cracks, seen from directly above, top down, flat even lighting, no shadows, stylized hand-painted fantasy game texture, seamless tileable"
+        },
+        {
+          "script": "tools/pipeline/seamless.py",
+          "args": "<in> <out> 1024"
+        }
+      ]
+    },
+    "nature/boulder.glb": {
+      "steps": [
+        {
+          "gen3d": "model",
+          "job": "44289effd5",
+          "seed": 202,
+          "faces": 3000,
+          "texture": 1024,
+          "prompt": "mossy grey granite boulder, stylized fantasy, hand-painted texture style"
+        }
+      ]
+    },
+    "nature/oak.glb": {
+      "steps": [
+        {
+          "gen3d": "image",
+          "job": null,
+          "seed": 302,
+          "object": true,
+          "prompt": "3D render of a stylized fantasy oak tree, thick volumetric round leafy canopy with depth, thick trunk with roots, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple trees, forest, ground, grass",
+          "note": "a hand-painted style prompt gave a flat, card-like tree (job 58d4dff425); '3D render' and 'three-quarter view' fixed it"
+        },
+        {
+          "gen3d": "model --image",
+          "job": "4b55b17231",
+          "seed": 7,
+          "faces": 10000,
+          "texture": 1024
+        }
+      ]
+    },
+    "nature/bush.glb": {
+      "steps": [
+        {
+          "gen3d": "model",
+          "job": "c6df8d9185",
+          "seed": 211,
+          "faces": 3000,
+          "texture": 1024,
+          "prompt": "3D render of one small compact round leafy green shrub, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, multiple bushes, hedge, ground, pot",
+          "note": "comes with a small earth mound; sunk 0.3 m into the ground"
+        }
+      ]
+    },
+    "raw/snow1.png": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of fresh white snow with soft drifts and a few footprints-free sparkles, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "rocks, grass, footprints, objects, text",
+          "seed": 801
+        }
+      ]
+    },
+    "raw/snow2.png": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of packed white snow with small icy crystals and subtle blue shadows, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "rocks, grass, footprints, objects, text",
+          "seed": 802
+        }
+      ]
+    },
+    "raw/ice.png": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of a frozen lake surface, blue-white ice with cracks and frost, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "objects, text",
+          "seed": 803
+        }
+      ]
+    },
+    "raw/pine1.glb": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a tall straight snowy pine tree with dark green needles and snow on the branches, conical shape, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 811,
+          "faces": 9000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/pine2.glb": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a slender young fir tree covered in snow, conical shape, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 812,
+          "faces": 7000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/snowwolf.glb": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a white snow wolf standing on all four legs, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 821,
+          "faces": 8000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/longhouse.glb": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a nordic viking timber longhouse with a steep snowy roof and carved dragon gable ends, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 831,
+          "faces": 16000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/wisp.glb": {
+      "batch": "batch3.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a floating icy blue glowing frost spirit wisp made of ice crystals, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 841,
+          "faces": 4000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/sand.png": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of fine golden desert sand with soft wind ripples, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "rocks, plants, footprints, objects, text",
+          "seed": 901
+        }
+      ]
+    },
+    "raw/sandpath.png": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of a packed pale sandstone path with small flat stones and fine sand, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "plants, objects, text",
+          "seed": 902
+        }
+      ]
+    },
+    "raw/desertrock.png": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of red-orange layered sandstone rock with cracks, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "plants, objects, text",
+          "seed": 903
+        }
+      ]
+    },
+    "raw/palm.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a tall date palm tree with a curved trunk and a crown of green fronds, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 911,
+          "faces": 8000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/cactus.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a tall green saguaro cactus with two arms, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 912,
+          "faces": 3000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/drybush.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small dry desert shrub with thin brown branches, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 913,
+          "faces": 3000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/scorpion.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a giant desert scorpion with raised tail and pincers, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 921,
+          "faces": 8000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/sandsnake.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a coiled sand-colored desert snake raising its head, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 922,
+          "faces": 6000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/ember.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a floating fire spirit made of glowing embers and flames, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 923,
+          "faces": 4000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/domehouse.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small desert mud-brick house with a white dome roof and a wooden door, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 931,
+          "faces": 10000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/sandinn.glb": {
+      "batch": "batch4.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a two-story sandstone desert inn with arched windows, wooden balconies and a flat roof with a cloth awning, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 932,
+          "faces": 16000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/priest.glb": {
+      "batch": "batch5.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human priest in white and gold cloth vestments with a golden sun emblem on the chest, a gold-trimmed sash, white sleeves, soft white boots, short brown hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1001
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/priest.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/paladin.glb": {
+      "batch": "batch5.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human paladin in shining silver plate armor with gold trim and a white tabard with a golden sun emblem, steel gauntlets and boots, no helmet, short brown hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1011
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/paladin.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/warlock.glb": {
+      "batch": "batch5.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human warlock in dark purple and black robes-like tunic with glowing green runes, a hooded cowl thrown back, black leather gloves, dark boots, pale skin, short black hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1021
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/warlock.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/hunter.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human hunter ranger in green and brown leather armor with a mail shirt underneath, a quiver strap across the chest, leather bracers, a brown cloak on the shoulders, tall leather boots, short brown hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1101
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/hunter.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/shaman.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human shaman in blue and brown mail and leather armor with bone and feather ornaments, a wolf pelt on the shoulders, tribal tattoos on the arms, leather boots, braided dark hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1111
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/shaman.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/druid.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body human druid in green and brown leaf-patterned leather robes-like tunic with a cloak of leaves on the shoulders, wooden antler ornaments, bare forearms, soft leather boots, long brown hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1121
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/druid.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/bear.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a big brown grizzly bear standing on all four legs, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1131,
+          "faces": 8000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/totem_wrath.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a carved wooden tribal totem pole with a fierce red painted face and feathers on top, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1141,
+          "faces": 4000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/totem_healing.glb": {
+      "batch": "batch6.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a carved wooden tribal totem pole with a calm blue painted face and a water drop symbol, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1142,
+          "faces": 4000,
+          "texture": 1024
+        }
+      ]
+    },
+    "raw/med/grass.png": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of dry golden summer grass with a few small wildflowers, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "stones, rocks, objects, text",
+          "seed": 1201
+        }
+      ]
+    },
+    "raw/med/path.png": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of a pale limestone dirt path with small white pebbles, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "objects, text, cobblestones",
+          "seed": 1202
+        }
+      ]
+    },
+    "raw/med/olive.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a gnarled old olive tree with a twisted silver-grey trunk and a round silvery-green crown, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1211,
+          "faces": 9000,
+          "texture": 1024,
+          "job": "2942acd22e",
+          "server_dir": "2026-11-13/022205-2942acd22e-3d-render-of-a-gnarled-old-olive-tree-wi"
+        }
+      ]
+    },
+    "raw/med/cypress.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a tall slender dark green italian cypress tree, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1212,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "ed2eececf0",
+          "server_dir": "2026-11-13/022624-ed2eececf0-3d-render-of-a-tall-slender-dark-green-i"
+        }
+      ]
+    },
+    "raw/med/lavender.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small round lavender bush with purple flowers, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1213,
+          "faces": 3000,
+          "texture": 1024,
+          "job": "c4498c7a98",
+          "server_dir": "2026-11-13/022833-c4498c7a98-3d-render-of-a-small-round-lavender-bush"
+        }
+      ]
+    },
+    "raw/med/crab.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a giant red crab with big claws, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1221,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "09220d3840",
+          "server_dir": "2026-11-13/023023-09220d3840-3d-render-of-a-giant-red-crab-with-big-c"
+        }
+      ]
+    },
+    "raw/med/windspirit.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a floating swirling air spirit made of pale blue wind and clouds, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1222,
+          "faces": 4000,
+          "texture": 1024,
+          "job": "82d662b592",
+          "server_dir": "2026-11-13/023303-82d662b592-3d-render-of-a-floating-swirling-air-spi"
+        }
+      ]
+    },
+    "raw/med/whitehouse.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small whitewashed greek island house with a blue dome and blue door and shutters, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1231,
+          "faces": 10000,
+          "texture": 1024,
+          "job": "1be03f4ee1",
+          "server_dir": "2026-11-13/023448-1be03f4ee1-3d-render-of-a-small-whitewashed-greek-i"
+        }
+      ]
+    },
+    "raw/med/villa.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a mediterranean villa with terracotta tiled roof and a columned porch, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1232,
+          "faces": 14000,
+          "texture": 1024,
+          "job": "bd3d3cca93",
+          "server_dir": "2026-11-13/023637-bd3d3cca93-3d-render-of-a-mediterranean-villa-with"
+        }
+      ]
+    },
+    "raw/med/corsair.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body pirate corsair with a red bandana, a white loose shirt, a brown leather vest, a wide sash belt, dark trousers and tall boots, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1241
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/med/corsair.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "f0f51ae8a2",
+          "server_dir": "2026-11-13/024030-f0f51ae8a2-corsair"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/med/hoplite.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body greek hoplite soldier in bronze cuirass and bronze greaves over a red tunic, leather pteruges skirt strips, no helmet, short dark curly hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1242
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/med/hoplite.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "d295f4d647",
+          "server_dir": "2026-11-13/024208-d295f4d647-hoplite"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/unholy/grass.png": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of dead withered grey-brown grass and dark soil, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "stones, objects, text",
+          "seed": 1301
+        }
+      ]
+    },
+    "raw/unholy/path.png": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "close-up texture of dark wet muddy path with small black stones, seen from directly above, top down, flat even lighting, no shadows, stylized game texture, seamless tileable",
+          "negative": "objects, text",
+          "seed": 1302
+        }
+      ]
+    },
+    "raw/unholy/deadtree.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a dead twisted leafless tree with black bark and gnarled branches, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1311,
+          "faces": 7000,
+          "texture": 1024,
+          "job": "0e6a74254f",
+          "server_dir": "2026-11-13/024406-0e6a74254f-3d-render-of-a-dead-twisted-leafless-tre"
+        }
+      ]
+    },
+    "raw/unholy/darkpine.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a tall dark gloomy pine tree with nearly black needles, conical shape, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1312,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "155a4a6ca8",
+          "server_dir": "2026-11-13/024540-155a4a6ca8-3d-render-of-a-tall-dark-gloomy-pine-tre"
+        }
+      ]
+    },
+    "raw/unholy/gravestone.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of an old weathered mossy stone gravestone with a rounded top, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1313,
+          "faces": 2000,
+          "texture": 1024,
+          "job": "27fd848252",
+          "server_dir": "2026-11-13/024750-27fd848252-3d-render-of-an-old-weathered-mossy-ston"
+        }
+      ]
+    },
+    "raw/unholy/direwolf.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a black dire wolf with glowing red eyes standing on all four legs, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1321,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "feb03c486d",
+          "server_dir": "2026-11-13/024940-feb03c486d-3d-render-of-a-black-dire-wolf-with-glow"
+        }
+      ]
+    },
+    "raw/unholy/bats.glb": {
+      "batch": "batch8.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a single giant black vampire bat with leathery wings spread wide, small compact body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1323,
+          "faces": 5000,
+          "texture": 1024,
+          "job": "a6141d2de6",
+          "server_dir": "2026-11-13/030758-a6141d2de6-3d-render-of-a-single-giant-black-vampir"
+        }
+      ]
+    },
+    "raw/unholy/gothichouse.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small gothic house of dark stone with a steep slate roof and a corner turret, warm lit windows, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1331,
+          "faces": 12000,
+          "texture": 1024,
+          "job": "d59c3b2044",
+          "server_dir": "2026-11-13/025320-d59c3b2044-3d-render-of-a-small-gothic-house-of-dar"
+        }
+      ]
+    },
+    "raw/unholy/crypt.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small stone crypt mausoleum with a pointed arch door, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1332,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "e6b3811897",
+          "server_dir": "2026-11-13/025454-e6b3811897-3d-render-of-a-small-stone-crypt-mausole"
+        }
+      ]
+    },
+    "raw/unholy/cultist.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body dark cultist in long black and blood red robes-like tunic with occult symbols, a hood thrown back, pale skin, bald head, bare hands, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1341
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/unholy/cultist.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "a8f1f6870e",
+          "server_dir": "2026-11-13/025728-a8f1f6870e-cultist"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/unholy/vampire.glb": {
+      "batch": "batch7.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body vampire noble in an elegant black and crimson coat with a high collar, a dark waistcoat, black trousers and boots, pale skin, slicked black hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1342
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/unholy/vampire.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "796fab387f",
+          "server_dir": "2026-11-13/025905-796fab387f-vampire"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/med/cypress2.glb": {
+      "batch": "batch8.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a single very tall and very narrow columnar italian cypress tree shaped like a slim dark green flame, dense foliage from bottom to top, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1214,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "72d277381e",
+          "server_dir": "2026-11-13/030018-72d277381e-3d-render-of-a-single-very-tall-and-very"
+        }
+      ]
+    },
+    "raw/med/lavender2.glb": {
+      "batch": "batch8.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a low round lavender shrub with many purple flower spikes growing directly from the soil, no pot, no planter, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1215,
+          "faces": 3000,
+          "texture": 1024,
+          "job": "dd7d08c2b1",
+          "server_dir": "2026-11-13/030216-dd7d08c2b1-3d-render-of-a-low-round-lavender-shrub"
+        }
+      ]
+    },
+    "raw/props/noticeboard.glb": {
+      "batch": "batch8.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a medieval wooden village notice board on two posts with a small shingle roof and pinned paper notes, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1401,
+          "faces": 5000,
+          "texture": 1024,
+          "job": "947aa0175b",
+          "server_dir": "2026-11-13/030434-947aa0175b-3d-render-of-a-medieval-wooden-village-n"
+        }
+      ]
+    },
+    "raw/props/stall.glb": {
+      "batch": "batch8.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a medieval market stall with a wooden counter, a striped red and white cloth awning and crates of goods, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1402,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "973722aec0",
+          "server_dir": "2026-11-13/030610-973722aec0-3d-render-of-a-medieval-market-stall-wit"
+        }
+      ]
+    },
+    "raw/ancient/pyramid.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of an ancient egyptian sandstone pyramid with smooth sloped sides and a dark entrance at the base, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1501,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "81a69ee8d6",
+          "server_dir": "2026-11-13/030939-81a69ee8d6-3d-render-of-an-ancient-egyptian-sandsto"
+        }
+      ]
+    },
+    "raw/ancient/obelisk.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a single tall ancient egyptian sandstone obelisk with carved hieroglyphs, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1502,
+          "faces": 3000,
+          "texture": 1024,
+          "job": "0270f61fbd",
+          "server_dir": "2026-11-13/031116-0270f61fbd-3d-render-of-a-single-tall-ancient-egypt"
+        }
+      ]
+    },
+    "raw/ancient/sphinx.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of an ancient egyptian sandstone sphinx statue lying on its belly, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1503,
+          "faces": 10000,
+          "texture": 1024,
+          "job": "e0f2bd281b",
+          "server_dir": "2026-11-13/031356-e0f2bd281b-3d-render-of-an-ancient-egyptian-sandsto"
+        }
+      ]
+    },
+    "raw/ancient/temple.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small ancient egyptian sandstone temple with massive painted columns and a flat roof, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1504,
+          "faces": 12000,
+          "texture": 1024,
+          "job": "f23a547eee",
+          "server_dir": "2026-11-13/031524-f23a547eee-3d-render-of-a-small-ancient-egyptian-sa"
+        }
+      ]
+    },
+    "raw/ancient/house.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a small flat-roofed egyptian mud brick house with a doorway and small windows, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1505,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "171eac6a8c",
+          "server_dir": "2026-11-13/031733-171eac6a8c-3d-render-of-a-small-flat-roofed-egyptia"
+        }
+      ]
+    },
+    "raw/ancient/statue.glb": {
+      "batch": "batch10.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a seated pharaoh statue of sandstone on a block throne, hands on the knees, nemes headdress, compact, whole statue visible, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1507,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "2a3dad86c8",
+          "server_dir": "2026-11-13/033253-2a3dad86c8-3d-render-of-a-seated-pharaoh-statue-of"
+        }
+      ]
+    },
+    "raw/ancient/scarab.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a giant golden-green scarab beetle standing on six legs, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1511,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "4c8243fa9c",
+          "server_dir": "2026-11-13/032121-4c8243fa9c-3d-render-of-a-giant-golden-green-scarab"
+        }
+      ]
+    },
+    "raw/ancient/cobra.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a giant cobra snake rearing up with an open hood, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1512,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "952493819e",
+          "server_dir": "2026-11-13/032252-952493819e-3d-render-of-a-giant-cobra-snake-rearing"
+        }
+      ]
+    },
+    "raw/ancient/mummy.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body egyptian mummy wrapped completely in dirty yellowed linen bandages, bandaged head, dark eye sockets, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1521
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/ancient/mummy.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "b4863e0779",
+          "server_dir": "2026-11-13/032514-b4863e0779-mummy"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/ancient/guardian.glb": {
+      "batch": "batch9.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body egyptian tomb guardian warrior with bronze skin, a broad golden collar, a white linen kilt with a golden belt, golden arm bands, a blue and gold striped nemes headdress, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1522
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/ancient/guardian.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "552cfe580d",
+          "server_dir": "2026-11-13/032652-552cfe580d-guardian"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/npc/merchant.glb": {
+      "batch": "batch10.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body medieval merchant with a green wool tunic, a brown leather apron, a belt with a coin purse, brown trousers and leather shoes, short brown beard, no hat, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1601
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/npc/merchant.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "cb773ab3eb",
+          "server_dir": "2026-11-13/032848-cb773ab3eb-merchant"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/npc/villager.glb": {
+      "batch": "batch10.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body medieval peasant farmer with a loose undyed linen shirt, a brown wool vest, rope belt, patched grey trousers and simple leather boots, no hat, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1602
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/npc/villager.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "8edaafc8b3",
+          "server_dir": "2026-11-13/033025-8edaafc8b3-villager"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/npc/villager2.glb": {
+      "batch": "batch10.sh",
+      "steps": [
+        {
+          "gen3d": "image",
+          "prompt": "full body medieval townsman with a blue wool tunic with a hood down, a brown belt, dark green trousers and brown boots, short blond hair, no weapon, front view, stylized fantasy game character, hand-painted texture style",
+          "control": "spike/control/depth.png",
+          "control_scale": 0.6,
+          "control_end": 0.75,
+          "seed": 1603
+        },
+        {
+          "gen3d": "model",
+          "image": "raw/npc/villager2.png",
+          "seed": 7,
+          "faces": 60000,
+          "texture": 2048,
+          "job": "fb06de8c79",
+          "server_dir": "2026-11-13/033202-fb06de8c79-villager2"
+        }
+      ],
+      "post": "tools/pipeline/outfit.py (baked onto the base body)"
+    },
+    "raw/grass/spider.glb": {
+      "batch": "batch11.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a giant hairy forest spider with eight long legs and a brown and black striped body, standing, side three-quarter view, full body, stylized fantasy game creature, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1701,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "cf335569a5",
+          "server_dir": "2026-11-13/041059-cf335569a5-3d-render-of-a-giant-hairy-forest-spider"
+        }
+      ]
+    },
+    "raw/props/chest.glb": {
+      "batch": "batch12.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of a closed wooden treasure chest with iron bands and a lock, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1801,
+          "faces": 4000,
+          "texture": 1024,
+          "job": "7bd04d5dbd",
+          "server_dir": "2026-11-13/132104-7bd04d5dbd-3d-render-of-a-closed-wooden-treasure-ch"
+        }
+      ]
+    },
+    "raw/props/chest_open.glb": {
+      "batch": "batch12.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "3D render of an open wooden treasure chest with iron bands, lid open, gold coins inside, three-quarter view, game asset, soft studio light",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1802,
+          "faces": 5000,
+          "texture": 1024,
+          "job": "52608f7091",
+          "server_dir": "2026-11-13/132433-52608f7091-3d-render-of-an-open-wooden-treasure-che"
+        }
+      ]
+    },
+    "raw/gear/coif.glb": {
+      "batch": "batch13.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "medieval chainmail coif hood covering the head and neck with an open face, empty, stylized fantasy game asset, hand-painted texture style",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1901,
+          "faces": 8000,
+          "texture": 1024,
+          "job": "29f294b522",
+          "server_dir": "2026-11-13/133110-29f294b522-medieval-chainmail-coif-hood-covering-th"
+        }
+      ]
+    },
+    "raw/gear/cap.glb": {
+      "batch": "batch13.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "medieval brown leather cap with ear flaps and stitching, empty, stylized fantasy game asset, hand-painted texture style",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1902,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "0f8625ad8e",
+          "server_dir": "2026-11-13/133426-0f8625ad8e-medieval-brown-leather-cap-with-ear-flap"
+        }
+      ]
+    },
+    "raw/gear/hood.glb": {
+      "batch": "batch13.sh",
+      "steps": [
+        {
+          "gen3d": "model",
+          "prompt": "medieval dark blue cloth hood with a short cape over the shoulders, empty, stylized fantasy game asset, hand-painted texture style",
+          "negative": "flat, 2D, painting, illustration, drawing, sketch, multiple, group, ground, base, pedestal, cropped",
+          "seed": 1903,
+          "faces": 6000,
+          "texture": 1024,
+          "job": "e29381d5e6",
+          "server_dir": "2026-11-13/133713-e29381d5e6-medieval-dark-blue-cloth-hood-with-a-sho"
+        }
+      ]
+    }
+  }
+}

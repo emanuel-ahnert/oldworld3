@@ -1,0 +1,15 @@
+{
+  "job": "32dd9dcc27",
+  "files": [
+    "birch_s522.glb",
+    "birch_s522.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 76.3,
+    "preview": 2.5,
+    "export-glb": 6.9,
+    "total": 85.7
+  },
+  "server_dir": "2026-11-13/004751-32dd9dcc27-birch-s522"
+}

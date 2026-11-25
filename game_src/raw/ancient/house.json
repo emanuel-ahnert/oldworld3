@@ -1,0 +1,19 @@
+{
+  "job": "171eac6a8c",
+  "files": [
+    "ancient/house.glb",
+    "ancient/house.preview.png",
+    "ancient/house.image.png"
+  ],
+  "seed": 1505,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 82.5,
+    "preview": 1.2,
+    "export-glb": 7.3,
+    "total": 124.5
+  },
+  "server_dir": "2026-11-13/031733-171eac6a8c-3d-render-of-a-small-flat-roofed-egyptia",
+  "used_seed": 1505
+}

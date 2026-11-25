@@ -1,0 +1,19 @@
+{
+  "job": "f23a547eee",
+  "files": [
+    "ancient/temple.glb",
+    "ancient/temple.preview.png",
+    "ancient/temple.image.png"
+  ],
+  "seed": 1504,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 83.2,
+    "preview": 1.3,
+    "export-glb": 8.5,
+    "total": 126.5
+  },
+  "server_dir": "2026-11-13/031524-f23a547eee-3d-render-of-a-small-ancient-egyptian-sa",
+  "used_seed": 1504
+}

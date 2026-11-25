@@ -1,0 +1,19 @@
+{
+  "job": "3df29ca0b3",
+  "files": [
+    "bear.glb",
+    "bear.preview.png",
+    "bear.image.png"
+  ],
+  "seed": 1131,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 49.1,
+    "preview": 1.0,
+    "export-glb": 4.8,
+    "total": 88.3
+  },
+  "server_dir": "2026-11-13/021439-3df29ca0b3-3d-render-of-a-big-brown-grizzly-bear-st",
+  "used_seed": 1131
+}

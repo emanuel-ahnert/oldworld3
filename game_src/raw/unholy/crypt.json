@@ -1,0 +1,19 @@
+{
+  "job": "e6b3811897",
+  "files": [
+    "unholy/crypt.glb",
+    "unholy/crypt.preview.png",
+    "unholy/crypt.image.png"
+  ],
+  "seed": 1332,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.3,
+    "image-to-3d": 66.4,
+    "preview": 1.1,
+    "export-glb": 6.5,
+    "total": 107.4
+  },
+  "server_dir": "2026-11-13/025454-e6b3811897-3d-render-of-a-small-stone-crypt-mausole",
+  "used_seed": 1332
+}

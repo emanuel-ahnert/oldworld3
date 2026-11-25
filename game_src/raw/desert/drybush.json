@@ -1,0 +1,19 @@
+{
+  "job": "3cd9262a7f",
+  "files": [
+    "drybush.glb",
+    "drybush.preview.png",
+    "drybush.image.png"
+  ],
+  "seed": 913,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 49.6,
+    "preview": 0.9,
+    "export-glb": 4.3,
+    "total": 88.3
+  },
+  "server_dir": "2026-11-13/014713-3cd9262a7f-3d-render-of-a-small-dry-desert-shrub-wi",
+  "used_seed": 913
+}

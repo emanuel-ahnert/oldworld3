@@ -1,0 +1,19 @@
+{
+  "job": "82d662b592",
+  "files": [
+    "med/windspirit.glb",
+    "med/windspirit.preview.png",
+    "med/windspirit.image.png"
+  ],
+  "seed": 1222,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 59.1,
+    "preview": 1.2,
+    "export-glb": 9.4,
+    "total": 103.2
+  },
+  "server_dir": "2026-11-13/023303-82d662b592-3d-render-of-a-floating-swirling-air-spi",
+  "used_seed": 1222
+}

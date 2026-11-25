@@ -1,0 +1,19 @@
+{
+  "job": "58d4dff425",
+  "files": [
+    "oak.glb",
+    "oak.preview.png",
+    "oak.image.png"
+  ],
+  "seed": 201,
+  "timings": {
+    "text-to-image": 41.8,
+    "check-image": 3.1,
+    "image-to-3d": 85.5,
+    "preview": 2.2,
+    "export-glb": 4.0,
+    "total": 203.3
+  },
+  "server_dir": "2026-11-12/224102-58d4dff425-stylized-fantasy-oak-tree-with-a-full-ro",
+  "used_seed": 201
+}

@@ -1,0 +1,19 @@
+{
+  "job": "709018befc",
+  "files": [
+    "sandsnake.glb",
+    "sandsnake.preview.png",
+    "sandsnake.image.png"
+  ],
+  "seed": 922,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 71.2,
+    "preview": 1.2,
+    "export-glb": 9.0,
+    "total": 114.9
+  },
+  "server_dir": "2026-11-13/015012-709018befc-3d-render-of-a-coiled-sand-colored-deser",
+  "used_seed": 922
+}

@@ -1,0 +1,19 @@
+{
+  "job": "52608f7091",
+  "files": [
+    "props/chest_open.glb",
+    "props/chest_open.preview.png",
+    "props/chest_open.image.png"
+  ],
+  "seed": 1802,
+  "timings": {
+    "text-to-image": 101.0,
+    "check-image": 7.5,
+    "image-to-3d": 81.6,
+    "preview": 1.7,
+    "export-glb": 10.4,
+    "total": 202.1
+  },
+  "server_dir": "2026-11-13/132433-52608f7091-3d-render-of-an-open-wooden-treasure-che",
+  "used_seed": 1804
+}

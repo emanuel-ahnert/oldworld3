@@ -1,0 +1,12 @@
+{
+  "job": "4aa281e3e4",
+  "files": [
+    "grass.png"
+  ],
+  "seed": 101,
+  "timings": {
+    "text-to-image": 58.3,
+    "total": 58.3
+  },
+  "server_dir": "2026-11-12/223807-4aa281e3e4-texture-of-short-lush-green-meadow-grass"
+}

@@ -1,0 +1,19 @@
+{
+  "job": "efb64fc0a8",
+  "files": [
+    "domehouse.glb",
+    "domehouse.preview.png",
+    "domehouse.image.png"
+  ],
+  "seed": 931,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 61.7,
+    "preview": 1.1,
+    "export-glb": 6.9,
+    "total": 103.2
+  },
+  "server_dir": "2026-11-13/015524-efb64fc0a8-3d-render-of-a-small-desert-mud-brick-ho",
+  "used_seed": 931
+}

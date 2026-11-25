@@ -1,0 +1,19 @@
+{
+  "job": "466653dc92",
+  "files": [
+    "totem_healing.glb",
+    "totem_healing.preview.png",
+    "totem_healing.image.png"
+  ],
+  "seed": 1144,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.6,
+    "image-to-3d": 51.6,
+    "preview": 1.0,
+    "export-glb": 4.9,
+    "total": 124.4
+  },
+  "server_dir": "2026-11-13/022133-466653dc92-3d-render-of-a-short-compact-carved-wood",
+  "used_seed": 1145
+}

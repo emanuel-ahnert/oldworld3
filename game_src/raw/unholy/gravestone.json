@@ -1,0 +1,19 @@
+{
+  "job": "27fd848252",
+  "files": [
+    "unholy/gravestone.glb",
+    "unholy/gravestone.preview.png",
+    "unholy/gravestone.image.png"
+  ],
+  "seed": 1313,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 63.4,
+    "preview": 1.4,
+    "export-glb": 10.0,
+    "total": 108.2
+  },
+  "server_dir": "2026-11-13/024750-27fd848252-3d-render-of-an-old-weathered-mossy-ston",
+  "used_seed": 1313
+}

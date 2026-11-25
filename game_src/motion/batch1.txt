@@ -1,0 +1,5 @@
+# name | prompt | seconds | repeats   (MoMask, 20 fps; see tools/pipeline/motion_retarget.py)
+run | a person runs forward at a steady fast pace | 4 | 3
+walk | a person walks forward at a normal pace | 4 | 3
+jump | a person jumps forward over an obstacle and lands | 2.4 | 3
+idle | a person stands still in a relaxed pose, breathing and shifting weight slightly | 4 | 3

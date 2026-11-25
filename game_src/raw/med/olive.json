@@ -1,0 +1,19 @@
+{
+  "job": "2942acd22e",
+  "files": [
+    "med/olive.glb",
+    "med/olive.preview.png",
+    "med/olive.image.png"
+  ],
+  "seed": 1211,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 89.3,
+    "preview": 1.2,
+    "export-glb": 11.0,
+    "total": 135.0
+  },
+  "server_dir": "2026-11-13/022205-2942acd22e-3d-render-of-a-gnarled-old-olive-tree-wi",
+  "used_seed": 1211
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "run",
+    "repeat": 0,
+    "prompt": "a person runs forward at a steady fast pace",
+    "frames": 80,
+    "file": "batch1/run_0.npy"
+  },
+  {
+    "name": "run",
+    "repeat": 1,
+    "prompt": "a person runs forward at a steady fast pace",
+    "frames": 80,
+    "file": "batch1/run_1.npy"
+  },
+  {
+    "name": "run",
+    "repeat": 2,
+    "prompt": "a person runs forward at a steady fast pace",
+    "frames": 80,
+    "file": "batch1/run_2.npy"
+  },
+  {
+    "name": "walk",
+    "repeat": 0,
+    "prompt": "a person walks forward at a normal pace",
+    "frames": 80,
+    "file": "batch1/walk_0.npy"
+  },
+  {
+    "name": "walk",
+    "repeat": 1,
+    "prompt": "a person walks forward at a normal pace",
+    "frames": 80,
+    "file": "batch1/walk_1.npy"
+  },
+  {
+    "name": "walk",
+    "repeat": 2,
+    "prompt": "a person walks forward at a normal pace",
+    "frames": 80,
+    "file": "batch1/walk_2.npy"
+  },
+  {
+    "name": "jump",
+    "repeat": 0,
+    "prompt": "a person jumps forward over an obstacle and lands",
+    "frames": 48,
+    "file": "batch1/jump_0.npy"
+  },
+  {
+    "name": "jump",
+    "repeat": 1,
+    "prompt": "a person jumps forward over an obstacle and lands",
+    "frames": 48,
+    "file": "batch1/jump_1.npy"
+  },
+  {
+    "name": "jump",
+    "repeat": 2,
+    "prompt": "a person jumps forward over an obstacle and lands",
+    "frames": 48,
+    "file": "batch1/jump_2.npy"
+  },
+  {
+    "name": "idle",
+    "repeat": 0,
+    "prompt": "a person stands still in a relaxed pose, breathing and shifting weight slightly",
+    "frames": 80,
+    "file": "batch1/idle_0.npy"
+  },
+  {
+    "name": "idle",
+    "repeat": 1,
+    "prompt": "a person stands still in a relaxed pose, breathing and shifting weight slightly",
+    "frames": 80,
+    "file": "batch1/idle_1.npy"
+  },
+  {
+    "name": "idle",
+    "repeat": 2,
+    "prompt": "a person stands still in a relaxed pose, breathing and shifting weight slightly",
+    "frames": 80,
+    "file": "batch1/idle_2.npy"
+  }
+]

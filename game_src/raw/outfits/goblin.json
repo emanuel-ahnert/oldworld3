@@ -1,0 +1,15 @@
+{
+  "job": "86a3f470c7",
+  "files": [
+    "goblin.glb",
+    "goblin.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.5,
+    "preview": 0.9,
+    "export-glb": 8.1,
+    "total": 49.5
+  },
+  "server_dir": "2026-11-13/011552-86a3f470c7-goblin"
+}

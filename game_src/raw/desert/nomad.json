@@ -1,0 +1,15 @@
+{
+  "job": "97c4bbd5e8",
+  "files": [
+    "nomad.glb",
+    "nomad.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.6,
+    "preview": 0.9,
+    "export-glb": 7.7,
+    "total": 49.2
+  },
+  "server_dir": "2026-11-13/020804-97c4bbd5e8-nomad"
+}

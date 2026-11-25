@@ -1,0 +1,19 @@
+{
+  "job": "ed2eececf0",
+  "files": [
+    "med/cypress.glb",
+    "med/cypress.preview.png",
+    "med/cypress.image.png"
+  ],
+  "seed": 1212,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.5,
+    "image-to-3d": 53.9,
+    "preview": 1.1,
+    "export-glb": 7.4,
+    "total": 129.2
+  },
+  "server_dir": "2026-11-13/022624-ed2eececf0-3d-render-of-a-tall-slender-dark-green-i",
+  "used_seed": 1213
+}

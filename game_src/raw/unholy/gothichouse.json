@@ -1,0 +1,19 @@
+{
+  "job": "d59c3b2044",
+  "files": [
+    "unholy/gothichouse.glb",
+    "unholy/gothichouse.preview.png",
+    "unholy/gothichouse.image.png"
+  ],
+  "seed": 1331,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 51.3,
+    "preview": 1.0,
+    "export-glb": 5.2,
+    "total": 90.9
+  },
+  "server_dir": "2026-11-13/025320-d59c3b2044-3d-render-of-a-small-gothic-house-of-dar",
+  "used_seed": 1331
+}

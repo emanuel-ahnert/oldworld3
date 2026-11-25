@@ -1,0 +1,15 @@
+{
+  "job": "d01eb32593",
+  "files": [
+    "paladin.glb",
+    "paladin.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 7.6,
+    "total": 49.0
+  },
+  "server_dir": "2026-11-13/015840-d01eb32593-paladin"
+}

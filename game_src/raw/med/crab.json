@@ -1,0 +1,19 @@
+{
+  "job": "09220d3840",
+  "files": [
+    "med/crab.glb",
+    "med/crab.preview.png",
+    "med/crab.image.png"
+  ],
+  "seed": 1221,
+  "timings": {
+    "text-to-image": 93.6,
+    "check-image": 6.9,
+    "image-to-3d": 51.3,
+    "preview": 1.0,
+    "export-glb": 5.3,
+    "total": 158.1
+  },
+  "server_dir": "2026-11-13/023023-09220d3840-3d-render-of-a-giant-red-crab-with-big-c",
+  "used_seed": 1223
+}

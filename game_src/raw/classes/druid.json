@@ -1,0 +1,15 @@
+{
+  "job": "4970051f32",
+  "files": [
+    "druid.glb",
+    "druid.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 7.6,
+    "total": 48.9
+  },
+  "server_dir": "2026-11-13/021348-4970051f32-druid"
+}

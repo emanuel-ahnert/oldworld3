@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Oldworld3 (desktop 9, fullscreen)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/launch.js",
+      "runtimeExecutable": "${env:HOME}/.local/share/mise/installs/node/latest/bin/node",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Oldworld3 (desktop 9, fullscreen, other seed)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/launch.js",
+      "args": ["--seed", "${input:seed}"],
+      "runtimeExecutable": "${env:HOME}/.local/share/mise/installs/node/latest/bin/node",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ],
+  "inputs": [
+    { "id": "seed", "type": "promptString", "description": "World seed", "default": "2" }
+  ]
+}

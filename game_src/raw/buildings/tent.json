@@ -1,0 +1,19 @@
+{
+  "job": "a2364f9015",
+  "files": [
+    "buildings/tent.glb",
+    "buildings/tent.preview.png",
+    "buildings/tent.image.png"
+  ],
+  "seed": 741,
+  "timings": {
+    "text-to-image": 62.3,
+    "check-image": 4.6,
+    "image-to-3d": 61.5,
+    "preview": 1.1,
+    "export-glb": 6.9,
+    "total": 136.4
+  },
+  "server_dir": "2026-11-13/010247-a2364f9015-3d-render-of-a-small-brown-canvas-campin",
+  "used_seed": 742
+}

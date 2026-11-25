@@ -1,0 +1,23 @@
+# Godot's import cache (rebuilt by the editor / tools/import.sh)
+game/.godot/
+game/override.cfg
+*.tmp
+
+# Python caches, Blender backups
+__pycache__/
+*.pyc
+*.blend1
+
+# Local only: machine-specific notes (addresses, logins, paths), private-pattern list,
+# assistant state
+design/local/
+.private-patterns
+.claude/
+
+# Old test screenshots and early experiments (the pipeline parts of spike/ stay)
+shots/
+spike/img/*
+!spike/img/body_s11.png
+spike/godot/
+spike/shots/
+spike/anim_compare/

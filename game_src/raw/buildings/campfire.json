@@ -1,0 +1,19 @@
+{
+  "job": "291e7cd537",
+  "files": [
+    "buildings/campfire.glb",
+    "buildings/campfire.preview.png",
+    "buildings/campfire.image.png"
+  ],
+  "seed": 751,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.6,
+    "image-to-3d": 63.0,
+    "preview": 1.1,
+    "export-glb": 7.5,
+    "total": 138.5
+  },
+  "server_dir": "2026-11-13/010506-291e7cd537-3d-render-of-a-campfire-with-logs-arrang",
+  "used_seed": 752
+}

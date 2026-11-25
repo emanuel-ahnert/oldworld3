@@ -1,0 +1,12 @@
+{
+  "job": "c3ed0c794b",
+  "files": [
+    "rock.png"
+  ],
+  "seed": 103,
+  "timings": {
+    "text-to-image": 55.5,
+    "total": 55.5
+  },
+  "server_dir": "2026-11-12/224005-c3ed0c794b-texture-of-grey-rough-rock-cliff-surface"
+}

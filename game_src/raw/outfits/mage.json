@@ -1,0 +1,15 @@
+{
+  "job": "94a80f6994",
+  "files": [
+    "mage.glb",
+    "mage.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 41.1,
+    "preview": 0.9,
+    "export-glb": 7.3,
+    "total": 49.3
+  },
+  "server_dir": "2026-11-13/011919-94a80f6994-mage"
+}

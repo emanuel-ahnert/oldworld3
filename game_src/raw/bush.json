@@ -1,0 +1,19 @@
+{
+  "job": "c6df8d9185",
+  "files": [
+    "bush.glb",
+    "bush.preview.png",
+    "bush.image.png"
+  ],
+  "seed": 211,
+  "timings": {
+    "text-to-image": 55.5,
+    "check-image": 3.9,
+    "image-to-3d": 182.3,
+    "preview": 3.9,
+    "export-glb": 12.4,
+    "total": 258.0
+  },
+  "server_dir": "2026-11-12/225134-c6df8d9185-3d-render-of-one-small-compact-round-lea",
+  "used_seed": 211
+}

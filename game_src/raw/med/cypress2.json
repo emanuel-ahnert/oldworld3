@@ -1,0 +1,19 @@
+{
+  "job": "72d277381e",
+  "files": [
+    "med/cypress2.glb",
+    "med/cypress2.preview.png",
+    "med/cypress2.image.png"
+  ],
+  "seed": 1214,
+  "timings": {
+    "text-to-image": 62.3,
+    "check-image": 4.6,
+    "image-to-3d": 40.5,
+    "preview": 1.1,
+    "export-glb": 6.6,
+    "total": 115.1
+  },
+  "server_dir": "2026-11-13/030018-72d277381e-3d-render-of-a-single-very-tall-and-very",
+  "used_seed": 1215
+}

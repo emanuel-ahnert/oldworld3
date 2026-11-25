@@ -1,0 +1,19 @@
+{
+  "job": "973722aec0",
+  "files": [
+    "props/stall.glb",
+    "props/stall.preview.png",
+    "props/stall.image.png"
+  ],
+  "seed": 1402,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 64.5,
+    "preview": 1.1,
+    "export-glb": 7.5,
+    "total": 106.7
+  },
+  "server_dir": "2026-11-13/030610-973722aec0-3d-render-of-a-medieval-market-stall-wit",
+  "used_seed": 1402
+}

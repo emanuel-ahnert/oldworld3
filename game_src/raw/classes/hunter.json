@@ -1,0 +1,15 @@
+{
+  "job": "433b8a5588",
+  "files": [
+    "hunter.glb",
+    "hunter.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.3,
+    "preview": 0.9,
+    "export-glb": 7.5,
+    "total": 48.8
+  },
+  "server_dir": "2026-11-13/020854-433b8a5588-hunter"
+}

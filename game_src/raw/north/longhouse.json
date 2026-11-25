@@ -1,0 +1,19 @@
+{
+  "job": "16e4e07282",
+  "files": [
+    "longhouse.glb",
+    "longhouse.preview.png",
+    "longhouse.image.png"
+  ],
+  "seed": 831,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.4,
+    "image-to-3d": 58.2,
+    "preview": 1.1,
+    "export-glb": 5.7,
+    "total": 98.4
+  },
+  "server_dir": "2026-11-13/013045-16e4e07282-3d-render-of-a-nordic-viking-timber-long",
+  "used_seed": 831
+}

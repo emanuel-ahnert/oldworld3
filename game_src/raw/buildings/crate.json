@@ -1,0 +1,19 @@
+{
+  "job": "70d0bec693",
+  "files": [
+    "buildings/crate.glb",
+    "buildings/crate.preview.png",
+    "buildings/crate.image.png"
+  ],
+  "seed": 761,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 90.0,
+    "preview": 1.3,
+    "export-glb": 7.1,
+    "total": 131.9
+  },
+  "server_dir": "2026-11-13/010725-70d0bec693-3d-render-of-a-wooden-crate-with-iron-co",
+  "used_seed": 761
+}

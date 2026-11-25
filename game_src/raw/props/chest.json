@@ -1,0 +1,19 @@
+{
+  "job": "7bd04d5dbd",
+  "files": [
+    "props/chest.glb",
+    "props/chest.preview.png",
+    "props/chest.image.png"
+  ],
+  "seed": 1801,
+  "timings": {
+    "text-to-image": 35.6,
+    "check-image": 2.5,
+    "image-to-3d": 90.6,
+    "preview": 1.6,
+    "export-glb": 10.0,
+    "total": 207.1
+  },
+  "server_dir": "2026-11-13/132104-7bd04d5dbd-3d-render-of-a-closed-wooden-treasure-ch",
+  "used_seed": 1801
+}

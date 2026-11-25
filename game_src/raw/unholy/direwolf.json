@@ -1,0 +1,19 @@
+{
+  "job": "feb03c486d",
+  "files": [
+    "unholy/direwolf.glb",
+    "unholy/direwolf.preview.png",
+    "unholy/direwolf.image.png"
+  ],
+  "seed": 1321,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.5,
+    "image-to-3d": 43.5,
+    "preview": 0.9,
+    "export-glb": 4.3,
+    "total": 115.6
+  },
+  "server_dir": "2026-11-13/024940-feb03c486d-3d-render-of-a-black-dire-wolf-with-glow",
+  "used_seed": 1322
+}

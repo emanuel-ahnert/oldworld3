@@ -1,0 +1,19 @@
+{
+  "job": "a6141d2de6",
+  "files": [
+    "unholy/bats.glb",
+    "unholy/bats.preview.png",
+    "unholy/bats.image.png"
+  ],
+  "seed": 1323,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 40.6,
+    "preview": 0.9,
+    "export-glb": 3.8,
+    "total": 78.8
+  },
+  "server_dir": "2026-11-13/030758-a6141d2de6-3d-render-of-a-single-giant-black-vampir",
+  "used_seed": 1323
+}

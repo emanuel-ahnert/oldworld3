@@ -1,0 +1,19 @@
+{
+  "job": "ffb286c158",
+  "files": [
+    "buildings/house2.glb",
+    "buildings/house2.preview.png",
+    "buildings/house2.image.png"
+  ],
+  "seed": 721,
+  "timings": {
+    "text-to-image": 93.9,
+    "check-image": 6.9,
+    "image-to-3d": 78.5,
+    "preview": 1.2,
+    "export-glb": 8.8,
+    "total": 189.4
+  },
+  "server_dir": "2026-11-13/005729-ffb286c158-3d-render-of-a-small-medieval-timber-fra",
+  "used_seed": 723
+}

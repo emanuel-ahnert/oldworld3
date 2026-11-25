@@ -1,0 +1,19 @@
+{
+  "job": "bd3d3cca93",
+  "files": [
+    "med/villa.glb",
+    "med/villa.preview.png",
+    "med/villa.image.png"
+  ],
+  "seed": 1232,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.7,
+    "image-to-3d": 104.9,
+    "preview": 1.5,
+    "export-glb": 13.2,
+    "total": 186.6
+  },
+  "server_dir": "2026-11-13/023637-bd3d3cca93-3d-render-of-a-mediterranean-villa-with",
+  "used_seed": 1233
+}

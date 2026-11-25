@@ -1,0 +1,15 @@
+{
+  "job": "8edaafc8b3",
+  "files": [
+    "npc/villager.glb",
+    "npc/villager.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 7.6,
+    "total": 48.9
+  },
+  "server_dir": "2026-11-13/033025-8edaafc8b3-villager"
+}

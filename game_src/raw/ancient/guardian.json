@@ -1,0 +1,15 @@
+{
+  "job": "552cfe580d",
+  "files": [
+    "ancient/guardian.glb",
+    "ancient/guardian.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.8,
+    "preview": 0.9,
+    "export-glb": 10.1,
+    "total": 51.7
+  },
+  "server_dir": "2026-11-13/032652-552cfe580d-guardian"
+}

@@ -1,0 +1,19 @@
+{
+  "job": "750ce98332",
+  "files": [
+    "cactus.glb",
+    "cactus.preview.png",
+    "cactus.image.png"
+  ],
+  "seed": 912,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 46.5,
+    "preview": 1.0,
+    "export-glb": 4.8,
+    "total": 85.8
+  },
+  "server_dir": "2026-11-13/014545-750ce98332-3d-render-of-a-tall-green-saguaro-cactus",
+  "used_seed": 912
+}

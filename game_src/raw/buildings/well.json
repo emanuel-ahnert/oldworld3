@@ -1,0 +1,19 @@
+{
+  "job": "bcf827179f",
+  "files": [
+    "buildings/well.glb",
+    "buildings/well.preview.png",
+    "buildings/well.image.png"
+  ],
+  "seed": 771,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 66.2,
+    "preview": 1.1,
+    "export-glb": 7.0,
+    "total": 107.7
+  },
+  "server_dir": "2026-11-13/010938-bcf827179f-3d-render-of-a-medieval-stone-well-with",
+  "used_seed": 771
+}

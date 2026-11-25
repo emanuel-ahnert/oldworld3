@@ -1,0 +1,15 @@
+{
+  "job": "dae6e0f619",
+  "files": [
+    "rogue.glb",
+    "rogue.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 7.4,
+    "total": 48.7
+  },
+  "server_dir": "2026-11-13/020945-dae6e0f619-rogue"
+}

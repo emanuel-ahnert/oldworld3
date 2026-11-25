@@ -1,0 +1,19 @@
+{
+  "job": "5eeec1f03b",
+  "files": [
+    "palm.glb",
+    "palm.preview.png",
+    "palm.image.png"
+  ],
+  "seed": 911,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.6,
+    "image-to-3d": 75.0,
+    "preview": 1.0,
+    "export-glb": 7.1,
+    "total": 150.1
+  },
+  "server_dir": "2026-11-13/014313-5eeec1f03b-3d-render-of-a-tall-date-palm-tree-with",
+  "used_seed": 912
+}

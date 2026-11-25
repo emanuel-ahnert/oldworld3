@@ -1,0 +1,19 @@
+{
+  "job": "0270f61fbd",
+  "files": [
+    "ancient/obelisk.glb",
+    "ancient/obelisk.preview.png",
+    "ancient/obelisk.image.png"
+  ],
+  "seed": 1502,
+  "timings": {
+    "text-to-image": 93.6,
+    "check-image": 7.0,
+    "image-to-3d": 52.2,
+    "preview": 2.4,
+    "export-glb": 3.3,
+    "total": 158.4
+  },
+  "server_dir": "2026-11-13/031116-0270f61fbd-3d-render-of-a-single-tall-ancient-egypt",
+  "used_seed": 1504
+}

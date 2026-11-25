@@ -1,0 +1,15 @@
+{
+  "job": "ccf5264a4f",
+  "files": [
+    "berserker.glb",
+    "berserker.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.4,
+    "preview": 0.9,
+    "export-glb": 8.0,
+    "total": 49.3
+  },
+  "server_dir": "2026-11-13/014048-ccf5264a4f-berserker"
+}

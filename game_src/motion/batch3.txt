@@ -1,0 +1,7 @@
+# name | prompt | seconds | repeats   (one-shots: attacks, cast, hit, death)
+atka | a person slashes diagonally with a sword in the right hand, from above the right shoulder down to the left hip | 1.6 | 4
+atkb | a person swings a sword horizontally with the right hand from right to left in front of the body | 1.6 | 4
+strikea | a person raises a sword high over the head with the right hand and chops down powerfully | 2 | 4
+casta | a person thrusts the right hand forward to cast a spell | 1.6 | 4
+hita | a person gets hit in the chest and staggers backward | 1.4 | 4
+deatha | a person is struck, collapses and falls backward onto the ground and lies still | 3 | 4

@@ -1,0 +1,19 @@
+{
+  "job": "c4498c7a98",
+  "files": [
+    "med/lavender.glb",
+    "med/lavender.preview.png",
+    "med/lavender.image.png"
+  ],
+  "seed": 1213,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 64.8,
+    "preview": 1.2,
+    "export-glb": 8.5,
+    "total": 107.9
+  },
+  "server_dir": "2026-11-13/022833-c4498c7a98-3d-render-of-a-small-round-lavender-bush",
+  "used_seed": 1213
+}

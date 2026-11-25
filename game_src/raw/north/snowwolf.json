@@ -1,0 +1,19 @@
+{
+  "job": "23f8a303ea",
+  "files": [
+    "snowwolf.glb",
+    "snowwolf.preview.png",
+    "snowwolf.image.png"
+  ],
+  "seed": 821,
+  "timings": {
+    "text-to-image": 31.1,
+    "check-image": 2.2,
+    "image-to-3d": 47.8,
+    "preview": 1.0,
+    "export-glb": 4.9,
+    "total": 87.1
+  },
+  "server_dir": "2026-11-13/012917-23f8a303ea-3d-render-of-a-white-snow-wolf-standing",
+  "used_seed": 821
+}

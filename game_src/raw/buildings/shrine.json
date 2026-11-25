@@ -1,0 +1,19 @@
+{
+  "job": "a35e582516",
+  "files": [
+    "buildings/shrine.glb",
+    "buildings/shrine.preview.png",
+    "buildings/shrine.image.png"
+  ],
+  "seed": 731,
+  "timings": {
+    "text-to-image": 62.6,
+    "check-image": 4.6,
+    "image-to-3d": 50.1,
+    "preview": 1.0,
+    "export-glb": 5.6,
+    "total": 124.0
+  },
+  "server_dir": "2026-11-13/010040-a35e582516-3d-render-of-a-small-stone-wayside-shrin",
+  "used_seed": 732
+}

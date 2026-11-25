@@ -1,0 +1,15 @@
+{
+  "job": "a8f1f6870e",
+  "files": [
+    "unholy/cultist.glb",
+    "unholy/cultist.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.5,
+    "preview": 0.9,
+    "export-glb": 8.5,
+    "total": 49.9
+  },
+  "server_dir": "2026-11-13/025728-a8f1f6870e-cultist"
+}

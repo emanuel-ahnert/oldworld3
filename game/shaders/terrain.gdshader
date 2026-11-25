@@ -1,0 +1,125 @@
+// Terrain: grass, dirt (vertex color R: roads, plaza) and rock on steep slopes.
+// Textures tile in world space; grass is sampled at two scales to hide the repetition.
+shader_type spatial;
+
+uniform sampler2D grass_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D dirt_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D rock_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;      // cliff faces
+uniform sampler2D rock_top_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;  // rock seen from above
+uniform float grass_tile = 2.2;   // meters per texture repeat (the grass textures hold 2x2 copies: small blades)
+uniform float dirt_tile = 1.6;
+uniform float rock_tile = 12.0;
+uniform vec3 road_tint = vec3(0.66, 0.56, 0.44);           // per zone: roads and plaza (North: grey)
+uniform float road_sat = 0.5;                              // how much of the dirt texture's color stays
+uniform vec3 rock_tint : source_color = vec3(1.0);        // per zone: warm, cool or purple rock
+uniform vec4 rock_moss = vec4(0.33, 0.42, 0.18, 0.0);     // rgb: moss on rock facing up, a: how much
+uniform vec4 grass_tint = vec4(1.0, 1.0, 1.0, 0.0);   // rgb: color the grass is pulled toward, a: how far
+uniform float snow = 0.0;
+// Variety: a tileable noise (terrain.gd) drives drier/darker grass patches, ragged bare-soil
+// patches (`bare` = how much; per zone) and fine soil grit between the grass.
+uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
+uniform float bare = 0.5;
+uniform float snow_line = 1000.0;   // snow caps on mountains above this height (per zone)
+uniform sampler2D soil_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;  // plain soil, all zones          // 1 in snow zones: the "grass" texture is snow, keep it bright
+
+varying vec3 wpos;
+varying vec3 wnorm;
+varying float dirt_w;
+varying float shore_w;
+
+void vertex() {
+	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	dirt_w = COLOR.r;
+	shore_w = COLOR.g;
+}
+
+vec3 rock_triplanar_t(vec3 p, vec3 n, float tile) {
+	vec3 w = pow(abs(n), vec3(4.0));
+	w /= (w.x + w.y + w.z);
+	return texture(rock_tex, vec2(p.z, -p.y) / tile).rgb * w.x
+		+ texture(rock_top_tex, p.xz / tile).rgb * w.y
+		+ texture(rock_tex, vec2(p.x, -p.y) / tile).rgb * w.z;
+}
+
+vec3 rock_triplanar(vec3 p, vec3 n) {
+	return rock_triplanar_t(p, n, rock_tile);
+}
+
+void fragment() {
+	// Texture reads are the main cost on integrated graphics: rock and dirt are only sampled
+	// where they show (branches are coherent: whole screen areas are meadow).
+	vec2 uv = wpos.xz;
+	vec3 g = texture(grass_tex, uv / grass_tile).rgb;
+	// Second read, rotated and a little larger, hides the repetition (a much larger scale
+	// showed giant blades).
+	vec2 ruv = vec2(uv.x * 0.8 - uv.y * 0.6, uv.x * 0.6 + uv.y * 0.8);
+	vec3 g2 = texture(grass_tex, ruv / (grass_tile * 2.9) + vec2(0.37, 0.71)).rgb;
+	g = mix(g, g2, 0.45);
+	// Large-scale tint variation so meadows are not one flat green (also the road-edge noise).
+	vec3 big = texture(grass_tex, uv / 97.0).rgb;
+	g *= mix(0.82, 1.08, big.g);
+	g = mix(mix(vec3(dot(g, vec3(0.3, 0.59, 0.11))), g, 0.82) * 0.88, g * 1.02, snow);   // grass: a bit less saturated
+	g = mix(g, vec3(dot(g, vec3(0.3, 0.59, 0.11))) * grass_tint.rgb * 2.0, grass_tint.a);
+	float n_big = texture(noise_tex, uv / 46.0).r;               // patches, tens of meters
+	float n_mid = texture(noise_tex, uv / 5.3 + vec2(0.31, 0.77)).r;  // their ragged edges
+	float n_fine = texture(noise_tex, uv / 0.9 + vec2(0.62, 0.13)).r; // grit speckles
+	float grassy = snow > 0.99 ? 0.0 : 1.0;      // off on snow and sand
+	// Drier, yellowish grass in some places, darker lush grass in others.
+	g = mix(g, g * vec3(1.12, 1.02, 0.66), smoothstep(0.58, 0.78, n_big) * 0.55 * grassy);
+	g *= mix(1.0, mix(0.8, 1.06, n_mid), grassy);
+	// Bare soil: patches with ragged edges, and grit showing between the blades.
+	float patch = smoothstep(0.7, 0.82, n_big * 0.75 + n_mid * 0.35) * 0.8 * bare;
+	float grit = smoothstep(0.6, 0.85, n_fine) * 0.5 * bare;
+	vec3 col = g;
+	float soil = max(patch, grit) * grassy;
+	if (soil > 0.01) {
+		vec3 d = texture(soil_tex, uv / 1.9).rgb;
+		d = mix(vec3(dot(d, vec3(0.33))), d, 0.5) * vec3(0.55, 0.47, 0.38) * mix(0.75, 1.05, n_mid);
+		d = mix(d, d * grass_tint.rgb * 2.0, grass_tint.a) * (grass_tint.a > 0.0 ? 0.65 : 1.0);   // Unholy: dark olive soil
+		col = mix(col, d, soil);
+	}
+	if (dirt_w > 0.01) {
+		// Ragged road edges and grass patches growing into the road: compare the dirt weight
+		// with a noise pattern (the grass texture's brightness at a mid scale).
+		float n = texture(grass_tex, uv / 7.0 + vec2(0.13, 0.57)).g;
+		float dw = smoothstep(0.35, 0.65, dirt_w * 1.15 - (n - 0.45) * 0.9);
+		vec3 d = texture(dirt_tex, uv / dirt_tile).rgb;
+		// Pull the generated soil toward a muted earth brown, with large-scale variation.
+		d = mix(vec3(dot(d, vec3(0.33))), d, road_sat) * road_tint;
+		d *= mix(0.85, 1.1, big.r);
+		col = mix(col, d, dw);
+	}
+	if (shore_w > 0.01) {
+		// Lake shores and beds: pale wet sand.
+		vec3 sand = texture(dirt_tex, uv / 2.4).rgb;
+		sand = mix(vec3(dot(sand, vec3(0.33))), sand, 0.4) * vec3(0.82, 0.76, 0.62);
+		col = mix(col, sand, smoothstep(0.1, 0.6, shore_w));
+	}
+	float slope = 1.0 - wnorm.y;
+	float rock_w = smoothstep(0.16, 0.30, slope);
+	if (rock_w > 0.001) {
+		// Mountains: the rock at two scales (faces don't repeat every few meters), warm and cool
+		// tints over the range, darker strata bands.
+		vec3 rk = rock_triplanar(wpos, wnorm);
+		vec3 rk_big = rock_triplanar_t(wpos, wnorm, rock_tile * 4.7);
+		rk = mix(rk, rk * rk_big * 2.0, 0.5);
+		float n_rock = texture(noise_tex, wpos.xz / 90.0 + vec2(wpos.y / 120.0, 0.0)).r;
+		rk *= mix(vec3(0.86, 0.9, 1.0), vec3(1.1, 1.0, 0.86), n_rock);
+		float band = sin(wpos.y * 0.21 + n_rock * 4.0);                     // broad layers
+		rk *= 0.88 + 0.12 * smoothstep(-0.3, 0.5, band);
+		rk *= rock_tint;
+		// Moss and grass in the ledges (rock facing up), patchy.
+		float moss = rock_moss.a * smoothstep(0.5, 0.8, wnorm.y) * smoothstep(0.3, 0.6, n_rock + n_mid * 0.5);
+		rk = mix(rk, rock_moss.rgb * (0.7 + 0.6 * dot(rk, vec3(0.333))), moss);
+		col = mix(col, rk, rock_w);
+	}
+	// Snow caps: above the zone's snow line, on the flatter parts.
+	if (wpos.y > snow_line - 12.0) {
+		float sw = smoothstep(snow_line, snow_line + 10.0, wpos.y + (n_mid - 0.5) * 16.0) * smoothstep(0.45, 0.72, wnorm.y);
+		col = mix(col, vec3(0.9, 0.92, 0.96), sw);
+	}
+	ALBEDO = col;
+	ROUGHNESS = 0.95;
+	SPECULAR = 0.2;
+}

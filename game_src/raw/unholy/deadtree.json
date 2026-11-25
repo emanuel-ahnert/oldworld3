@@ -1,0 +1,19 @@
+{
+  "job": "0e6a74254f",
+  "files": [
+    "unholy/deadtree.glb",
+    "unholy/deadtree.preview.png",
+    "unholy/deadtree.image.png"
+  ],
+  "seed": 1311,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.3,
+    "image-to-3d": 53.7,
+    "preview": 1.0,
+    "export-glb": 5.0,
+    "total": 93.2
+  },
+  "server_dir": "2026-11-13/024406-0e6a74254f-3d-render-of-a-dead-twisted-leafless-tre",
+  "used_seed": 1311
+}

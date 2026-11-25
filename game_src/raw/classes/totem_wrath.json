@@ -1,0 +1,19 @@
+{
+  "job": "8a48991b16",
+  "files": [
+    "totem_wrath.glb",
+    "totem_wrath.preview.png",
+    "totem_wrath.image.png"
+  ],
+  "seed": 1143,
+  "timings": {
+    "text-to-image": 31.2,
+    "check-image": 2.2,
+    "image-to-3d": 47.7,
+    "preview": 1.0,
+    "export-glb": 4.9,
+    "total": 87.0
+  },
+  "server_dir": "2026-11-13/021959-8a48991b16-3d-render-of-a-short-compact-carved-wood",
+  "used_seed": 1143
+}

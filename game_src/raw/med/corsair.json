@@ -1,0 +1,15 @@
+{
+  "job": "f0f51ae8a2",
+  "files": [
+    "med/corsair.glb",
+    "med/corsair.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.6,
+    "preview": 0.9,
+    "export-glb": 7.6,
+    "total": 49.1
+  },
+  "server_dir": "2026-11-13/024030-f0f51ae8a2-corsair"
+}

@@ -1,0 +1,6 @@
+# name | prompt | seconds | repeats
+runa | a person sprints forward in a straight line as fast as possible | 4 | 4
+runb | a person runs fast forward in a straight line | 4 | 4
+walka | a person walks forward in a straight line | 5 | 4
+walkb | a man walks straight ahead at a normal speed | 5 | 4
+jumpa | a person runs forward and jumps up high, then lands and keeps running | 3 | 4

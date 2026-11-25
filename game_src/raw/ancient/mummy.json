@@ -1,0 +1,15 @@
+{
+  "job": "b4863e0779",
+  "files": [
+    "ancient/mummy.glb",
+    "ancient/mummy.preview.png"
+  ],
+  "seed": 7,
+  "timings": {
+    "image-to-3d": 40.5,
+    "preview": 0.9,
+    "export-glb": 8.0,
+    "total": 49.4
+  },
+  "server_dir": "2026-11-13/032514-b4863e0779-mummy"
+}

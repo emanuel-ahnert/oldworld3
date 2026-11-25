@@ -1,0 +1,19 @@
+{
+  "job": "1fdeb0053b",
+  "files": [
+    "sandinn.glb",
+    "sandinn.preview.png",
+    "sandinn.image.png"
+  ],
+  "seed": 932,
+  "timings": {
+    "text-to-image": 62.4,
+    "check-image": 4.7,
+    "image-to-3d": 80.6,
+    "preview": 1.2,
+    "export-glb": 7.8,
+    "total": 156.7
+  },
+  "server_dir": "2026-11-13/015755-1fdeb0053b-3d-render-of-a-two-story-sandstone-deser",
+  "used_seed": 933
+}

@@ -1,0 +1,19 @@
+{
+  "job": "b964021106",
+  "files": [
+    "buildings/house1.glb",
+    "buildings/house1.preview.png",
+    "buildings/house1.image.png"
+  ],
+  "seed": 711,
+  "timings": {
+    "text-to-image": 62.6,
+    "check-image": 4.6,
+    "image-to-3d": 63.5,
+    "preview": 1.2,
+    "export-glb": 7.8,
+    "total": 139.7
+  },
+  "server_dir": "2026-11-13/005506-b964021106-3d-render-of-a-small-medieval-cottage-wi",
+  "used_seed": 712
+}
