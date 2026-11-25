@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://1ux0bw7ww8sl"
-path="res://.godot/imported/hood_layer.glb-c3d092172bac936b3bc7c60aeca5f235.scn"
+uid="uid://ubport6ee50u"
+path="res://.godot/imported/head_helm.glb-64e2df2294c0c258ab4d5ad06b668e42.scn"
 
 [deps]
 
-source_file="res://assets/gear/hood_layer.glb"
-dest_files=["res://.godot/imported/hood_layer.glb-c3d092172bac936b3bc7c60aeca5f235.scn"]
+source_file="res://assets/gear/head_helm.glb"
+dest_files=["res://.godot/imported/head_helm.glb-64e2df2294c0c258ab4d5ad06b668e42.scn"]
 
 [params]
 

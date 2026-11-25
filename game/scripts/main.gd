@@ -198,6 +198,8 @@ func _ready() -> void:
 		_creature_lineup(String(args.creatures), float(args.get("creature-t", -1)))
 	if args.has("lineup"):
 		_lineup()
+	if args.has("heads"):
+		_heads()
 	player.message.connect(hud.show_message)
 	player.hint.connect(hud.show_hint)
 	if args.has("nohud"):
@@ -315,6 +317,25 @@ func _loading_screen(type: String) -> CanvasLayer:
 
 
 ## Test: all classes side by side in front of the hero, facing the camera.
+## Test: the headgear in a row facing the camera (hood over a robe, hood, coif, leather cap,
+## plate helm); --heads-turn DEG turns them (90: from the side).
+func _heads() -> void:
+	var looks := [["mage", "hood"], ["rogue", "hood"], ["paladin", "coif"], ["hunter", "cowl"], ["warrior", "helmet"]]
+	for i in looks.size():
+		var h := Humanoid.new()
+		add_child(h)
+		var look := Player.look_of(looks[i][0])
+		look.erase("helmet")
+		h.build(look)
+		var hp: String = Player.HEADGEAR.get({"hood": "cloth", "coif": "mail", "cowl": "leather", "helmet": "plate"}[looks[i][1]])
+		h.equip_model("helmet", hp)
+		var x := (i - (looks.size() - 1) / 2.0) * 0.9
+		var p := player.global_position + Vector3(x, 0, 2.2)
+		h.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
+		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
+	player.visible = false
+
+
 func _lineup() -> void:
 	var names := Player.CLASSES.keys()
 	for i in names.size():

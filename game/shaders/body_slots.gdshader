@@ -20,28 +20,40 @@ uniform bool show_slots = false;
 // under it and not drawn, so nothing pokes through it.
 uniform bool robed = false;
 
-// Helmet worn (WoW style): head vertices above the neck are pulled toward the head center, so
-// hair and ears end up inside the helmet instead of clipping through it. Positions are in the
-// mesh's local space, updated every frame from the skeleton (player.gd).
-uniform float head_shrink = 0.0;     // 0 = no helmet, 1 = full shrink
+// Under headgear (headgear.py's shells around the full-size head) the head is drawn only where it
+// shows: the face (within face_cos of straight ahead, below `brow` m above the head's middle) and
+// the neck (below `chin`, near its axis). Hair and the back of the head would poke through the
+// shell (WoW hides them too). Positions in the mesh's space, set every frame (Humanoid).
+uniform bool hide_hair = false;
 uniform vec3 head_center = vec3(0.0, 1.72, 0.0);
-uniform vec3 neck_pos = vec3(0.0, 1.6, 0.0);
 uniform vec3 head_up = vec3(0.0, 1.0, 0.0);
+uniform vec3 head_fwd = vec3(0.0, 0.0, 1.0);
+uniform float face_cos = 0.5;
+uniform float brow = 0.07;
+uniform float chin = -0.12;
 
 varying float slot;
+varying vec3 mesh_pos;
 varying float height;      // above the feet (the mesh's origin is on the ground)
 
 void vertex() {
 	slot = COLOR.r * 8.0 - 0.5;
 	height = VERTEX.y;
-	if (head_shrink > 0.0 && slot < 0.5) {
-		float above = smoothstep(0.0, 0.05, dot(VERTEX - neck_pos, head_up));
-		VERTEX = mix(VERTEX, head_center + (VERTEX - head_center) * 0.45, above * head_shrink);
-	}
+	mesh_pos = VERTEX;
 }
 
 void fragment() {
 	int s = clamp(int(round(slot)), 0, 4);
+	if (hide_hair && s == 0) {
+		vec3 rel = mesh_pos - head_center;
+		float up = dot(rel, head_up);
+		vec3 flat_ = rel - head_up * up;
+		bool face = up < brow && dot(normalize(flat_ + head_fwd * 1e-4), head_fwd) > face_cos;
+		bool neck = up < chin && length(flat_) < 0.075;
+		if (!face && !neck) {
+			discard;
+		}
+	}
 	// Under a robe: the chest and arms aren't drawn, the legs and feet only below the hem (the
 	// ankles and shoes show from any side; a foot kicked up behind in a stride doesn't float
 	// behind the hem).

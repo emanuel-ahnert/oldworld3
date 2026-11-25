@@ -1,9 +1,10 @@
-// An enemy's health bar over its name (enemy.gd): a black border, the dark empty part and the
-// filled part in the plate's colour, slightly lighter at the top. Always faces the camera.
+// An enemy's health bar with its name on it (enemy.gd): a black border, the dark empty part and
+// the filled part in the plate's colour, slightly lighter at the top. Always faces the camera,
+// drawn over everything (like WoW's nameplates); the name's label is drawn over it.
 shader_type spatial;
-render_mode unshaded, cull_disabled, shadows_disabled;
+render_mode unshaded, cull_disabled, shadows_disabled, depth_test_disabled, depth_draw_never;
 
-uniform vec2 size = vec2(1.1, 0.13);    // m, the quad's size
+instance uniform vec2 size = vec2(1.4, 0.2);    // m, the quad's size
 uniform float border = 0.022;           // m
 instance uniform float fill = 1.0;
 instance uniform vec4 color : source_color = vec4(0.85, 0.12, 0.08, 1.0);
@@ -22,4 +23,5 @@ void fragment() {
 		c = u <= fill ? color.rgb * (1.15 - 0.4 * UV.y) : vec3(0.07, 0.06, 0.06);
 	}
 	ALBEDO = c;
+	ALPHA = 1.0;
 }

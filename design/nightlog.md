@@ -680,19 +680,34 @@ What was built overnight while the user slept, in order. Start the game from VS 
        generated metal maps made fur shine in the moonlight).
      - Items: a weapon's own stat takes the whole budget and the suffix comes on top (an
        iron dagger of the Owl had less Magic and Mana than a plain one two levels lower).
+     - Trees and bushes within 2–5.5 m of the camera dither out (scatter.gd `NEAR_FADE`): a
+       camera pushed into a crown (dense Unholy forest) no longer sees a black wall of branches.
      - Exit: no more leaked music playback (streams released on exit), tooltips closed before
        quitting.
 
+116. **Headgear around the real head; nameplates with the name on the bar.**
+     - Hood, coif, leather cap and plate helm are no generated models on the head bone any more
+       (the head was shrunk to fit them and showed small inside the open ones): each is a shell
+       built around the full-size head (`tools/pipeline/headgear.py`, in build_characters.sh):
+       an egg around the head (round like WoW's), the face opening cut as a smooth oval (the
+       helm: an eye slit), ending at the neck, never on the shoulders. The hood closes under
+       the chin and takes the robe's colours. One shader for cloth, mail rings, stitched
+       leather, steel with brass (`shaders/headgear.gdshader`). The head shrink is gone.
+     - Under headgear the body shader draws only the face and the neck (`hide_hair`): hair
+       would poke through the shells (WoW hides it too).
+     - Test: `--heads [--heads-turn 180]` shows the four in a row.
+     - Nameplates: the name in white on the health bar, the bar as wide as the name needs,
+       drawn over everything, about 50% larger.
+
 
 ## Known issues / next
-
-- In dense forest (the Unholy lands) the camera ends up inside tree crowns during fights: the
-  vampire and cultist shots for the README were unusable.
 
 - Only head items, weapons and shields are visible; body armor keeps the class outfit (visible
   armor needs outfits per item type).
 - Elite groups (2–3 elites one level above you) kill rogues, priests, mages and hunters of the
   same level in automated fights; tune if that feels too hard in play.
+- The leather cap still reads much like a hood (it covers the ears and the nape); a cap with
+  cheek guards or a shorter back would set it apart.
 - Some generated buildings look rough up close (the Mediterranean villa), the obelisk has no
   pointed tip, the tomb guardian's kilt came out as trousers.
 - Sunrise and sunset light is dim on the side facing away from the sun.

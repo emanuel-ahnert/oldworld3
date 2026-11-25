@@ -10,7 +10,7 @@ One garment, made here from the body's measurements (nothing generated):
 - Two sleeves along the arms: snug at the shoulder, widening down the forearm in folds into bell
   sleeves.
 Skinning: the bodice, collar and sleeves take their weights from the nearest body skin (like
-the hood, hood_layer.py); the skirt follows the hips at the waist and more and more the thighs
+the headgear, headgear.py); the skirt follows the hips at the waist and more and more the thighs
 toward the hem (its left half the left thigh, the right half the right one), so it swings with
 the stride. The game hides the body's chest and legs under it (body_slots.gdshader `robed`), so
 nothing pokes through.

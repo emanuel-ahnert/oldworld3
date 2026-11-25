@@ -26,6 +26,7 @@ var nameplate: Node3D           ## name and health bar over the head (visible in
 var _plate_name: Label3D
 var _plate_bar: MeshInstance3D
 static var _plate_mat: ShaderMaterial
+const PLATE_W := 1.3                ## m, the narrowest health bar
 
 var _model: Node3D
 var _visual: Node3D          ## creature mesh (procedural motion)
@@ -126,13 +127,14 @@ func _ready() -> void:
 	nameplate.position.y = (2.1 * float(data.get("scale", 1.0))) if humanoid else 1.6
 	_plate_name = Label3D.new()
 	_plate_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_plate_name.font_size = 34
-	_plate_name.outline_size = 8
+	_plate_name.font_size = 26
+	_plate_name.outline_size = 7
 	_plate_name.pixel_size = 0.005
+	_plate_name.no_depth_test = true
+	_plate_name.render_priority = 2
+	_plate_name.outline_render_priority = 1
 	_plate_name.text = plate_name()
-	var tint := Color(1, 0.85, 0.3) if data.behavior == "defensive" else Color(1, 0.4, 0.35)
 	if champion != "":
-		tint = Color(1, 0.6, 0.15)
 		nameplate.position.y *= 1.2
 		_model.scale *= 1.2
 		if modifier == "Burning":
@@ -142,19 +144,24 @@ func _ready() -> void:
 			glow.omni_range = 5.0
 			glow.position.y = 1.2
 			add_child(glow)
-	_plate_name.modulate = tint
+	_plate_name.modulate = Color(1, 1, 1)           # white on the bar; the bar's colour tells friend from foe
 	nameplate.add_child(_plate_name)
 	if _plate_mat == null:
 		_plate_mat = ShaderMaterial.new()
 		_plate_mat.shader = load("res://shaders/nameplate.gdshader")
 	_plate_bar = MeshInstance3D.new()
+	# The bar as wide as the name needs (at least PLATE_W m), the name on it.
+	var font: Font = _plate_name.font if _plate_name.font else ThemeDB.fallback_font
+	var text_w := font.get_string_size(_plate_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _plate_name.font_size).x * _plate_name.pixel_size
+	var bar := Vector2(maxf(PLATE_W, text_w + 0.24), 0.2)
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1.1, 0.13)
+	quad.size = bar
 	_plate_bar.mesh = quad
+	_plate_bar.set_instance_shader_parameter("size", bar)
 	_plate_bar.material_override = _plate_mat
 	_plate_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_plate_bar.position.y = 0.2
-	_plate_bar.set_instance_shader_parameter("color", Color(0.85, 0.7, 0.1) if data.behavior == "defensive" else Color(0.8, 0.1, 0.07))
+	_plate_bar.position.y = 0.0
+	_plate_bar.set_instance_shader_parameter("color", Color(0.85, 0.7, 0.1) if data.behavior == "defensive" else (Color(0.9, 0.42, 0.06) if champion != "" else Color(0.8, 0.1, 0.07)))
 	nameplate.add_child(_plate_bar)
 	nameplate.visible = false
 	add_child(nameplate)
@@ -304,7 +311,7 @@ func _physics_process(dt: float) -> void:
 		var cam := get_viewport().get_camera_3d()
 		if cam:
 			var d := cam.global_position.distance_to(nameplate.global_position)
-			nameplate.scale = Vector3.ONE * clampf(d * 0.085, 0.3, 2.6) / maxf(scale.x, 0.01)
+			nameplate.scale = Vector3.ONE * clampf(d * 0.13, 0.45, 4.0) / maxf(scale.x, 0.01)
 
 
 ## Going around obstacles (tree trunks, houses, crates, cliffs): probes ahead along `want`;

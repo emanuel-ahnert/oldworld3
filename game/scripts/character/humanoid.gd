@@ -2,7 +2,7 @@ class_name Humanoid
 extends Node3D
 ## A humanoid on the shared base body: gear slots (texture sets A and B per slot, see
 ## design/asset-pipeline.md), armor layers (WoW style geometry worn over the body, e.g. plate
-## legs from tools/pipeline/armor.py, shown or hidden per gear), an optional helmet (the head shrinks under it, WoW style), a
+## legs from tools/pipeline/armor.py, shown or hidden per gear), optional headgear (a layer around the full-size head), a
 ## weapon in the right hand, and the animation tree. Faces -Z like the game's units.
 
 const BODY := "res://assets/characters/warrior/body"
@@ -78,20 +78,21 @@ const BOW_AIM := Vector3(90, 0, 0)
 const STAFF_SCALE := 0.75
 static var STAFF_GRIP := Vector3(0.0, -0.16, 0.03)     ## the hand about the staff's middle
 static var STAFF_TILT := Vector3(-12, 0, -5)          ## upright in the idle hand, off the robe
-## Per-model fit of headgear: [offset, scale] (generated models differ in size and pivot).
-## [offset, scale, rotation in degrees, head shrink]: the head shrinks under headgear so the hair
-## doesn't poke through (WoW hides it). Closed helms, the coif and the cowl shrink it fully (the face
-## sits in their shadow); the open cap doesn't (it would squash the face) and covers the hair.
-## The hood is a layer (HEAD_LAYERS).
-const HEAD_FIT := {
-	"coif": [Vector3(0, 0.07, 0.02), 0.31, Vector3.ZERO, 1.0], "cap": [Vector3(0, 0.11, 0.01), 0.27, Vector3(0, 90, 0), 0.6],
-	"cowl": [Vector3(0, 0.05, 0.04), 0.4, Vector3.ZERO, 1.0],
+## Headgear is worn as a layer built around the full-size head (tools/pipeline/headgear.py):
+## item model -> [layer, kind for shaders/headgear.gdshader (0 cloth, 1 mail, 2 leather,
+## 3 plate)]. The head keeps its size: shrunk to fit generated helmets, it showed small inside the
+## open ones.
+const HEAD_LAYERS := {
+	"hood": ["res://assets/gear/head_hood.glb", 0], "coif": ["res://assets/gear/head_coif.glb", 1],
+	"cowl": ["res://assets/gear/head_cowl.glb", 2], "cap": ["res://assets/gear/head_cowl.glb", 2],
+	"helmet": ["res://assets/gear/head_helm.glb", 3],
 }
-## Headgear worn as a layer fitted to the body instead of on the head bone: model -> [layer,
-## head shrink]. The hood is fitted around the full-size head (tools/pipeline/hood_layer.py) and
-## shows the face, so the head keeps its size (shrunk, the face looked tiny in the hood).
-const HEAD_LAYERS := {"hood": ["res://assets/gear/hood_layer.glb", 0.0]}
-var _shrink := 1.0
+## What of the head still shows under each kind (body_slots.gdshader hide_hair): [cos of the
+## face's half width, brow m above the head's middle] (the openings of headgear.py's KINDS).
+const FACE_SHOWN := [[0.55, 0.065], [0.68, 0.055], [0.3, 0.045], [2.0, 0.0]]
+var _face_shown := []
+const HOOD_TINT := [Color(0.42, 0.36, 0.29), Color(0.30, 0.25, 0.19)]   ## a plain hood: tint, hem
+var _robe_colors := HOOD_TINT
 var _held := {}
 var _layers := {}             ## key -> MeshInstance3D on the body's skeleton
 static var _layer_mat: ShaderMaterial
@@ -139,6 +140,8 @@ func set_pick(pick: Array) -> void:
 func set_robe(tint: Color, trim: Color, accent := Color(-1, 0, 0)) -> void:
 	if mat:
 		mat.set_shader_parameter("robed", tint.a > 0.0)
+	_robe_colors = HOOD_TINT if tint.a <= 0.0 else [tint, trim]
+	_tint_hood()
 	if tint.a <= 0.0:
 		set_layer("robe", "")
 		return
@@ -157,6 +160,16 @@ func set_robe(tint: Color, trim: Color, accent := Color(-1, 0, 0)) -> void:
 const ROBE := "res://assets/gear/robe_layer.glb"
 
 
+## A cloth hood takes the robe's colors (cloth and hem), a plain brown without one.
+func _tint_hood() -> void:
+	var mi := _layers.get("head") as MeshInstance3D
+	if mi == null or not (mi.material_override is ShaderMaterial):
+		return
+	var hm := mi.material_override as ShaderMaterial
+	hm.set_shader_parameter("tint", _robe_colors[0])
+	hm.set_shader_parameter("trim", _robe_colors[1])
+
+
 func has_layer(key: String) -> bool:
 	return _layers.has(key)
 
@@ -168,11 +181,16 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 		(_held[key] as Node).queue_free()
 		_held.erase(key)
 	if key == "helmet":
-		var layer: Array = HEAD_LAYERS.get(path.get_file().get_basename(), ["", 1.0])
+		var layer: Array = HEAD_LAYERS.get(path.get_file().get_basename(), ["", 0])
 		set_layer("head", layer[0], true)
-		if layer[0] != "":
-			helmet_worn = true
-			_shrink = layer[1]
+		helmet_worn = layer[0] != ""
+		_face_shown = FACE_SHOWN[int(layer[1])] if helmet_worn else []
+		if helmet_worn:
+			var hm := ShaderMaterial.new()
+			hm.shader = load("res://shaders/headgear.gdshader")
+			hm.set_shader_parameter("kind", int(layer[1]))
+			(_layers["head"] as MeshInstance3D).material_override = hm
+			_tint_hood()
 			return
 	if path == "":
 		if key == "helmet":
@@ -181,19 +199,11 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 	var h: Array = HOLD[key]
 	var offset: Vector3 = h[1]
 	var scale_f: float = h[3]
-	var fit: Array = HEAD_FIT.get(path.get_file().get_basename(), [])
-	if key == "helmet":
-		_shrink = 1.0
 	if key == "weapon" and path.get_file().begins_with("staff"):
 		scale_f *= STAFF_SCALE        # staves were too long: they stood far over the head
 		# Held about the middle, the top tipped a little outward and forward (clear of the robe).
 		offset = STAFF_GRIP
 		rot = STAFF_TILT
-	if key == "helmet" and not fit.is_empty():
-		offset = fit[0]
-		scale_f = fit[1]
-		rot = fit[2]
-		_shrink = fit[3]
 	var att := _attach(h[0], path, offset, rot if rot != null else h[2], scale_f)
 	if att:
 		_held[key] = att
@@ -207,7 +217,7 @@ func equip_model(key: String, path: String, rot: Variant = null) -> void:
 		if stowed and key in STOWABLE:
 			att.visible = false
 	if key == "helmet":
-		helmet_worn = att != null          # the body shader shrinks the head under it (no hair poking out)
+		helmet_worn = att != null
 	if key == "weapon":
 		_fit_trail()
 		if anim:
@@ -338,20 +348,22 @@ func set_bow_aim(on: bool, dt: float) -> void:
 	m.transform = a.interpolate_with(m.get_meta("aim"), _bow_aim)
 
 
-## The body shader shrinks the head under a helmet; it needs the head's mesh-local position of
-## this frame's pose (after the animation: in _process it was a frame late, and in fast blows
-## the head poked out of the helmet).
+## Every frame after the animation: the staff's hold; under headgear the head's middle and
+## directions for the body shader (what of the head is drawn), in the mesh's space of this frame's
+## pose (in _process it was a frame late).
 func _head_update() -> void:
 	_staff_update()
 	if mat == null:
 		return
-	mat.set_shader_parameter("head_shrink", _shrink if helmet_worn else 0.0)
-	if not helmet_worn:
+	mat.set_shader_parameter("hide_hair", not _face_shown.is_empty())
+	if _face_shown.is_empty():
 		return
 	var to_mesh := _mesh.global_transform.affine_inverse() * _skel.global_transform
-	var head := to_mesh * _skel.get_bone_global_pose(_head).origin
-	var neck := to_mesh * _skel.get_bone_global_pose(_neck).origin
-	var up := (head - neck).normalized()
-	mat.set_shader_parameter("head_center", head + up * 0.1)
-	mat.set_shader_parameter("neck_pos", head - up * 0.07)          # below the chin, so it shrinks too
+	var pose := _skel.get_bone_global_pose(_head)
+	var turn := to_mesh.basis * pose.basis * _skel.get_bone_global_rest(_head).basis.inverse()
+	var up := (turn * Vector3.UP).normalized()
+	mat.set_shader_parameter("head_center", to_mesh * pose.origin + up * 0.10)
 	mat.set_shader_parameter("head_up", up)
+	mat.set_shader_parameter("head_fwd", (turn * Vector3.BACK).normalized())
+	mat.set_shader_parameter("face_cos", _face_shown[0])
+	mat.set_shader_parameter("brow", _face_shown[1])

@@ -45,6 +45,9 @@ const BASE := {"beech": 0.04, "linden": 0.05, "birch": 0.02, "oak": 0.37, "palm"
 	"olive": 0.1, "cypress": 0.02, "deadtree": 0.48, "darkpine": 0.06, "pine1": 0.34, "pine2": 0.4}
 const MAX_DROP := 0.45
 
+## Vegetation within x m of the camera is invisible, from y m on solid (dithered between).
+const NEAR_FADE := Vector2(2.0, 5.5)
+
 ## Forest trees and how often each species is picked; the gnarled oak is the rare one.
 const TREES := {"beech": 0.35, "linden": 0.3, "birch": 0.25, "oak": 0.1}
 
@@ -236,15 +239,20 @@ func _load_mesh(path: String, tint := Color.WHITE) -> Dictionary:
 	var mesh := mi.mesh
 	var aabb := mesh.get_aabb()
 	scene.free()
-	if tint != Color.WHITE:
-		# Recolor (e.g. the Unholy pines came out frosty): a copy with darker materials.
-		mesh = mesh.duplicate()
-		for i in mesh.get_surface_count():
-			var m := mesh.surface_get_material(i)
-			if m is BaseMaterial3D:
-				var c := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+	# Every material a copy: recolored by `tint` (e.g. the Unholy pines came out frosty), and
+	# dithered out close to the camera (gone within NEAR_FADE.x m, solid from NEAR_FADE.y m), so
+	# a camera pushed into a crown sees through the branches instead of a dark wall of them.
+	mesh = mesh.duplicate()
+	for i in mesh.get_surface_count():
+		var m := mesh.surface_get_material(i)
+		if m is BaseMaterial3D:
+			var c := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
+			if tint != Color.WHITE:
 				c.albedo_color = c.albedo_color * tint
-				mesh.surface_set_material(i, c)
+			c.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+			c.distance_fade_min_distance = NEAR_FADE.x
+			c.distance_fade_max_distance = NEAR_FADE.y
+			mesh.surface_set_material(i, c)
 	return {"mesh": mesh, "aabb": aabb}
 
 

@@ -12,9 +12,13 @@ for set in plate_legs plate_shoulders; do
   blender -b --python tools/pipeline/armor.py -- spike/body $set spike/body/$set.glb 2>&1 | grep -E "Error|Traceback" || true
   cp spike/body/$set.glb $W/
 done
-# The cloth hood with its cape, fitted to the body (worn as the "head" layer).
-blender -b --python tools/pipeline/hood_layer.py -- spike/body game_src/raw/gear/hood.glb spike/body/hood_layer.glb 2>&1 | grep -E "Error|Traceback" || true
-cp spike/body/hood_layer.glb game/assets/gear/
+# Headgear built around the full-size head (worn as the "head" layer): cloth hood, mail coif,
+# leather cap, plate helm.
+mkdir -p spike/body/headgear
+for k in hood coif cowl helm; do
+  blender -b --python tools/pipeline/headgear.py -- spike/body $k spike/body/headgear/$k.glb 2>&1 | grep -E "Error|Traceback" || true
+  cp spike/body/headgear/$k.glb game/assets/gear/head_$k.glb
+done
 # The casters' robe skirt (tools/pipeline/robe_layer.py), coloured per class in the game.
 blender -b --python tools/pipeline/robe_layer.py -- spike/body spike/body/robe_layer.glb 2>&1 | grep -E "Error|Traceback" || true
 cp spike/body/robe_layer.glb game/assets/gear/
