@@ -51,9 +51,15 @@ scripts, a synthesizer in Python). No third-party assets.
 ## Download
 
 Ready-to-play builds for Windows and Linux (x86-64) are on the
-[Releases page](https://github.com/emanuel-ahnert/oldworld3/releases): unpack the `.zip`
-(Windows) or `.tar.gz` (Linux) and start `oldworld3.exe` or `oldworld3.x86_64`. One file
-each, with the game data inside. `tools/release.sh` builds them.
+[Releases page](https://github.com/emanuel-ahnert/oldworld3/releases): a single file each,
+with the game data inside. Download it and run it.
+
+- **Windows:** `oldworld3-<version>-windows-x86_64.exe`. Windows may warn that the app is
+  from an unknown publisher (it isn't signed): "More info" → "Run anyway".
+- **Linux:** `oldworld3-<version>-linux-x86_64`. Downloads lose the "executable" flag, so
+  allow it once: `chmod +x oldworld3-*-linux-x86_64` (or Properties → "Allow executing").
+
+`tools/release.sh` builds them.
 
 ## Running from source
 
