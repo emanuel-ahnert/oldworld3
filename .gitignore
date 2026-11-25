@@ -21,3 +21,6 @@ spike/img/*
 spike/godot/
 spike/shots/
 spike/anim_compare/
+
+# Release builds (tools/release.sh)
+dist/

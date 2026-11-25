@@ -48,7 +48,14 @@ scripts, a synthesizer in Python). No third-party assets.
   to rest anywhere; a day and night cycle; death and respawn at the last checkpoint;
   autosave.
 
-## Running
+## Download
+
+Ready-to-play builds for Windows and Linux (x86-64) are on the
+[Releases page](https://github.com/emanuel-ahnert/oldworld3/releases): unpack the `.zip`
+(Windows) or `.tar.gz` (Linux) and start `oldworld3.exe` or `oldworld3.x86_64`. One file
+each, with the game data inside. `tools/release.sh` builds them.
+
+## Running from source
 
 Needs [Godot 4.7](https://godotengine.org) on the `PATH` as `godot`. The generated assets
 are in the repository, so no download is needed.
