@@ -9,10 +9,12 @@ extends CanvasLayer
 const SETTINGS := "user://settings.cfg"
 const QUALITY := {
 	"Low": {"scale": 0.6, "shadow": 30.0, "clutter": [14.0, 0.35], "shadows": false,   # blob shadows instead
-		"view": 100.0, "far": 180.0},
-	"Medium": {"scale": 0.75, "shadow": 45.0, "clutter": [20.0, 0.55], "view": 160.0, "far": 600.0},
-	"High": {"scale": 1.0, "shadow": 70.0, "clutter": [36.0, 1.3], "view": 160.0, "far": 600.0},
+		"view": 100.0, "far": 180.0, "aniso": 0},
+	"Medium": {"scale": 0.75, "shadow": 45.0, "clutter": [20.0, 0.55], "view": 160.0, "far": 600.0, "aniso": 1},
+	"High": {"scale": 1.0, "shadow": 70.0, "clutter": [36.0, 1.3], "view": 160.0, "far": 600.0, "aniso": 2},
 }
+## aniso: anisotropic texture filtering (Viewport.anisotropic_filtering_level: 0 off, 1 2x, 2 4x),
+## sharp ground at shallow angles; on an integrated GPU it cost a quarter of the frame.
 ## clutter: radius m, density. view: m to the last trees, rocks and bushes; far: m to the end of
 ## the world drawn (Low: thick fog hides where it ends, World.set_view).
 
@@ -62,11 +64,18 @@ static func apply_volumes() -> void:
 		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 1) / 100.0))
 
 
+## Until one is chosen in the options: the release executables start at the best quality, a
+## run from the source (the editor, VS Code, the test scripts) at the lowest (the development
+## machine's integrated GPU).
+static func default_quality() -> String:
+	return "High" if OS.has_feature("template") else "Low"
+
+
 static func load_quality() -> String:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
-		return String(cfg.get_value("video", "quality", "Medium"))
-	return "Medium"
+		return String(cfg.get_value("video", "quality", default_quality()))
+	return default_quality()
 
 
 static func load_daynight() -> bool:
@@ -80,6 +89,7 @@ static func apply_quality(name: String, viewport: Viewport, p_sun: DirectionalLi
 	var q: Dictionary = QUALITY.get(name, QUALITY.Medium)
 	viewport.scaling_3d_scale = q.scale
 	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if q.scale < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
+	viewport.anisotropic_filtering_level = int(q.get("aniso", 2)) as Viewport.AnisotropicFiltering
 	if p_sun:
 		p_sun.directional_shadow_max_distance = q.shadow
 		p_sun.shadow_enabled = q.get("shadows", true)

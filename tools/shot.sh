@@ -21,5 +21,8 @@ if command -v hyprctl >/dev/null; then
   hyprctl eval 'hl.window_rule({ name = "oldworld3-test", match = { class = "^Oldworld3 test$" }, workspace = "special:oldworld silent", no_initial_focus = true })' >/dev/null
 fi
 rm -f "$out"
+# A run from the source defaults to Low (GameMenu.default_quality); tests render at Medium
+# unless they ask for a quality (--quality Low|Medium|High).
+case " $* " in *" --quality "*) ;; *) set -- "$@" --quality Medium ;; esac
 timeout ${SHOT_TIMEOUT:-180} godot --path "$game" -- --shot "$out" --frame "$frame" "$@" 2>&1 | grep -vE '^(Godot Engine|Vulkan|$)' || true
 [ -f "$out" ] && echo "ok: $out"

@@ -172,7 +172,7 @@ const WEST_EAST := {
 		"name": "Bat Swarm", "types": ["Dark"], "resistance": 8, "tier": "trash", "hp": 160, "attack": 9, "defense": 7,
 		"behavior": "aggressive", "speed": 8.0, "swing": 1.6, "reach": 1.3, "radius": 0.5,
 		"model": "creature:res://assets/creatures/bats.glb", "fallback": "res://assets/creatures/wisp.glb",
-		"group": Vector2i(1, 2), "abilities": [], "float": 1.8, "flying": true,
+		"group": Vector2i(1, 2), "abilities": [], "float": 1.6, "flying": true, "swarm": true,
 	},
 	"cultist": {
 		"name": "Cultist", "types": ["Dark", "Fire"], "resistance": 11, "tier": "elite", "hp": 320, "attack": 8, "magic": 14,

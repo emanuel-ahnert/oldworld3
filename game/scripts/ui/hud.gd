@@ -19,7 +19,7 @@ var _cast_label: Label
 var _map: Minimap
 var _xp_label: Label
 var _xp_text: Label
-var _quests: Label
+var _quests: RichTextLabel
 var _hero_auras: HFlowContainer
 var _target_auras: HFlowContainer
 var _auras_at := 0.0
@@ -93,7 +93,7 @@ class CombatIcon extends Control:
 
 const HELP := """W/S forward/back   A/D turn (strafe with right mouse)   Q/E strafe   Space jump   Shift sprint
 left drag look   right drag steer   middle button re-center   both buttons run   wheel or - / . zoom   Tab target
-F auto-attack   F2 autorun   1–6 abilities   R potion   C camp   B bags   M map   N abilities
+F auto-attack   F2 or mouse 4 autorun   1–6 abilities   R potion   C camp   B bags   M map   N abilities
 right-click enemy attack   F1 hide help   Esc clear target / menu"""
 
 
@@ -411,13 +411,22 @@ func _process(_dt: float) -> void:
 		_map.offset_left = -Minimap.SIZE_PX - 16
 		_map.offset_top = 14
 		add_child(_map)
-		_quests = _label(Vector2.ZERO, 15)
+		# Rich text: done quests stand out in green from the active ones (white).
+		_quests = RichTextLabel.new()
+		_quests.bbcode_enabled = true
+		_quests.fit_content = true
+		_quests.scroll_active = false
+		_quests.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_quests.add_theme_font_size_override("normal_font_size", 15)
+		_quests.add_theme_color_override("default_color", Color(1, 1, 1))
+		_quests.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		_quests.add_theme_constant_override("outline_size", 5)
+		add_child(_quests)
 		_quests.anchor_left = 1.0
 		_quests.anchor_right = 1.0
 		_quests.offset_left = -Minimap.SIZE_PX - 16
 		_quests.offset_right = -16
 		_quests.offset_top = Minimap.SIZE_PX + 44
-		_quests.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_quests.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		player.quests_changed.connect(_update_quests)
 		player.level_banner.connect(show_level)
@@ -497,8 +506,9 @@ func _process(_dt: float) -> void:
 func _update_quests() -> void:
 	var lines := []
 	for q in player.quests.active:
+		var title := String(q.title).replace("[", "[lb]")
 		if int(q.have) >= int(q.need):
-			lines.append("%s  — done, return to the inn" % q.title)
+			lines.append("[color=#7fe06a]%s  — done, return to the inn[/color]" % title)
 		else:
-			lines.append("%s  %d/%d" % [q.title, int(q.have), int(q.need)])
+			lines.append("%s  %d/%d" % [title, int(q.have), int(q.need)])
 	_quests.text = ("Quests\n" + "\n".join(lines)) if not lines.is_empty() else ""

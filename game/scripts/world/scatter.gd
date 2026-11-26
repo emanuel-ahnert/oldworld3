@@ -47,6 +47,8 @@ const MAX_DROP := 0.45
 
 ## Vegetation within x m of the camera is invisible, from y m on solid (dithered between).
 const NEAR_FADE := Vector2(2.0, 5.5)
+## The procedural trees (tools/pipeline/tree.py): their leaves get shaders/leaf.
+const CARD_TREES := ["beech", "linden", "birch", "olive", "cypress", "bush"]
 
 ## Forest trees and how often each species is picked; the gnarled oak is the rare one.
 const TREES := {"beech": 0.35, "linden": 0.3, "birch": 0.25, "oak": 0.1}
@@ -243,9 +245,19 @@ func _load_mesh(path: String, tint := Color.WHITE) -> Dictionary:
 	# dithered out close to the camera (gone within NEAR_FADE.x m, solid from NEAR_FADE.y m), so
 	# a camera pushed into a crown sees through the branches instead of a dark wall of them.
 	mesh = mesh.duplicate()
+	var cards := path.get_file().get_basename() in CARD_TREES
 	for i in mesh.get_surface_count():
 		var m := mesh.surface_get_material(i)
-		if m is BaseMaterial3D:
+		if cards and m is BaseMaterial3D and (m as BaseMaterial3D).cull_mode == BaseMaterial3D.CULL_DISABLED:
+			# The leaves: one double-sided card per sprig (shaders/leaf).
+			var lm := ShaderMaterial.new()
+			lm.shader = preload("res://shaders/leaf.gdshader")
+			lm.set_shader_parameter("albedo_tex", (m as BaseMaterial3D).albedo_texture)
+			lm.set_shader_parameter("tint", (m as BaseMaterial3D).albedo_color * tint)
+			lm.set_shader_parameter("roughness", (m as BaseMaterial3D).roughness)
+			lm.set_shader_parameter("near_fade", NEAR_FADE)
+			mesh.surface_set_material(i, lm)
+		elif m is BaseMaterial3D:
 			var c := (m as BaseMaterial3D).duplicate() as BaseMaterial3D
 			if tint != Color.WHITE:
 				c.albedo_color = c.albedo_color * tint

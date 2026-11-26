@@ -1,6 +1,8 @@
 class_name Audio
 extends Node
-## Music and sound effects (synthesized by tools/audio/makeaudio.py, from Oldworld2).
+## Music and sound effects. Music: generated takes (ACE-Step on the GPU box,
+## tools/audio/master_music.sh), several per track, one after another. Sound effects: generated
+## (MOSS-SoundEffect) or synthesized (tools/audio/makeaudio.py).
 ## Music follows the situation with a crossfade: combat, near the settlement, the zone; a sad
 ## tune on death. Sound effects are short one-shots.
 
@@ -15,6 +17,7 @@ var village_music := "village"
 var _players: Array[AudioStreamPlayer] = []
 var _current := 0
 var _track := ""
+var _take := ""                ## the path of the take playing
 var _sfx: Array[AudioStreamPlayer] = []
 var _cache := {}
 var _last_play := {}
@@ -27,6 +30,7 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		p.volume_db = -80
 		p.bus = "Music"
+		p.finished.connect(_on_take_finished.bind(p))
 		add_child(p)
 		_players.append(p)
 	for i in 8:
@@ -55,12 +59,18 @@ static func sfx(name: String, volume_db := 0.0) -> void:
 
 ## A blow landing: the weapon's impact (sword, axe, mace, club, staff, dagger, claw, bite, arrow;
 ## hit_<kind>1..3, one take at random), a crit with the crit ring over it.
-static func hit(kind: String, crit := false, volume_db := 0.0) -> void:
+## `surface`: what the blow lands on (flesh, metal, bone, chitin, spirit; Enemy.surface(),
+## Player.surface()): hit_<kind>_<surface>1..3 when there is one, the weapon's own otherwise.
+static func hit(kind: String, crit := false, volume_db := 0.0, surface := "") -> void:
 	if instance == null:
 		return
-	instance._play_sfx("hit_%s%d" % [kind, randi() % 3 + 1], volume_db + (2.0 if crit else 0.0))
+	var n := randi() % 3 + 1
+	var name := "hit_%s%d" % [kind, n]
+	if surface != "" and ResourceLoader.exists(SOUND % ("hit_%s_%s%d" % [kind, surface, n])):
+		name = "hit_%s_%s%d" % [kind, surface, n]
+	instance._play_sfx(name, volume_db + (5.0 if crit else 0.0))      # crits clearly louder
 	if crit:
-		instance._play_sfx("crit", volume_db - 8.0)
+		instance._play_sfx("crit", volume_db - 3.0)
 
 
 static func music(track: String) -> void:
@@ -87,16 +97,33 @@ func _play_sfx(name: String, volume_db: float) -> void:
 func _play_music(track: String) -> void:
 	if track == _track:
 		return
-	var path := MUSIC % track
-	if not ResourceLoader.exists(path):
+	var takes := _takes(track)
+	if takes.is_empty():
 		return
 	_track = track
-	var stream: AudioStream = _cache.get(track)
+	_start_take(takes[randi() % takes.size()], FADE)
+
+
+## The takes of a track (generated music, tools/audio/master_music.sh): <track>.ogg,
+## <track>_2.ogg, ... Any of them plays; after one ends, another (see _on_take_finished).
+func _takes(track: String) -> Array[String]:
+	var out: Array[String] = []
+	for i in range(1, 10):
+		var path := MUSIC % (track if i == 1 else "%s_%d" % [track, i])
+		if not ResourceLoader.exists(path):
+			break
+		out.append(path)
+	return out
+
+
+func _start_take(path: String, fade: float) -> void:
+	_take = path
+	var stream: AudioStream = _cache.get(path)
 	if stream == null:
 		stream = load(path)
 		if stream is AudioStreamOggVorbis:
-			(stream as AudioStreamOggVorbis).loop = track != "sad"
-		_cache[track] = stream
+			(stream as AudioStreamOggVorbis).loop = false      # the next take follows instead
+		_cache[path] = stream
 	var old := _players[_current]
 	_current = 1 - _current
 	var new := _players[_current]
@@ -104,9 +131,21 @@ func _play_music(track: String) -> void:
 	new.volume_db = -40
 	new.play()
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(new, "volume_db", -8.0, FADE)
-	tw.tween_property(old, "volume_db", -60.0, FADE)
+	tw.tween_property(new, "volume_db", -8.0, fade)
+	tw.tween_property(old, "volume_db", -60.0, fade)
 	tw.chain().tween_callback(old.stop)
+
+
+## A take played to its end: another take of the same track (not the same one again when there
+## are more); the lament on death plays once.
+func _on_take_finished(player: AudioStreamPlayer) -> void:
+	if player != _players[_current] or _track == "" or _track == "sad":
+		return
+	var takes := _takes(_track)
+	if takes.size() > 1:
+		takes.erase(_take)
+	if not takes.is_empty():
+		_start_take(takes[randi() % takes.size()], 0.5)
 
 
 ## Picks the music for the hero's situation (called a few times per second).

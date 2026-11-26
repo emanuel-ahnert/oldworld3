@@ -1,0 +1,17 @@
+# Oldworld3 music, first batch (ACE-Step 1.5 on the GPU box, gen_music.sh).
+# name | caption | seconds | takes [| bpm]
+title | epic medieval fantasy main theme, orchestral, french horns, strings, timpani, choir pads, heroic and wistful, cinematic game soundtrack | 120 | 3 | 80
+grassland | peaceful medieval fantasy countryside, acoustic guitar, flute, light strings, harp, gentle and adventurous, open meadows, game ambient soundtrack | 150 | 3 | 90
+village | cozy medieval village tavern music, lute, recorder, hand drum, fiddle, warm and cheerful, folk, game soundtrack | 120 | 3 | 100
+north | cold nordic fantasy wilderness, low strings, nyckelharpa, deep drums, wordless distant choir, sparse and windswept, game ambient soundtrack | 150 | 3 | 70
+hall | nordic mead hall, tagelharpa, frame drum, lyre, warm fire, sturdy and proud, folk, game soundtrack | 120 | 3 | 85
+desert | arabian fantasy desert, oud, ney flute, darbuka, low drones, hot and vast, mysterious, game ambient soundtrack | 150 | 3 | 85
+oasis | desert oasis town, oud, qanun, light percussion, flute, calm and welcoming, game soundtrack | 120 | 3 | 95
+ancient | ancient egyptian ruins, harp, ney, low choir drones, sistrum, ominous and timeless, tombs and pyramids, game ambient soundtrack | 150 | 3 | 70
+mediterranean | sunny mediterranean coast, mandolin, classical guitar, accordion, light strings, relaxed and bright, game ambient soundtrack | 150 | 3 | 95
+harbor | mediterranean harbor town, mandolin, accordion, tambourine, lively and friendly, folk, game soundtrack | 120 | 3 | 110
+unholy | dark gothic haunted lands, low strings, church organ, distant bells, eerie choir, dread and decay, game ambient soundtrack | 150 | 3 | 65
+chapel | candlelit gothic chapel, pipe organ, sombre choir, solemn and melancholic, game soundtrack | 120 | 3 | 60
+fight | medieval fantasy battle music, driving war drums, staccato strings, brass stabs, tense and energetic, game combat soundtrack | 90 | 3 | 140
+fight_elite | epic boss battle, full orchestra, choir, pounding taiko and war drums, brass, intense and heroic, game combat soundtrack | 90 | 3 | 150
+sad | sorrowful fantasy lament, solo cello, soft piano, quiet strings, defeat and loss, game soundtrack | 60 | 3 | 60

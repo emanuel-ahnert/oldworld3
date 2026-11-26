@@ -811,6 +811,99 @@ What was built overnight while the user slept, in order. Start the game from VS 
      - Dead bat swarms lie on the ground like other corpses (only spirits and wisps, which
        have no body, still shrink away after falling). Test: --kill-at N prints CORPSE lines.
 
+120. **Dusk and dawn, a rising moon; a real bat swarm; WoW-colored damage numbers.**
+     - Day and night: the one light used to jump from the setting sun to a fixed moon high in
+       the south. Now the moon has its own arc (rising in the east just after sunset, highest
+       at midnight, setting in the west at dawn: -sun elevation - 4°), the sun dims and reddens
+       down to nothing as it sets, the moon's light grows as it rises; the light changes hands
+       where both are dark (no snap of light or shadows). The moon disc follows its arc. A
+       longer twilight for sky and fog (day factor over -9°..12°).
+     - Bat Swarm: six small bats built in code (scripts/enemies/bat_swarm.gd: furry body, head,
+       ears, membrane wings on pivots), flapping at 6.5 Hz and weaving round the swarm's center.
+       Its health is its bats: ceil(6 x hp/max) fly, the rest drop out of the air, tumble and
+       lie on the ground (top_level, staying where they fell); the last falls at 0 HP. Healing
+       raises them again; respawning resets all. Test: --swarm-test N.
+     - Damage numbers: auto-attacks (swings, Auto Shot) white, abilities and their damage over
+       time yellow (Combatant.auto_hit while an auto lands, carried to the swing's impact;
+       last_hit_auto read by the number). Tests: --autos-only (the fight bot without
+       abilities), --dmg-log.
+
+121. **The axe's edge forward; wading leaves a wake; auto-attack keeps going on the run.**
+     - The axe model's blade points along its -Z: held, the edge was on top. Humanoid turns
+       axes 180° about the haft (edge forward and down, as the swings strike).
+     - Wading: Wake (scripts/world/wake.gd) spreads ripple rings (shaders/ripple) from legs in a
+       lake (every ~0.28 s moving, slow ones standing) and throws a splash of droplets at each
+       footfall while running. The hero and monsters within 60 m; Terrain/Zones.water_level.
+       Test: --lake now faces the lake (--lake --autowalk --no-enemies).
+     - Auto-attack on the run: releasing the mouse after a two-button run (or after holding a
+       button to look) counted as a click on empty ground, which cleared the target and with
+       it the auto-attack. A release is a click now only after a short (< 0.4 s) press of that
+       button alone, not dragged. Also WoW's leeway: while hero or target moves, melee reaches
+       2.2 m farther and the facing cone is 75° (swings and melee abilities). Test: --circle
+       (the fight bot strafes round its target).
+
+122. **Whirlwind can't be tapped off; done quests in green; little XP from far weaker monsters.**
+     - Whirlwind: a second press stops it only 2 s after it started (WHIRL_LOCK); running out
+       of rage or a stun still ends it.
+     - Quest tracker: a RichTextLabel; finished quests ("done, return to the inn") in green.
+       Test: --quest-one-done.
+     - XP (Rules.enemy_xp): monsters up to 5 levels below the hero give full XP (before: 10%
+       less per level below), then 80/60/40/20/10% at 6..10 below, 5% beyond (at least 1).
+       Higher monsters still give 10% more per level (up to +50%).
+
+123. **Performance: twice the frame rate at Medium; fewer triangles in the nature.**
+     Measured on the dev machine (integrated AMD Vega), tools/bench.sh 15 s run through the start
+     zone. Before: Low ~61 (after the first fix), Medium 24, High ~20. After: Low 74, Medium 50,
+     High 42. Per-part costs with `--off shadows,clutter,scatter,terrain,buildings,fxaa,fog,water`
+     (and --perf N, --lod X, --scale3d X); runs must be interleaved, the machine's speed drifts.
+     - The biggest waste: ~90 textures loaded from scripts (terrain, every outfit's color/normal/
+       metal maps at 2048 px, the moon) were imported uncompressed without mipmaps (Godot only
+       compresses textures it sees in a 3D material): distant ground read the full texture per
+       pixel. Now VRAM compressed with mipmaps; tools/import.sh does it for new ones. 34 -> 47.
+     - Terrain shader: slow variation (meadow brightness, dry patches, rock tint) read per
+       vertex instead of per pixel; road edges from the noise instead of a third grass read; the
+       grit noise packed into the noise texture's green channel; soil shaded from the grass
+       read; branch reads with textureGrad. (A shader that fails to compile draws nothing and
+       benchmarks like "terrain off": check SHADER ERROR before trusting a jump.)
+     - Anisotropic filtering per quality (Viewport.anisotropic_filtering_level): Low off,
+       Medium 2x, High 4x. It was a quarter of the frame on Medium.
+     - Trees (tree.py): twigs as 3-sided tubes over every other point of their path (same
+       shapes), limbs 5 sides, one double-sided card per sprig (shaders/leaf keeps the card's
+       bent normal on its back): beech 16k -> 7.7k triangles.
+     - Generated nature cut to budgets (tools/reduce_models.sh -> tools/pipeline/reduce.py: weld,
+       voxel remesh, drop small shells, collapse, new UVs, color baked over, matte): boulder
+       2.9k -> 700, pines 7-8k -> 2.5k, oak 9.6k -> 3k, shrub, drybush, cactus. Not the
+       buildings, props, palm, dead tree: up close the bake smeared (stall awning holes, flecks
+       at windows) or thin parts went; Blender's plain collapse stalls at ~half on these meshes
+       and Godot's LOD generator keeps UV seams (chest only 3.9k -> 2.5k; that script was dropped).
+       Normal and metal bakes from the original came out empty in Blender 5.2 (open).
+     - Quality default: High for the release executables, Low run from the source
+       (GameMenu.default_quality); a saved choice wins. Test scripts render at Medium.
+
+124. **Generated music; hit sounds by material; autorun on mouse 4.**
+     - Music from ACE-Step 1.5 (MIT) on the GPU box (design/asset-pipeline.md 6.8): every track
+       now has up to three generated takes (<track>.ogg, <track>_2.ogg, ..., mastered by
+       tools/audio/master_music.sh: -18 LUFS, fades). Audio picks a take at random and plays
+       another take of the same track after one ends (no looping one recording). Elite fights:
+       the first take plus two fast JRPG-style ones; normal fights still the first batch's two.
+     - Sound-effect models (MOSS-SoundEffect, EzAudio, Dasheng-AudioGen) were tried and dropped:
+       distorted or off-prompt. Effects stay synthesized (makeaudio.py), now by what is hit:
+       hit_<weapon>_<surface>1..3 for sword, axe, mace, club, staff, dagger, arrow on flesh,
+       metal, bone, chitin, spirit, and bite/claw on flesh and metal (Enemy.surface():
+       hoplites and tomb guardians metal, mummies bone, insects and crabs chitin, wisps and
+       spirits spirit, the rest flesh; Player.surface(): mail or plate chest = metal). Metal:
+       short low modes, a clank and a mail rattle (not a bell); spirit: a breathy fwoosh with a
+       low glow; bite: teeth snap, a wet tear and squelch, a deep snarl, no pitched thump.
+       Audio.hit falls back to hit_<weapon>1..3 when a pair is missing.
+     - Autorun also on mouse button 4.
+     - Rend on key 4 by default, Thunder Clap on 6 (saves keep their bars). Crits louder (+5 dB
+       and the crit accent at -3 dB). Flesh hits are mostly the wound (wet splat, grainy squish,
+       soft suction), the weapon adding its edge or weight; no pitched thumps (they knocked like
+       wood).
+     - A real club: club.glb was a short steel blade since the start; tools/pipeline/club.py
+       builds a knobbly wooden club (knots, leather grip, iron studs). Goblins, trolls,
+       berserkers, nomads, corsairs and hoplites with "weapon": "club" carry it.
+
 
 ## Known issues / next
 

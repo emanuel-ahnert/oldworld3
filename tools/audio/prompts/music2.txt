@@ -1,0 +1,4 @@
+# Oldworld3 music, second batch: more energetic combat (the first fight takes were too slow).
+# name | caption | seconds | takes [| bpm]
+fight_fast | fast upbeat JRPG battle theme, energetic and catchy, driving bass line, punchy brass and synth lead melody, snare rolls, orchestral hits, heroic, retro game combat soundtrack, instrumental | 90 | 4 | 170
+fight_elite_fast | intense upbeat JRPG boss battle theme, very energetic, fast driving bass, soaring brass and strings melody, pounding drums, dramatic orchestral hits, heroic and urgent, game combat soundtrack, instrumental | 90 | 4 | 180

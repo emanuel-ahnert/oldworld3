@@ -12,7 +12,6 @@ const DUSK := Color(1.0, 0.55, 0.3)
 const NIGHT_AMBIENT := Color(0.3, 0.38, 0.58)
 const DIST_FOG_END := 210.0       ## m: distance fog (all zone types but the deserts) full here
 const DIST_FOG_MAX := 0.97        ## its opacity at the end: the rim mountains only a faint shape
-const MOON_DIR := Vector3(-42, 150, 0)   ## degrees: the moonlight's rotation (high in the south)
 const MOON_SIZE := 4.2            ## degrees across (the real moon: 0.5; a game sky wants it bigger)
 const MOON_HALO := 2.6           ## the moon quad in moon diameters (its halo; moon.gdshader halo_size)
 const FIXED := 0.36               ## time of day when the cycle is off (morning, sun at ~48°)
@@ -56,6 +55,27 @@ func elevation() -> float:
 	return sin(TAU * (t - 0.25)) * 60.0 + 8.0
 
 
+## The moon goes the opposite way: it rises in the east just after sunset (MOON_LAG degrees of
+## the sun's fall later), stands highest at midnight and sets in the west at dawn.
+const MOON_LAG := 4.0
+
+
+func moon_elevation() -> float:
+	return -elevation() - MOON_LAG
+
+
+## Yaw (degrees) of a body over the sky at phase t (0.25 rising in the east, 0.5 highest, 0.75
+## setting in the west): the sun at the time of day, the moon half a day later.
+static func _yaw(t: float) -> float:
+	return -35.0 - (t - 0.5) * 140.0
+
+
+## Where the moon is: its rotation as a light's (degrees), pitched down at its elevation.
+func moon_rotation() -> Vector3:
+	var t := fmod((time if enabled else FIXED) + 0.5, 1.0)
+	return Vector3(-maxf(moon_elevation(), 0.5), _yaw(t), 0)
+
+
 var _applied_at := -1.0
 
 
@@ -75,22 +95,30 @@ func apply() -> void:
 		return
 	_applied_at = time
 	var el := elevation()
-	var day := smoothstep(-6.0, 10.0, el)            # 0 night .. 1 day
+	var day := smoothstep(-9.0, 12.0, el)            # 0 night .. 1 day (a long twilight)
 	var dusk := clampf(1.0 - absf(el - 4.0) / 14.0, 0.0, 1.0) * day   # orange near the horizon
-	_moon_strength = 1.0 - smoothstep(-8.0, -1.0, el)
-	sun.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_AND_SKY if el > -2.0 else DirectionalLight3D.SKY_MODE_LIGHT_ONLY
-	if el > -2.0:
-		# The sun: east in the morning, west in the evening (yaw follows the time).
-		var t := time if enabled else FIXED
-		sun.rotation_degrees = Vector3(-maxf(el, 4.0), -35.0 - (t - 0.5) * 140.0, 0)
+	# One light, handed over between sun and moon in the twilight: the sun fades as it sinks to
+	# the horizon, the moon fades in as it rises; the handover (a jump of direction) happens
+	# where both are nearly dark, so neither the light nor the shadows ever snap.
+	var mel := moon_elevation()
+	var sun_k := smoothstep(-3.0, 8.0, el)
+	var moon_k := smoothstep(-3.0, 10.0, mel)
+	_moon_strength = smoothstep(-4.0, 3.0, mel) * (1.0 - 0.5 * day)
+	var t := time if enabled else FIXED
+	if sun_k >= moon_k:
+		# The sun: east in the morning, west in the evening (yaw follows the time); reddening
+		# and dimming down to nothing as it sets.
+		sun.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_AND_SKY
+		sun.rotation_degrees = Vector3(-maxf(el, 0.5), _yaw(t), 0)
 		var c: Color = _day.sun
-		sun.light_color = c.lerp(DUSK, dusk * 0.7)
-		sun.light_energy = float(_day.energy) * maxf(day, 0.5)
+		sun.light_color = c.lerp(DUSK, dusk * 0.7 + (1.0 - sun_k) * 0.3)
+		sun.light_energy = float(_day.energy) * sun_k
 	else:
-		# The moon, high in the south.
-		sun.rotation_degrees = MOON_DIR
+		# The moon, along its own arc; its light rises with it.
+		sun.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
+		sun.rotation_degrees = moon_rotation()
 		sun.light_color = Color(0.62, 0.72, 1.0)
-		sun.light_energy = 0.55
+		sun.light_energy = 0.55 * moon_k
 	var sk: Array = _day.sky
 	var nsk: Array = _day.get("night_sky", NIGHT_SKY)
 	sky.sky_top_color = (nsk[0] as Color).lerp(sk[0], day)
@@ -156,7 +184,9 @@ func _moon_process() -> void:
 	_moon.visible = _moon_strength > 0.001
 	if not _moon.visible:
 		return
-	var dir := Basis.from_euler(MOON_DIR * PI / 180.0).z          # toward the light's source
+	var mr := moon_rotation()
+	mr.x = -moon_elevation()                                      # the disc itself sinks below the horizon
+	var dir := Basis.from_euler(mr * PI / 180.0).z                # toward the moon
 	var dist := cam.far * 0.85
 	var across := 2.0 * dist * tan(deg_to_rad(MOON_SIZE) / 2.0) * MOON_HALO
 	_moon.global_transform = Transform3D(Basis().scaled(Vector3(across, across, 1.0)), cam.global_position + dir * dist)

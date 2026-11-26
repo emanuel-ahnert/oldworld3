@@ -230,6 +230,11 @@ func equip_model(key: String, path: String, rot: Variant = null, size := 1.0) ->
 		offset = STAFF_GRIP
 		rot = STAFF_TILT
 	var att := _attach(h[0], path, offset, rot if rot != null else h[2], scale_f)
+	if att and path.get_file().begins_with("axe"):
+		# The axe model's blade points along its -Z: turned about the haft, the edge faces
+		# forward and down when standing (as the swings strike), not up.
+		var am := att.get_child(0) as Node3D
+		am.transform.basis = am.transform.basis * Basis(Vector3.UP, PI)
 	if att:
 		_held[key] = att
 		if key == "weapon":

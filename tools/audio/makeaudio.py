@@ -773,12 +773,280 @@ def sfx():
     place(buf, 0.62, timpani(hz(38), rng, 1.0), 0.8)
     S["battle_cry"] = reverb(buf, 1.8, 0.35)
 
-    for kind in ("sword", "axe", "mace", "club", "staff", "dagger", "claw", "bite", "arrow"):
+    # The weapon's own hit (hit_<kind>1..3): only the claw's is still played (Audio.hit's fallback
+    # when a pair is missing: a druid's bear claws on bone, shells and spirits); every other
+    # blow has its by-surface takes below.
+    for kind in ("claw",):
         for i, p in enumerate((1.0, 0.93, 1.07)):
             S[f"hit_{kind}{i + 1}"] = impact(kind, np.random.default_rng(100 + i * 17 + len(kind)), p)
 
+    # --- Hits by what they land on (Audio.hit: hit_<weapon>_<surface>1..3; Enemy.surface(),
+    # Player.surface()). Each is the weapon's part (its edge, its mass, its own ring) and the
+    # target's answer: flesh a dull thud that swallows any ring; plate armor a clang of
+    # inharmonic plate modes ringing on, a scrape for edges; bone dry cracks and a hollow knock;
+    # an insect's shell a sharp click and a crunchy crackle; a spirit's body of light a shimmer
+    # and a rush of air. Three takes each, pitch and grain varied.
+    EDGED = {"sword", "axe", "dagger", "claw"}
+    MASS = {"sword": 0.8, "axe": 1.0, "mace": 1.25, "club": 1.0, "staff": 0.6, "dagger": 0.4, "arrow": 0.45, "bite": 0.7, "claw": 0.7}
+    WOOD = {"club", "staff"}
+
+    def plate(r, p, f0=520.0, tau=0.38, gain=1.0):
+        """Armor struck: not a bell. A worn plate is thin and damped (strapped to a body), so
+        a few low inharmonic modes die within a tenth of a second, under a noisy clank in the
+        mids and the rattle of mail rings (many tiny clicks). (The first version rang high and
+        long: it sounded like an instrument.)"""
+        tau = min(tau, 0.45) * 0.3
+        f0 = f0 * 0.55
+        dur = max(0.35, tau * 4)
+        t = t_of(dur)
+        modes = ((1.0, 1.0), (1.37, 0.8), (1.83, 0.65), (2.51, 0.45), (3.2, 0.3))
+        x = np.zeros(len(t))
+        for k, a in modes:
+            f = f0 * p * k * r.uniform(0.97, 1.03)
+            x += a * np.sin(2 * np.pi * f * t + r.uniform(0, 6)) * np.exp(-t / (tau / k ** 0.8))
+        x *= 0.5
+        clank = fft_filter(noise(dur, r), low=3800, high=700) * np.exp(-t / 0.035)
+        rattle = np.zeros(len(t))
+        for _ in range(int(r.integers(14, 22))):
+            place(rattle, r.uniform(0.0, 0.09) ** 1.4, band(0.008, 3000, 9000, 0.0015, r), r.uniform(0.2, 0.7))
+        return (x + clank * 0.9 + rattle * 0.5) * np.clip(t / 0.0007, 0, 1) * gain * 0.45
+
+    def scrape(r, dur, lo, hi):
+        n = int(dur * SR)
+        x = sweep_filter(noise(dur, r), np.linspace(hi, lo, n // 1024 + 1))
+        x = fft_filter(x, high=lo * 0.6)
+        return x * np.exp(-np.arange(n) / SR / (dur / 3)) * (0.6 + 0.4 * np.sin(2 * np.pi * r.uniform(45, 70) * np.arange(n) / SR))
+
+    def cracks(r, count, spread, lo=1800, hi=7000, tau=0.004):
+        return mix(*[(r.uniform(0, spread), band(0.03, lo, hi, tau, r) * r.uniform(0.4, 1.0)) for _ in range(count)])
+
+    def snarl(r, p, dur=0.32):
+        """A beast's snarl under a bite or a swipe: growling noise, rough at ~35 Hz."""
+        n = int(dur * SR)
+        t = np.arange(n) / SR
+        g = fft_filter(noise(dur, r), low=900 * p, high=120) * (0.55 + 0.45 * np.sin(2 * np.pi * 35 * t) ** 2)
+        g += osc("saw", 95 * p * (1 + 0.04 * np.sin(2 * np.pi * 6 * t)), dur) * 0.25
+        return fft_filter(g, low=1400) * env(n, a=0.02, d=0.1, s=0.7, r=0.12)
+
+    def shimmer(r, p, dur=0.55):
+        t = t_of(dur)
+        x = np.zeros(len(t))
+        for _ in range(7):
+            f = r.uniform(1400, 4800) * p
+            x += np.sin(2 * np.pi * f * t * (1 + 0.012 * np.sin(2 * np.pi * r.uniform(5, 9) * t)) + r.uniform(0, 6)) * np.exp(-t / r.uniform(0.12, 0.3))
+        return x / 7 * np.clip(t / 0.004, 0, 1)
+
+    def wound(r, p, amount, cut):
+        """The target's answer when a blow lands in flesh (what the bite taught: wet and grainy
+        in the mids, no pitched or hard-attacked low thump, which knocked like wood): a wet
+        splat, many tiny wet grains thinning out, a soft muddy suction; cut: how much of it is
+        a cut (more splat and tearing) rather than a bruise."""
+        sd = 0.16
+        sn = int(sd * SR)
+        splat = sweep_filter(noise(sd, r), np.geomspace(2600 * p, 380, sn // 1024 + 1))
+        splat = fft_filter(splat, high=140) * np.exp(-np.arange(sn) / SR / 0.04) * np.clip(np.arange(sn) / SR / 0.003, 0, 1)
+        gd2 = 0.26
+        grains = np.zeros(int(gd2 * SR))
+        for _ in range(int(r.integers(20, 30) + 24 * cut)):
+            at = r.uniform(0, 1) ** 2.2 * 0.22
+            ln = r.uniform(0.004, 0.014)
+            lo = r.uniform(550, 1200) * p
+            g = fft_filter(noise(ln, r), low=lo * r.uniform(1.8, 2.6), high=lo) * np.sin(np.linspace(0, np.pi, int(ln * SR)))
+            place(grains, at, g, r.uniform(0.3, 1.0) * (1 - at / 0.28))
+        md = 0.2
+        mn = int(md * SR)
+        mt = np.arange(mn) / SR
+        mud = fft_filter(sweep_filter(noise(md, r), np.geomspace(2000, 650, mn // 512 + 1), block=512), high=330)
+        mud *= np.interp(np.arange(mn), np.linspace(0, mn, 12), r.uniform(0.4, 1.0, 12)) \
+            * np.clip(mt / 0.04, 0, 1) * np.exp(-np.clip(mt - 0.04, 0, None) / 0.055)
+        tn = int(0.16 * SR)
+        tear = fft_filter(noise(0.16, r), low=1900, high=280) * np.exp(-np.arange(tn) / SR / 0.04)
+        return mix((0.002, splat * (0.5 + 0.6 * cut)), (0, grains * 1.0), (0.04, mud * 0.6), (0.006, tear * 0.6 * cut)) * amount
+
+    def soft_mass(r, p, m, dur=0.22):
+        """A blow's weight without a slam: low noise with a soft attack (8 ms) and a short swell."""
+        n = int(dur * SR)
+        t = np.arange(n) / SR
+        return fft_filter(noise(dur, r), low=320 * p, high=70) * np.clip(t / 0.008, 0, 1) * np.exp(-t / 0.05) * m
+
+    def flesh_hit(kind, r, p):
+        """A weapon in flesh: mostly the wound (the target), the weapon only adding its edge,
+        weight or wood."""
+        if kind == "sword":
+            parts = [(0, band(0.07, 2500, 8500, 0.014, r) * 0.55), (0.002, ring(2900 * p, 0.12, 0.025) * 0.05),
+                     (0, soft_mass(r, p, 0.7)), (0.004, wound(r, p, 1.0, 1.0))]
+        elif kind == "axe":
+            parts = [(0, band(0.12, 600, 3800, 0.03, r) * 0.6), (0.012, band(0.04, 2500, 7000, 0.008, r) * 0.35),
+                     (0, soft_mass(r, p, 1.1)), (0.004, wound(r, p, 1.05, 1.0))]
+        elif kind == "dagger":
+            parts = [(0, band(0.04, 4500, 12000, 0.007, r) * 0.55), (0, soft_mass(r, p * 1.2, 0.35, 0.14)),
+                     (0.003, wound(r, p * 1.1, 0.75, 0.8))]
+        elif kind == "arrow":
+            t = t_of(0.25)
+            quiver = np.sin(2 * np.pi * 150 * p * t) * (0.6 + 0.4 * np.sin(2 * np.pi * 32 * t)) * np.exp(-t / 0.07)
+            parts = [(0, band(0.03, 2500, 9000, 0.004, r) * 0.7), (0, soft_mass(r, p * 1.15, 0.5, 0.16)),
+                     (0.003, wound(r, p * 1.1, 0.7, 0.7)), (0.012, quiver * 0.12)]
+        elif kind == "claw":
+            rips = mix(*[(i * 0.028 + r.uniform(0, 0.008), band(0.06, 1500 * p, 7000 * p, 0.018, r) * (1 - 0.2 * i)) for i in range(3)])
+            parts = [(0, rips * 0.6), (0, soft_mass(r, p, 0.6)), (0.006, wound(r, p, 1.0, 0.9)), (0, snarl(r, p) * 0.4)]
+        else:
+            # Blunt (mace, club, staff): a bruise more than a cut. The weight up front, a short
+            # dull squish, the club's or staff's own wood knocking faintly.
+            m = {"mace": 1.3, "club": 1.0, "staff": 0.7}[kind]
+            parts = [(0, soft_mass(r, p, m, 0.26)), (0.003, wound(r, p * 0.85, 0.6, 0.15)),
+                     (0, band(0.06, 250, 1800, 0.02, r) * 0.45 * m)]
+            if kind == "mace":
+                parts.append((0.001, cracks(r, 2, 0.02, 1500, 5000, 0.003) * 0.3))
+            else:
+                parts.append((0, knock((300 if kind == "club" else 470) * p, 0.12, 0.02) * 0.18))
+        return fft_filter(mix(*parts), high=75, order=2)
+
+    def surface_hit(kind, surf, r, p):
+        m = MASS[kind]
+        edged = kind in EDGED
+        wood = kind in WOOD
+        if surf == "flesh":
+            if kind == "bite":
+                # Teeth snapping shut (a sharp double click), flesh tearing (wet mid-high noise),
+                # only a soft push of the body, the snarl over it. (The first version's low
+                # thump knocked like wood.)
+                snap = mix((0, band(0.018, 1200, 4500, 0.003, r)), (r.uniform(0.012, 0.02), band(0.018, 1000, 3800, 0.0035, r) * 0.8))
+                n = int(0.18 * SR)
+                tear = fft_filter(noise(0.18, r), low=1900, high=280) * np.exp(-np.arange(n) / SR / 0.045) \
+                    * (0.6 + 0.4 * np.sin(2 * np.pi * r.uniform(60, 90) * np.arange(n) / SR))
+                # Deeper and meatier, never a tone (a pitched thump knocks like wood): the body's
+                # push as low filtered noise, a wet squelch under the tear, a deeper snarl.
+                n2 = int(0.22 * SR)
+                tt = np.arange(n2) / SR
+                push = fft_filter(noise(0.22, r), low=260, high=45) * np.exp(-tt / 0.06) * np.clip(tt / 0.004, 0, 1)
+                # No steady rhythm anywhere (a regular flutter or a pitched growl droned): the
+                # squelch is random wet grains, the growl breathy noise with an irregular swell.
+                squelch = np.zeros(n2)
+                for _ in range(int(r.integers(6, 10))):
+                    place(squelch, r.uniform(0.0, 0.08), fft_filter(noise(0.03, r), low=650, high=110)
+                          * np.exp(-np.arange(int(0.03 * SR)) / SR / 0.008), r.uniform(0.4, 1.0))
+                gd = 0.26
+                gn = int(gd * SR)
+                wob = np.interp(np.arange(gn), np.linspace(0, gn, 9), r.uniform(0.45, 1.0, 9))
+                growl = fft_filter(noise(gd, r), low=420 * p, high=60) * wob * env(gn, a=0.015, d=0.08, s=0.6, r=0.1)
+                # The wound: a wet splat (noise whose brightness drops fast, liquid slapping) and
+                # blood gurgling after it (short rising bubble chirps). The clicky snap quieter:
+                # on its own it sounded hollow, like wood.
+                sd = 0.16
+                sn = int(sd * SR)
+                splat = sweep_filter(noise(sd, r), np.geomspace(2600, 380, sn // 1024 + 1))
+                splat = fft_filter(splat, high=140) * np.exp(-np.arange(sn) / SR / 0.04) * np.clip(np.arange(sn) / SR / 0.003, 0, 1)
+                gurgle = np.zeros(int(0.3 * SR))
+                for _ in range(int(r.integers(4, 7))):
+                    bd = r.uniform(0.018, 0.035)
+                    bn = int(bd * SR)
+                    f0 = r.uniform(260, 520)
+                    chirp = np.sin(phase(f0 * np.geomspace(1, r.uniform(1.8, 2.6), bn), bn)) * np.sin(np.linspace(0, np.pi, bn)) ** 2
+                    place(gurgle, r.uniform(0.03, 0.22), chirp, r.uniform(0.25, 0.6))
+                # (The bubbling tail came out as water: only its very start, faint, under the splat.)
+                gurgle[int(0.09 * SR):] = 0.0
+                # The end and the body of it: wet tissue is a grainy mid-range texture, not a low
+                # burst (a low, sharp-attacked noise push slammed like a wooden door): many tiny
+                # wet grains at 600-3000 Hz, dense at first and thinning out over a quarter
+                # second, and a soft muddy suction in the mids. Everything under ~150 Hz cut.
+                gd2 = 0.28
+                grains = np.zeros(int(gd2 * SR))
+                for _ in range(int(r.integers(38, 52))):
+                    at = r.uniform(0, 1) ** 2.2 * 0.24
+                    ln = r.uniform(0.004, 0.014)
+                    lo = r.uniform(600, 1300)
+                    g = fft_filter(noise(ln, r), low=lo * r.uniform(1.8, 2.6), high=lo) * np.sin(np.linspace(0, np.pi, int(ln * SR)))
+                    place(grains, at, g, r.uniform(0.3, 1.0) * (1 - at / 0.3))
+                md = 0.22
+                mn = int(md * SR)
+                mt = np.arange(mn) / SR
+                mud = sweep_filter(noise(md, r), np.geomspace(2200, 700, mn // 512 + 1), block=512)
+                mud = fft_filter(mud, high=350)
+                mwob = np.interp(np.arange(mn), np.linspace(0, mn, 14), r.uniform(0.4, 1.0, 14))
+                mud *= mwob * np.clip(mt / 0.04, 0, 1) * np.exp(-np.clip(mt - 0.04, 0, None) / 0.06)
+                out = mix((0, snap * 0.35), (0.006, tear * 0.6), (0.002, splat * 0.9), (0.0, grains * 1.1),
+                          (0.04, mud * 0.7), (0.01, growl * 0.4))
+                return fft_filter(out, high=150, order=3)
+            return flesh_hit(kind, r, p)
+        if surf == "metal":
+            parts = [(0, thud(150, 55, 0.25, 0.06, p) * 0.5 * m)]
+            parts.append((0, band(0.025, 1500, 10000, 0.004, r) * (1.0 if not wood else 0.5)))      # the clank
+            if wood:
+                # Wood on steel: a dull clonk, the plate barely rings.
+                parts += [(0, knock((330 if kind == "club" else 480) * p, 0.2, 0.03) * 0.7),
+                          (0.001, plate(r, p, 430, 0.12, 0.6))]
+            elif kind == "mace":
+                parts += [(0, thud(110, 38, 0.4, 0.12, p) * 0.9), (0.001, plate(r, p, 380, 0.42, 1.25)),
+                          (0.002, cracks(r, 2, 0.02) * 0.4)]
+            elif kind == "arrow":
+                # A glancing tink: the head skips off the plate.
+                parts += [(0, plate(r, p, 900, 0.14, 0.7)), (0.003, ring(3600 * p, 0.2, 0.05) * 0.25),
+                          (0.02, scrape(r, 0.08, 2500, 8000) * 0.3)]
+            elif kind in ("bite", "claw"):
+                parts += [(0.0, plate(r, p, 610, 0.18, 0.55)), (0.0, scrape(r, 0.22, 1800, 7500) * 0.7),
+                          (0.0, snarl(r, p) * 0.45)]
+                if kind == "claw":
+                    parts += [(0.03, scrape(r, 0.15, 2200, 8000) * 0.5)]
+            else:
+                # Steel on steel: the plate's clang, the blade's own ring, an edge scraping on.
+                f0 = {"sword": 560, "axe": 470, "dagger": 720}[kind]
+                parts += [(0.001, plate(r, p, f0, 0.36 if kind != "dagger" else 0.2, 1.0)),
+                          (0.002, ring({"sword": 2900, "axe": 1900, "dagger": 4200}[kind] * p, 0.25, 0.05) * 0.12),
+                          (0.006, scrape(r, 0.12 if kind != "axe" else 0.07, 2000, 9000) * (0.45 if kind != "axe" else 0.3))]
+            return reverb(mix(*parts), 0.4, 0.08, seed=int(r.integers(1000)))
+        if surf == "bone":
+            # Dry bone and old wrappings: a light hollow knock, sharp dry cracks, a dusty rustle.
+            parts = [(0, thud(190, 80, 0.18, 0.04, p) * 0.5 * m),
+                     (0, knock(760 * p, 0.15, 0.018) * 0.55),
+                     (0.001, cracks(r, 3 + int(3 * m), 0.035, 1500, 6500, 0.003) * (0.7 + 0.3 * m)),
+                     (0.01, band(0.18, 2500, 8000, 0.05, r) * 0.18)]
+            if edged:
+                parts.append((0, band(0.06, 2800, 9000, 0.012, r) * 0.6))                          # the edge biting in
+            if kind == "arrow":
+                parts.append((0, band(0.03, 2500, 9000, 0.004, r) * 0.8))
+            return mix(*parts)
+        if surf == "chitin":
+            # A beetle's or spider's shell: a hard click, a crunchy crackle as it gives, a short
+            # hollow resonance of the shell, a little wet squelch under it.
+            t = t_of(0.12)
+            shell = (np.sin(2 * np.pi * 1350 * p * t) + 0.6 * np.sin(2 * np.pi * 2280 * p * t + 1)) * np.exp(-t / 0.018)
+            parts = [(0, band(0.02, 3000, 11000, 0.0025, r) * 1.0),
+                     (0, shell * 0.45),
+                     (0.002, cracks(r, 6 + int(4 * m), 0.045, 2200, 9000, 0.0025) * 0.7),
+                     (0, thud(170, 70, 0.2, 0.045, p) * 0.55 * m),
+                     (0.01, band(0.12, 250, 1500, 0.035, r) * 0.35)]
+            if edged:
+                parts.append((0, band(0.05, 3500, 10000, 0.01, r) * 0.5))
+            return mix(*parts)
+        if surf == "spirit":
+            # A body of light and mist: the blow sinks in with a soft breathy "fwoosh", a low glow
+            # swelling under it, a faint crackle of energy. (The first version stacked random
+            # high tones: harsh.)
+            dur = 0.55
+            n = int(dur * SR)
+            tt = np.arange(n) / SR
+            breath = sweep_filter(noise(dur, r), np.linspace(700, 2600, n // 1024 + 1))
+            breath = fft_filter(breath, high=250) * np.sin(np.linspace(0, np.pi, n)) ** 1.5
+            glow_f = r.uniform(190, 240) * p
+            glow = (np.sin(2 * np.pi * glow_f * tt) + 0.4 * np.sin(2 * np.pi * glow_f * 1.5 * tt + 1)) \
+                * (1 + 0.15 * np.sin(2 * np.pi * 6 * tt)) * env(n, a=0.06, d=0.15, s=0.4, r=0.25)
+            crackle = np.zeros(n)
+            for _ in range(8):
+                place(crackle, r.uniform(0.02, 0.35), band(0.01, 1500, 5000, 0.003, r), r.uniform(0.1, 0.35))
+            parts = [(0, thud(120, 60, 0.18, 0.05, p) * 0.3 * m), (0, breath * 0.6), (0, glow * 0.18), (0, crackle * 0.5)]
+            return reverb(mix(*parts), 0.9, 0.22, seed=int(r.integers(1000)))
+        raise ValueError(surf)
+
+    pairs = [(k, s) for k in ("sword", "axe", "mace", "club", "staff", "dagger", "arrow")
+             for s in ("flesh", "metal", "bone", "chitin", "spirit")]
+    pairs += [(k, s) for k in ("bite", "claw") for s in ("flesh", "metal")]
+    for kind, surf in pairs:
+        for i, p in enumerate((1.0, 0.94, 1.06)):
+            r = np.random.default_rng(500 + i * 31 + len(kind) * 7 + len(surf) * 13)
+            S[f"hit_{kind}_{surf}{i + 1}"] = surface_hit(kind, surf, r, p)
+
     for name, x in S.items():
-        if only and name not in only:
+        if only and "sounds" not in only and name not in only:
             continue
         write_wav(out_dir / "sounds" / f"{name}.wav", normalize(x, 0.85 * QUIET.get(name, 1)))
         print("wrote", name)

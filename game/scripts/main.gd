@@ -129,6 +129,8 @@ func _ready() -> void:
 		start = Vector3(q.x + first.position.x, 0, q.y + first.position.z)
 
 	var face := PI
+	if args.has("lake"):
+		face = PI / 2                 # facing -X, toward the lake
 	if args.has("landmark") and not first.landmarks.is_empty():
 		# Test: 75 m in front of the zone's first pyramid group, looking at it.
 		var c: Vector3 = first.landmarks[0]
@@ -354,6 +356,7 @@ func _heads_goblin() -> void:
 				cfg[k] = d[k]
 		if d.has("head_tint"):
 			cfg.pick = [0, 1, 1, 1, 1]
+		cfg.weapon = "res://assets/weapons/%s.glb" % d.get("weapon", "club")
 		h.build(cfg)
 		h.scale = Vector3.ONE * float(d.get("scale", 1.0)) * (d.get("build", Vector3.ONE) as Vector3)
 		var p := player.global_position + Vector3((i - 1) * 0.9, 0, 1.6)
@@ -486,15 +489,17 @@ func _fight_bot() -> void:
 		var casters: Array = Player.CASTERS + ["hunter"]
 		var reach := 24.0 if (player.cls in casters and not player.bear) else 2.2
 		player.auto_forward = Vector2(d.x, d.z).length() > reach and player.casting.is_empty()
-		var orders := {"warrior": [5, 2, 4, 3, 6, 1], "mage": [3, 4, 5, 2, 1], "rogue": [5, 4, 6, 1],
+		var orders := {"warrior": [5, 2, 6, 3, 4, 1], "mage": [3, 4, 5, 2, 1], "rogue": [5, 4, 6, 1],
 			"priest": [4, 5, 6, 1], "paladin": [6, 4, 2, 3, 1], "warlock": [3, 2, 5, 6, 4, 1],
 			"hunter": [3, 4, 2, 5, 1], "shaman": [2, 5, 6, 3, 1], "druid": [6, 3, 4, 2, 5, 1]}
-		var order: Array = orders.get(player.cls, [1])
+		var order: Array = [] if args.has("autos-only") else orders.get(player.cls, [1])
+		if args.has("circle") and d.length() < 4.0:
+			Input.action_press("strafe_right")           # test: circling the target while fighting
 		for key in order:
 			if player.bear and key == 6:
 				continue
 			if player.ability_problem(player.ability_by_key(key)) == "":
-				if (player.cls == "mage" and key != 3) or key != (4 if player.cls == "warrior" else 3) or World.enemies.filter(func(e): return not e.stats.dead and e.global_position.distance_to(player.global_position) < 8.0).size() >= 2:
+				if (player.cls == "mage" and key != 3) or key != (6 if player.cls == "warrior" else 3) or World.enemies.filter(func(e): return not e.stats.dead and e.global_position.distance_to(player.global_position) < 8.0).size() >= 2:
 					player.use_ability(key)
 					break
 		player.auto_attacking = not (player.cls in Player.CASTERS) or player.bear
@@ -647,7 +652,7 @@ func _setup_environment() -> void:
 	sun.shadow_enabled = quality.get("shadows", true)   # Low: none, blob shadows under units instead
 	BlobShadow.enabled = not sun.shadow_enabled
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_max_distance = float(args.get("shadow-dist", GameMenu.QUALITY[GameMenu.load_quality()].shadow))
+	sun.directional_shadow_max_distance = float(args.get("shadow-dist", GameMenu.QUALITY[String(args.get("quality", GameMenu.load_quality()))].shadow))
 	_sun = sun
 	_daynight = DayNight.new()
 	_daynight.name = "DayNight"
@@ -659,11 +664,57 @@ func _setup_environment() -> void:
 	add_child(sun)
 
 
+## Test (cost of each effect, tools/bench.sh ... --off shadows,clutter): turns parts of the
+## rendering off; repeated every half second so zones loaded later are covered too.
+func _effects_off(what: PackedStringArray) -> void:
+	for w in what:
+		match w:
+			"shadows":
+				_sun.shadow_enabled = false
+			"clutter":
+				Clutter.set_quality(0.1, 0.0)
+			"clutter-draw":
+				if Clutter.instance:
+					Clutter.instance.visible = false       # still built, not drawn
+			"fxaa":
+				get_viewport().screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+			"fog":
+				_env.fog_enabled = false
+			"grade":
+				_env.adjustment_enabled = false
+			"sky":
+				_daynight.set_process(false)
+	for z: Zone in zones.zones.values():
+		for w in what:
+			match w:
+				"scatter":
+					if z.scatter:
+						z.scatter.visible = false
+				"buildings":
+					if z.settlement:
+						z.settlement.visible = false
+				"terrain":
+					if z.terrain and not z.terrain.has_meta("plain"):
+						z.terrain.set_meta("plain", true)
+						var m := StandardMaterial3D.new()
+						m.albedo_color = Color(0.3, 0.45, 0.2)
+						for mi: MeshInstance3D in z.terrain.find_children("*", "MeshInstance3D", false, false):
+							if mi.name != "Lake":
+								mi.material_override = m
+				"terrain-shadow":
+					for mi: MeshInstance3D in z.terrain.find_children("Chunk*", "MeshInstance3D", false, false):
+						mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				"water":
+					for mi: Node3D in z.terrain.find_children("Lake*", "MeshInstance3D", false, false):
+						mi.visible = false
+
+
 func _setup_quality() -> void:
 	var vp := get_viewport()
-	var scale := float(args.get("scale", GameMenu.QUALITY[GameMenu.load_quality()].scale))
+	var scale := float(args.get("scale", GameMenu.QUALITY[String(args.get("quality", GameMenu.load_quality()))].scale))
 	vp.scaling_3d_scale = scale
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if scale < 1.0 else Viewport.SCALING_3D_MODE_BILINEAR
+	vp.anisotropic_filtering_level = int(GameMenu.QUALITY[String(args.get("quality", GameMenu.load_quality()))].get("aniso", 2)) as Viewport.AnisotropicFiltering
 	if args.has("bench") or args.has("shot"):
 		# Hidden test windows get no frame callbacks; without vsync they run at full speed.
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -798,6 +849,50 @@ func _process(_dt: float) -> void:
 				near = e
 		if near:
 			near.stats.take_damage(near.stats.hp + 1, false, player.stats)
+	if args.has("models") and player and _frame == 30:
+		# Test: glb files (any path, comma separated) side by side in front of the hero, e.g. a
+		# model and its reduced version (tools/pipeline/reduce.py).
+		var paths: PackedStringArray = String(args.models).split(",")
+		var fwd := -player.global_basis.z
+		var right := player.global_basis.x
+		var gap := float(args.get("models-gap", 2.5))
+		for i in paths.size():
+			var doc := GLTFDocument.new()
+			var st := GLTFState.new()
+			if doc.append_from_file(paths[i], st) != OK:
+				continue
+			var n: Node3D = doc.generate_scene(st)
+			add_child(n)
+			var p := player.global_position + fwd * float(args.get("models-dist", 4.0)) + right * (i - (paths.size() - 1) / 2.0) * gap
+			n.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
+			n.rotation.y = player.rotation.y + deg_to_rad(float(args.get("models-yaw", 200.0)))
+		player.model.visible = false
+	if args.has("off") and _frame >= 5 and _frame % 30 == 5:
+		_effects_off(String(args.off).split(","))
+	if args.has("scale3d") and _frame == 5:
+		get_viewport().scaling_3d_scale = float(args.scale3d)    # test: 3D resolution scale
+	if args.has("lod") and _frame == 5:
+		get_viewport().mesh_lod_threshold = float(args.lod)      # test: coarser LODs (default 1)
+	if args.has("perf") and _frame == int(args.perf):
+		# Test: what one frame costs (rendering monitors).
+		print("PERF fps %d  triangles %d  draw calls %d  objects %d  video mem %d MB" % [Engine.get_frames_per_second(),
+			Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576])
+	if args.has("quest-one-done") and player and _frame == 60 and not player.quests.active.is_empty():
+		player.quests.active[0].have = player.quests.active[0].need     # test: one quest done
+		player.quests_changed.emit()
+	if args.has("swarm-test") and player and _frame == 60:
+		# Test: a bat swarm 4 m in front of the hero; at frame 150 half of the bats drop.
+		var sw := BatSwarm.new()
+		add_child(sw)
+		var p := player.global_position - player.global_basis.z * 4.0
+		sw.global_position = Vector3(p.x, World.height_at(p.x, p.z) + 1.6, p.z)
+		set_meta("swarm", sw)
+		player.model.visible = false
+	if args.has("swarm-test") and _frame == 150 and has_meta("swarm"):
+		(get_meta("swarm") as BatSwarm).set_alive(int(args["swarm-test"]))
 	if args.has("kill-at") and player and _frame == int(args["kill-at"]) + 110:
 		for e in World.enemies:
 			if e.stats.dead and e.global_position.distance_to(player.global_position) < 30.0:

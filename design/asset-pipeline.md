@@ -324,3 +324,22 @@ and re-bakes all of them.
 - Prompts that worked: "a person sprints forward in a straight line as fast as possible",
   "a man walks straight ahead at a normal speed", "a person runs forward and jumps up high,
   then lands and keeps running". Plain "walks forward" often walks on the spot or in a circle.
+
+### 6.8 Generated music and sounds (2026-11-26)
+Until now every sound and track was synthesized in code (tools/audio/makeaudio.py). Generated
+audio comes from models on the GPU box, set up like MoMask (own uv venv under `/data/audio`,
+outside the gen3d container; `/data/audio/DOC.md` there).
+- Music: ACE-Step 1.5 (MIT; outputs ours). `ssh <gpu box> 'cd /data/audio && ./gen_music.sh
+  <prompts.txt> <out_dir>'`, prompt lines `name | caption | seconds | takes [| bpm]`
+  (tools/audio/prompts/). Instrumental only; turbo model with the 0.6B planning LM (12 GB tier).
+  ~35 s to load, then about 10-20 s per 30 s of music. Output 48 kHz stereo FLAC + .json (seed).
+- Sound effects: generated ones didn't work. MOSS-SoundEffect v2.0, EzAudio (MIT) and Dasheng-
+  AudioGen (Apache) were tried and removed: distorted, nothing like the prompt, or the prompt
+  read aloud by a voice (trained on everyday recordings, not game sounds). Stable Audio was left
+  out (gated, revenue-limited license). The effects are synthesized: tools/audio/makeaudio.py,
+  hits by weapon and surface (hit_<weapon>_<surface>1..3: flesh, metal, bone, chitin, spirit).
+- Picking: copy a batch to the laptop, `python3 tools/audio/listen.py <dir>` writes a listening
+  page; the user picks takes (Claude can't hear them; it checks length, loudness, clipping).
+- Into the game: trimmed, loudness-normalized, music looped, as the same file names in
+  game/assets/audio (so no code changes).
+- Not used: MusicGen, YuE2, MMAudio, Sony Woosh (non-commercial weights).

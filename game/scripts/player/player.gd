@@ -35,9 +35,9 @@ const ABILITIES_WARRIOR := [
 	{"id": "heavy_strike", "name": "Heavy Strike", "key": 1, "level": 1, "rage": 15, "cd": 0.0, "power": 50.0},
 	{"id": "battle_cry", "name": "Battle Cry", "key": 2, "level": 1, "rage": 0, "cd": 120.0, "gain": 10},
 	{"id": "overwhelm", "name": "Overwhelm", "key": 3, "level": 2, "rage": 5, "cd": 0.0, "power": 100.0},
-	{"id": "thunder_clap", "name": "Thunder Clap", "key": 4, "level": 4, "rage": 20, "cd": 6.0, "power": 25.0},
+	{"id": "thunder_clap", "name": "Thunder Clap", "key": 6, "level": 4, "rage": 20, "cd": 6.0, "power": 25.0},
 	{"id": "charge", "name": "Charge", "key": 5, "level": 6, "rage": 0, "cd": 15.0, "gain": 15},
-	{"id": "rend", "name": "Rend", "key": 6, "level": 2, "rage": 10, "cd": 0.0},
+	{"id": "rend", "name": "Rend", "key": 4, "level": 2, "rage": 10, "cd": 0.0},
 	{"id": "whirlwind", "name": "Whirlwind", "key": 7, "level": 12, "rage": 10, "cd": 60.0, "power": 40.0},
 ]
 ## Whirlwind: spins while rage lasts (WHIRL_RAGE per second, the first second paid on use),
@@ -364,17 +364,21 @@ func _unhandled_input(event: InputEvent) -> void:
 				if mb.pressed:
 					_press_pos = mb.position
 					_drag = 0.0
-				elif _drag < 6.0:
+					_press_t = Time.get_ticks_msec()
+					_chord = _rmb
+				elif _is_click():
 					_click_target(mb.position, false)
 			MOUSE_BUTTON_RIGHT:
 				_rmb = mb.pressed
 				if mb.pressed:
 					_press_pos = mb.position
 					_drag = 0.0
+					_press_t = Time.get_ticks_msec()
+					_chord = _lmb
 					# Right drag steers the hero: face where the camera looks.
 					rotation.y += cam_yaw
 					cam_yaw = 0.0
-				elif _drag < 6.0:
+				elif _is_click():
 					_click_target(mb.position, true)
 			MOUSE_BUTTON_MIDDLE:
 				if mb.pressed:
@@ -422,6 +426,12 @@ const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right"
 
 
 func _autorun_input(event: InputEvent) -> void:
+	# Mouse button 4 (the back side button) toggles it too; other mouse buttons leave it be.
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.button_index == MOUSE_BUTTON_XBUTTON1:
+			autorun = not autorun
+		return
 	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	if event.is_action("autorun"):
@@ -442,6 +452,21 @@ func _zoom_key(e: InputEventKey) -> int:
 	if label == KEY_PERIOD or e.keycode == KEY_KP_ADD:
 		return -1
 	return 0
+
+
+## A button's release is a click (target what is under the mouse, or clear the target) only
+## after a short press of that button alone without dragging: letting go after running with
+## both buttons, or after holding one to look, used to drop the target and stop the
+## auto-attack.
+var _press_t := 0
+var _chord := false
+
+
+func _is_click() -> bool:
+	var was_chord := _chord
+	if _lmb or _rmb:
+		_chord = true                 # the other button still down: part of a two-button run
+	return not was_chord and not (_lmb or _rmb) and _drag < 6.0 and Time.get_ticks_msec() - _press_t < 400
 
 
 func _click_target(screen_pos: Vector2, attack: bool) -> void:
@@ -674,9 +699,9 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 		if d < 8.0 or d > 25.0:
 			return "Out of range (8–25 m)"
 		return ""
-	if d > MELEE_RANGE + float(target.data.radius):
+	if d > _melee_reach(target):
 		return "Out of range"
-	if not _facing_target():
+	if not _facing_target(75.0 if _moving() else 60.0):
 		return "You must face the target"
 	return ""
 
@@ -700,7 +725,9 @@ func use_ability(key: int) -> void:
 	if not a.get("self", false) and not a.id in NOT_ATTACKS and target and not target.stats.dead and stats.level >= int(a.level):
 		auto_attacking = true
 	if a.id == "whirlwind" and whirling:
-		_stop_whirl()                 # pressed again: stop spinning
+		# Pressed again: stop spinning, but not in the first WHIRL_LOCK s (no tap-cancel).
+		if Combatant.now() - _whirl_started >= WHIRL_LOCK:
+			_stop_whirl()
 		return
 	var why := ability_problem(a)
 	if why != "":
@@ -766,7 +793,7 @@ func _execute(a: Dictionary) -> void:
 					var r := stats.roll_damage(e.stats, float(a.power))
 					e.stats.take_damage(r.amount, r.crit, stats)
 					e.stats.add_buff("thunder_clap", 10.0, {"attack_speed": 0.8})
-					Audio.hit(weapon_sound(), r.crit, -3.0)
+					Audio.hit(weapon_sound(), r.crit, -3.0, e.surface())
 					e.engage()
 		"charge":
 			_charge_target = target
@@ -777,6 +804,7 @@ func _execute(a: Dictionary) -> void:
 			auto_attacking = true
 		"whirlwind":
 			whirling = true
+			_whirl_started = Combatant.now()
 			_whirl_tick = 0.0
 			_whirl_hit()
 		"rend":
@@ -934,7 +962,7 @@ func _execute(a: Dictionary) -> void:
 					return
 				var r := stats.roll_damage(e.stats, float(a.power), false, _ambush())
 				e.stats.take_damage(r.amount, r.crit, stats)
-				Audio.hit("dagger", r.crit)
+				Audio.hit("dagger", r.crit, 0.0, e.surface())
 				e.engage(), 0.07)
 		"stealth":
 			stealthed = not stealthed
@@ -1131,6 +1159,11 @@ func _facing_target(cone := 60.0) -> bool:
 ## of hits from the front; a miss or dodge makes Overwhelm usable for 5 s (design/classes.md).
 ## What the hero's blows sound like: the main-hand weapon's kind (the class weapon without one),
 ## claws in Bear Form, a wooden knock for the hunter's bow.
+## What a blow on the hero lands on (hit sounds): mail or plate on the chest, or flesh.
+func surface() -> String:
+	return "metal" if String(equipped.get("chest", {}).get("kind", "")) in ["mail", "plate"] else "flesh"
+
+
 func weapon_sound() -> String:
 	if bear:
 		return "claw"
@@ -1157,14 +1190,34 @@ func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extr
 	var e := target
 	e.engage()
 	stats.mark_combat()
+	var auto := stats.auto_hit                  # an auto-attack swing (white numbers) or an ability
 	get_tree().create_timer(CharAnimator.impact(anim), false).timeout.connect(func():
 		if is_instance_valid(e) and not e.stats.dead and not stats.dead:
-			_melee_land(e, power, anim, extra, no_miss, extra_crit, element, on_hit))
+			stats.auto_hit = auto
+			_melee_land(e, power, anim, extra, no_miss, extra_crit, element, on_hit)
+			stats.auto_hit = false)
+
+
+## Melee reach against e: like WoW's leeway, while either of the two is moving it reaches
+## LEEWAY m farther (running alongside or after a target, the swings kept stopping just out of
+## range).
+const LEEWAY := 2.2
+
+
+func _moving() -> bool:
+	return Vector2(velocity.x, velocity.z).length() > 1.0
+
+
+func _melee_reach(e: Enemy) -> float:
+	var r := MELEE_RANGE + float(e.data.radius)
+	if _moving() or Vector2(e.velocity.x, e.velocity.z).length() > 1.0:
+		r += LEEWAY
+	return r
 
 
 func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bool, extra_crit: float, element: String, on_hit: Callable) -> void:
 	var to_me := global_position - e.global_position
-	if to_me.length() > MELEE_RANGE + float(e.data.radius) + 1.5:
+	if to_me.length() > _melee_reach(e) + 1.5:
 		Audio.sfx("miss", -4.0)              # it got away during the swing
 		return
 	stats.mark_combat()
@@ -1187,7 +1240,7 @@ func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bo
 		var hs := stats.roll_damage_elem(e.stats, 20.0, "Holy")
 		e.stats.take_damage(hs.amount, hs.crit, stats)
 	e.stats.take_damage(r.amount, r.crit, stats)
-	Audio.hit(weapon_sound(), r.crit)
+	Audio.hit(weapon_sound(), r.crit, 0.0, e.surface())
 	if power >= 40.0:
 		Audio.sfx("slash", -6.0)          # strong blows: the blade's swish over the impact
 	stats.rage = minf(100.0, stats.rage + (16.0 if r.crit else 8.0) * (1.0 if power < 40.0 else 0.0))
@@ -1207,8 +1260,10 @@ func _arrow(e: Enemy, power: float, element: String, kind: String) -> void:
 		if e.stats.dead:
 			return
 		var r := stats.roll_damage_elem(e.stats, power, element) if element != "Physical" else stats.roll_damage(e.stats, power, kind == "auto")
+		stats.auto_hit = kind == "auto"
 		e.stats.take_damage(r.amount, r.crit, stats)
-		Audio.hit("arrow", r.crit)
+		stats.auto_hit = false
+		Audio.hit("arrow", r.crit, 0.0, e.surface())
 		if kind == "venom_arrow":
 			e.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats)
 		if has_passive("Concussive Shots"):
@@ -1367,9 +1422,11 @@ func _combat_process(t: float) -> void:
 			_arrow(target, Rules.swing_power(stats.swing_time), "Physical", "auto")
 			return
 	if auto_attacking and target and t >= _swing_at and not stats.stunned():
-		if _target_distance() <= MELEE_RANGE + float(target.data.radius) and _facing_target():
+		if _target_distance() <= _melee_reach(target) and _facing_target(75.0 if _moving() else 60.0):
 			_swing_at = t + stats.swing_time
+			stats.auto_hit = true
 			_melee_hit(Rules.swing_power(stats.swing_time), _next_attack, 1.0)
+			stats.auto_hit = false
 			# Two slashes, then a thrust, then again.
 			_next_attack = {"attack1": "attack2", "attack2": "attack3"}.get(_next_attack, "attack1")
 
@@ -1388,13 +1445,17 @@ func _whirl_hit() -> void:
 		var r := stats.roll_damage(e.stats, float(a.power), false, _enrage())
 		e.stats.take_damage(r.amount, r.crit, stats)
 		e.engage()
-		Audio.hit(weapon_sound(), r.crit, -2.0)
+		Audio.hit(weapon_sound(), r.crit, -2.0, e.surface())
 		hit = true
 		if e.stats.dead and cooldowns.has("whirlwind"):
 			# Every kill by Whirlwind takes WHIRL_KILL_CD s off its own cooldown.
 			cooldowns["whirlwind"] = float(cooldowns["whirlwind"]) - WHIRL_KILL_CD
 			World.float_text(global_position + Vector3(0, 2.6, 0), "-%d s" % int(WHIRL_KILL_CD), Color(1, 0.8, 0.3), 32, self)
 	Audio.sfx("miss", -6.0 if hit else -2.0)       # the blade's whoosh
+
+
+const WHIRL_LOCK := 2.0           ## s after starting Whirlwind before a press can stop it
+var _whirl_started := -100.0
 
 
 func _stop_whirl() -> void:
@@ -1724,6 +1785,7 @@ func _physics_process(dt: float) -> void:
 	else:
 		velocity.y -= GRAVITY * dt
 	move_and_slide()
+	Wake.stir(self, Vector2(velocity.x, velocity.z).length())
 	_animate(local, speed, dt)
 
 

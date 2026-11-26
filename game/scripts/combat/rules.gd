@@ -49,11 +49,23 @@ static func xp_to_next(level: int) -> int:
 	return kills * 10 * level
 
 
+## XP share for an enemy this many levels below the hero: full up to 5 levels, then quickly
+## less (farming far weaker monsters is barely worth it).
+const LOW_XP := {6: 0.8, 7: 0.6, 8: 0.4, 9: 0.2, 10: 0.1}
+
+
 static func enemy_xp(enemy_level: int, player_level: int, tier: String) -> int:
-	var level_mod := clampf(1.0 + 0.1 * (enemy_level - player_level), 0.1, 1.5)
-	if enemy_level <= player_level - 10:
-		return 0
-	return roundi(10.0 * enemy_level * TIER_XP.get(tier, 1.0) * level_mod)
+	var below := player_level - enemy_level
+	var level_mod: float
+	if below > 10:
+		level_mod = 0.05
+	elif below > 5:
+		level_mod = LOW_XP[below]
+	elif below >= 0:
+		level_mod = 1.0
+	else:
+		level_mod = minf(1.0 + 0.1 * -below, 1.5)     # higher enemies: 10% more per level
+	return maxi(1, roundi(10.0 * enemy_level * TIER_XP.get(tier, 1.0) * level_mod))
 
 
 ## Auto-attack power from the weapon's swing time, so damage per second doesn't depend on it.

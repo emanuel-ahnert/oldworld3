@@ -137,7 +137,11 @@ func prepare() -> void:
 	_model = Node3D.new()
 	add_child(_model)
 	var m: String = data.model
-	if m.begins_with("creature:"):
+	if data.get("swarm", false):
+		# A swarm of small animated bats (built in code), its health counted in bats.
+		_visual = BatSwarm.new()
+		_model.add_child(_visual)
+	elif m.begins_with("creature:"):
 		var path := m.trim_prefix("creature:")
 		if not ResourceLoader.exists(path):
 			path = data.fallback
@@ -368,6 +372,8 @@ func _physics_process(dt: float) -> void:
 	if global_position.y > ground + 0.2:
 		global_position.y = ground
 		velocity.y = 0.0
+	if not data.get("float", 0.0) and World.player and global_position.distance_squared_to(World.player.global_position) < 3600.0:
+		Wake.stir(self, Vector2(velocity.x, velocity.z).length())     # wading through a lake
 	_animate(dt, speed)
 	nameplate.visible = state == State.CHASE or (p != null and p.target == self)
 	if nameplate.visible:
@@ -695,11 +701,22 @@ func _hit_player(power: float, label: String) -> void:
 		return
 	var r := stats.roll_damage(p.stats, power, label == "")
 	p.stats.take_damage(r.amount, r.crit, stats)
-	Audio.hit(hit_sound(), r.crit, -3.0)
+	Audio.hit(hit_sound(), r.crit, -3.0, p.surface())
 
 
 ## What this enemy's blows sound like: a humanoid's weapon (fists: a club's thud), a beast's
 ## claws or bite.
+## What a blow on this enemy lands on (Audio.hit): flesh by default (beasts; leather, hides
+## and cloth), armor, bone, an insect's shell, or a spirit's body of light.
+const SURFACES := {"hoplite": "metal", "tomb_guardian": "metal", "mummy": "bone",
+	"spider": "chitin", "scorpion": "chitin", "scarab": "chitin", "crab": "chitin",
+	"frost_wisp": "spirit", "ember_spirit": "spirit", "wind_spirit": "spirit"}
+
+
+func surface() -> String:
+	return String(SURFACES.get(kind, "flesh"))
+
+
 func hit_sound() -> String:
 	if humanoid:
 		return String(data.get("weapon", "club"))
@@ -730,12 +747,15 @@ func is_flying() -> bool:
 
 
 func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
+	_swarm_count()
+	if OS.get_cmdline_user_args().has("--dmg-log"):
+		print("DMG %d %s" % [amount, "white" if stats.last_hit_auto else "yellow"])      # test
 	_last_hurt = Combatant.now()
 	if modifier == "Thorned" and source and source.body is Player and source.body.global_position.distance_to(global_position) < 4.0:
 		# Thorns: 15% of melee damage goes back to the attacker.
 		source.take_damage(maxi(1, amount * 15 / 100), false, stats)
 	_flinch = 1.0
-	World.float_text(global_position + Vector3(0, 1.8 * float(data.get("scale", 1.0)) if humanoid else 1.3, 0), str(amount) + ("!" if crit else ""), Color(1, 0.95, 0.4) if crit else Color(1, 1, 1), 64 if crit else 48, self, crit)
+	World.float_text(global_position + Vector3(0, 1.8 * float(data.get("scale", 1.0)) if humanoid else 1.3, 0), str(amount) + ("!" if crit else ""), Color(1, 1, 1) if stats.last_hit_auto else Color(1, 0.86, 0.15), 64 if crit else 48, self, crit)
 	if state == State.IDLE:
 		engage()
 	if humanoid and randf() < 0.35:
@@ -744,8 +764,16 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 		_canim.shot("hit")
 
 
+## A bat swarm: one bat per 1/COUNT of its health still flies (the last falls at 0 HP).
+func _swarm_count() -> void:
+	if _visual is BatSwarm:
+		var f := float(stats.hp) / float(maxi(1, stats.max_hp))
+		(_visual as BatSwarm).set_alive(0 if stats.dead or stats.hp <= 0 else ceili(f * BatSwarm.COUNT))
+
+
 func _on_died(killer: Combatant) -> void:
 	state = State.DEAD
+	_swarm_count()
 	_base_scale = _model.scale
 	_died_at = Combatant.now()
 	nameplate.visible = false
@@ -761,7 +789,9 @@ func _on_died(killer: Combatant) -> void:
 func _dead_process(t: float) -> void:
 	var since := t - _died_at
 	var fl: float = data.get("float", 0.0)
-	if _visual and fl > 0.0:
+	if _visual is BatSwarm:
+		pass                                   # the bats fall one by one (BatSwarm)
+	elif _visual and fl > 0.0:
 		# Flying creatures drop out of the air, tumbling, and land on their side. Bats lie there
 		# like any corpse; spirits and wisps (no body) then shrink away.
 		var fall := clampf(since / 0.7, 0.0, 1.0)
@@ -818,6 +848,8 @@ func _respawn() -> void:
 	if _visual:
 		_model.scale = _base_scale
 		_visual.rotation.x = 0.0
+	if _visual is BatSwarm:
+		(_visual as BatSwarm).reset()
 	_howled = false
 	_smoked = false
 	if humanoid:
@@ -860,6 +892,7 @@ func _animate(dt: float, speed: float) -> void:
 	var moving := speed > 0.1
 	var fl: float = data.get("float", 0.0)
 	if fl > 0.0:
+		_swarm_count()                  # healing (out of combat) brings fallen bats back up
 		_phase += dt * 2.0
 		_visual.position.y = fl + sin(_phase) * 0.2
 		_visual.rotation.y = PI + sin(_phase * 0.5) * 0.4

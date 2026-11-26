@@ -156,6 +156,14 @@ func height_at(x: float, z: float) -> float:
 	return zn.terrain.height_at(x - zn.position.x, z - zn.position.z)
 
 
+## The water surface over a world point (NAN on dry land).
+func water_level(x: float, z: float) -> float:
+	var zn: Zone = zones.get(cell_of(Vector3(x, 0, z)))
+	if zn == null:
+		return NAN
+	return zn.terrain.water_level(x - zn.position.x, z - zn.position.z)
+
+
 ## Called every second or so with the hero's position.
 func update(p: Vector3) -> void:
 	var c := cell_of(p)

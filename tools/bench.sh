@@ -16,4 +16,7 @@ game=$root/game
 } > "$game/override.cfg"
 trap 'rm -f "$game/override.cfg"' EXIT
 hyprctl eval 'hl.window_rule({ name = "oldworld3-test", match = { class = "^Oldworld3 test$" }, workspace = "special:oldworld silent", no_initial_focus = true })' >/dev/null
+# A run from the source defaults to Low (GameMenu.default_quality); tests render at Medium
+# unless they ask for a quality (--quality Low|Medium|High).
+case " $* " in *" --quality "*) ;; *) set -- "$@" --quality Medium ;; esac
 timeout $((secs + 60)) godot --path "$game" -- --bench "$secs" "$@" 2>&1 | grep -E "BENCH|ERROR" || true

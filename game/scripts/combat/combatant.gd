@@ -212,9 +212,17 @@ func roll_spell(target: Combatant, power: float, element: String) -> Dictionary:
 	return {"amount": amount, "crit": crit, "mult": Rules.element_mult(element, target.types)}
 
 
+## True while this combatant lands an auto-attack (a swing, an Auto Shot): its damage numbers
+## are white; everything else (abilities, their damage over time) shows yellow, WoW style.
+var auto_hit := false
+## Whether the last hit taken was an auto-attack (read by the damage number).
+var last_hit_auto := false
+
+
 func take_damage(amount: int, crit: bool, source: Combatant) -> void:
 	if dead:
 		return
+	last_hit_auto = source != null and source.auto_hit
 	if source:
 		attacked.emit(source)
 	if now() < immune_until:

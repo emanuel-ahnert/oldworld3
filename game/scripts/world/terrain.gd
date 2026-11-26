@@ -182,6 +182,17 @@ func is_water(x: float, z: float) -> bool:
 	return false
 
 
+## The water surface's height over a point (zone-local), or NAN on dry land (or ice): where a
+## lake's water lies above the ground.
+func water_level(x: float, z: float) -> float:
+	if frozen:
+		return NAN
+	for l in lakes:
+		if Vector2(x, z).distance_to(l.center) < float(l.radius) * 1.45 and float(l.level) > height_at(x, z):
+			return float(l.level)
+	return NAN
+
+
 ## Distance from a point to the nearest lake's shore (negative inside a lake).
 func lake_distance(x: float, z: float) -> float:
 	var best := INF
@@ -301,22 +312,37 @@ func normal_at(x: float, z: float) -> Vector3:
 	return Vector3(hl - hr, 2.0 * STEP, hd - hu).normalized()
 
 
-static var _noise_tex: NoiseTexture2D
+static var _noise_tex: ImageTexture
 
 
-## One tileable noise for all zones (the terrain shader's variety).
-static func _noise() -> NoiseTexture2D:
+## One tileable noise for all zones (the terrain shader's variety). Red: the noise; green: the
+## same noise six times smaller, tiled (read with the red at one scale, it gives the fine grit
+## a texture read of its own used to cost).
+static func _noise() -> ImageTexture:
 	if _noise_tex == null:
 		var n := FastNoiseLite.new()
 		n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 		n.frequency = 0.012
 		n.fractal_octaves = 4
-		_noise_tex = NoiseTexture2D.new()
-		_noise_tex.width = 512
-		_noise_tex.height = 512
-		_noise_tex.seamless = true
-		_noise_tex.generate_mipmaps = true
-		_noise_tex.noise = n
+		const S := 516                       # 6 x 86
+		var img := n.get_seamless_image(S, S)
+		img.convert(Image.FORMAT_L8)
+		var small := img.duplicate() as Image
+		small.resize(S / 6, S / 6, Image.INTERPOLATE_CUBIC)
+		var a := img.get_data()
+		var b := small.get_data()
+		var rg := PackedByteArray()
+		rg.resize(S * S * 2)
+		var w := S / 6
+		for y in S:
+			var row := (y % w) * w
+			for x in S:
+				var i := y * S + x
+				rg[i * 2] = a[i]
+				rg[i * 2 + 1] = b[row + x % w]
+		var out := Image.create_from_data(S, S, false, Image.FORMAT_RG8, rg)
+		out.generate_mipmaps()
+		_noise_tex = ImageTexture.create_from_image(out)
 	return _noise_tex
 
 
@@ -327,6 +353,8 @@ func _build_material() -> void:
 	for k in ["grass", "dirt", "rock"]:
 		var path: String = g[k] if ResourceLoader.exists(g[k]) else "res://assets/terrain/%s.png" % k
 		material.set_shader_parameter(k + "_tex", load(path))
+		if k == "grass":
+			material.set_shader_parameter("grass_tex_plain", load(path))
 	material.set_shader_parameter("snow", float(zone.info.get("snow", 0.0)) if zone else 0.0)
 	var top: String = g.get("rock_top", g.rock)
 	material.set_shader_parameter("rock_top_tex", load(top if ResourceLoader.exists(top) else g.rock))

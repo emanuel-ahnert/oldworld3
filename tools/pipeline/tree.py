@@ -204,12 +204,20 @@ for lb in limbs:
 
 # --- tubes --------------------------------------------------------------------------------------
 V, N, UV, F, MAT = [], [], [], [], []      # positions, normals, uvs, faces (vertex index lists), material
-SIDES = {0: 9, 1: 6, 2: 4}
+SIDES = {0: 9, 1: 5, 2: 3}
+## Every how many points of a branch's path its tube takes a ring: twigs (inside the crown,
+## hardly seen) every other one. The path itself stays (the leaves sit on it): the same tree,
+## a third of its branch triangles (they were half of the model's).
+RING_EVERY = {0: 1, 1: 1, 2: 2}
 
 
 def tube(b):
     sides = SIDES[b.level]
     base = len(V)
+    keep = list(range(0, len(b.pts), RING_EVERY[b.level]))
+    if keep[-1] != len(b.pts) - 1:
+        keep.append(len(b.pts) - 1)
+    b = Branch([b.pts[i] for i in keep], [b.radii[i] for i in keep], b.level)
     # Frames along the branch (parallel transport, so the tube doesn't twist).
     d0 = (b.pts[1] - b.pts[0]).normalized()
     nrm = perp(d0)
@@ -270,7 +278,9 @@ def card(p, out, size, inner):
     if min(c.z for c in corners) < 0.03 * H:
         return                    # under the ground: the model's bottom must be the trunk's foot
     uvs = [(cu, cv), (cu + 0.5, cv), (cu + 0.5, cv + 0.5), (cu, cv + 0.5)]
-    for flip in (False, True):
+    # One quad (the leaf material is double-sided; the game's leaf shader keeps this normal on
+    # both sides: two quads back to back were half of a tree's triangles).
+    for flip in (False,):
         base = len(V)
         n = (sph * 0.75 + (face if not flip else -face) * 0.25).normalized()
         for c, uv in zip(corners, uvs):
@@ -303,7 +313,7 @@ if S["leader"] > 0.9:
     place_cards(trunk, S["limb_cards"] * 2, 0.85)
 
 print(f"TREE {SPECIES_NAME}: {len(branches)} branches ({len(limbs)} limbs, {len(twigs)} twigs), "
-      f"{sum(1 for m in MAT if m == 1) // 2} leaf cards, {len(F)} faces, {len(V)} vertices")
+      f"{sum(1 for m in MAT if m == 1)} leaf cards, {len(F)} faces, {len(V)} vertices")
 
 
 # --- textures ---------------------------------------------------------------------------------
@@ -467,7 +477,7 @@ def material(name, img, clip):
         rnd_.operation = "ROUND"
         nt.links.new(tex.outputs["Alpha"], rnd_.inputs[0])
         nt.links.new(rnd_.outputs[0], bsdf.inputs["Alpha"])
-    m.use_backface_culling = True
+    m.use_backface_culling = not clip         # leaves: double-sided cards
     return m
 
 
