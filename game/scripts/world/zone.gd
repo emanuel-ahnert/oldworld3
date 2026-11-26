@@ -59,6 +59,13 @@ func compute(p_cell: Vector2i, world_seed: int, with_enemies := true) -> void:
 ## The node part, one step per frame on the main thread (ZoneManager): 0 terrain meshes,
 ## 1 settlement, 2 vegetation, 3 enemies.
 func build_step(i: int) -> void:
+	var t0 := Time.get_ticks_usec()
+	_build_step(i)
+	if OS.get_cmdline_user_args().has("--zone-timing"):
+		print("ZONE %s step %d: %.1f ms" % [cell, i, (Time.get_ticks_usec() - t0) / 1000.0])
+
+
+func _build_step(i: int) -> void:
 	match i:
 		0:
 			add_child(terrain)

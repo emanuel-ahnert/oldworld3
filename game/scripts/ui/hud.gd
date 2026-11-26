@@ -93,7 +93,7 @@ class CombatIcon extends Control:
 
 const HELP := """W/S forward/back   A/D turn (strafe with right mouse)   Q/E strafe   Space jump   Shift sprint
 left drag look   right drag steer   middle button re-center   both buttons run   wheel or - / . zoom   Tab target
-F auto-attack   1–6 abilities   R potion   C camp   B bags   M map   N abilities
+F auto-attack   F2 autorun   1–6 abilities   R potion   C camp   B bags   M map   N abilities
 right-click enemy attack   F1 hide help   Esc clear target / menu"""
 
 

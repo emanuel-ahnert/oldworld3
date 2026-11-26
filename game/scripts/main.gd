@@ -28,6 +28,9 @@ extends Node3D
 ##   --chase-from X,Z  test: the nearest enemy starts at X,Z and chases the hero (pathfinding)
 ##   --strafe-at F     test: from frame F strafe left (ending a Whirlwind first)
 ##   --pos X,Z         start position (default: in front of the plaza)
+##   --hill-chase      test: on a slope near the start the nearest enemy chases the hero up it
+##                     (--hill-min/--hill-max: the slope as normal.y; --hill-charge: the hero
+##                     below charges the enemy up the hill); prints distance and heights
 ##   --cam-pitch DEG   test: camera pitch (positive looks up; the moon: --time 0.02 --cam-pitch 35)
 ##   --lineup-move S   test (--lineup): every class plays gait S (run, walk) on the spot, side-on
 ##   --to-north        test: run through the start zone's north crossing
@@ -359,6 +362,14 @@ func _heads_goblin() -> void:
 	player.visible = false
 
 
+## The ground's normal at x, z from height differences (tests).
+func _ground_normal(x: float, z: float) -> Vector3:
+	var e := 0.5
+	var dx := World.height_at(x + e, z) - World.height_at(x - e, z)
+	var dz := World.height_at(x, z + e) - World.height_at(x, z - e)
+	return Vector3(-dx, 2.0 * e, -dz).normalized()
+
+
 func _lineup() -> void:
 	var names := Player.CLASSES.keys()
 	for i in names.size():
@@ -491,6 +502,14 @@ func _fight_bot() -> void:
 
 func _on_entered_zone(z: Zone) -> void:
 	player.visited[Quests.key_of(z.cell)] = true
+	# Quests belong to their zone: leaving it drops them (its board posts them again on return).
+	var key := Quests.key_of(z.cell)
+	var gone: Array = player.quests.active.filter(func(q): return q.zone != key)
+	if not gone.is_empty():
+		for q in gone:
+			player.quests.active.erase(q)
+		player.message.emit("Left %s: %d quest%s dropped." % [String(gone[0].get("zone_name", "the zone")), gone.size(), "" if gone.size() == 1 else "s"])
+		player.quests_changed.emit()
 	hud.show_zone(z.zone_name, "%s — difficulty %d" % [z.info.name, z.difficulty])
 	_daynight.set_zone(z.info)
 	if Audio.instance:
@@ -574,7 +593,7 @@ func _setup_input() -> void:
 		"turn_left": [KEY_A, KEY_LEFT], "turn_right": [KEY_D, KEY_RIGHT],
 		"strafe_left": [KEY_Q], "strafe_right": [KEY_E],
 		"jump": [KEY_SPACE], "sprint": [KEY_SHIFT], "menu": [KEY_ESCAPE], "help": [KEY_F1],
-		"target_next": [KEY_TAB], "auto_attack": [KEY_F], "bags": [KEY_B, KEY_I], "map": [KEY_M], "spellbook": [KEY_N], "camp": [KEY_C],
+		"target_next": [KEY_TAB], "auto_attack": [KEY_F], "bags": [KEY_B, KEY_I], "map": [KEY_M], "spellbook": [KEY_N], "camp": [KEY_C], "autorun": [KEY_F2],
 	}
 	for action in keys:
 		if InputMap.has_action(action):
@@ -694,6 +713,51 @@ func _process(_dt: float) -> void:
 		elif _chaser and _chase_start > 0.0 and _chaser.global_position.distance_to(player.global_position) < 3.0:
 			print("CHASE reached in %.1f s" % (Time.get_ticks_msec() / 1000.0 - _chase_start))
 			_chase_start = -1.0
+	if args.has("hill-chase") and player:
+		# Test: on a slope near the start (25-35 degrees), the hero up the hill, the nearest enemy
+		# below it chasing; prints distance and heights each second (enemies climbing hills).
+		if _frame == 40:
+			var best := Vector3.INF
+			for r in range(20, 160, 4):
+				for k in 24:
+					var q := player.global_position + Vector3(cos(TAU * k / 24), 0, sin(TAU * k / 24)) * r
+					var nrm := _ground_normal(q.x, q.z)
+					if nrm.y > float(args.get("hill-min", 0.82)) and nrm.y < float(args.get("hill-max", 0.9)):
+						best = q
+						break
+				if best != Vector3.INF:
+					break
+			if best == Vector3.INF:
+				print("HILL none found")
+			else:
+				var n := _ground_normal(best.x, best.z)
+				var downhill := Vector3(n.x, 0, n.z).normalized()
+				var top := best - downhill * 7.0
+				var low := best + downhill * 7.0
+				if args.has("hill-charge"):
+					var tmp := top
+					top = low + downhill * 6.0          # the hero below, the enemy up the hill (charge)
+					low = tmp
+				player.global_position = Vector3(top.x, World.height_at(top.x, top.z) + 0.3, top.z)
+				var near: Enemy = null
+				for e in World.enemies:
+					if near == null or e.global_position.distance_to(player.global_position) < near.global_position.distance_to(player.global_position):
+						near = e
+				_chaser = near
+				near.global_position = Vector3(low.x, World.height_at(low.x, low.z) + 0.3, low.z)
+				near.home = near.global_position
+				if args.has("hill-charge"):
+					near.stats.stun_until = Combatant.now() + 1.0
+					player.set_target(near)
+					player.rotation.y = atan2(-(near.global_position.x - player.global_position.x), -(near.global_position.z - player.global_position.z))
+				else:
+					near.engage()
+				print("HILL slope %.0f deg, hero %.1f m above the enemy" % [rad_to_deg(acos(n.y)), player.global_position.y - near.global_position.y])
+		elif args.has("hill-charge") and _chaser and _frame == 45:
+			print("HILL charge: ", player.ability_problem(player.ability_by_id("charge")))
+			player.use_ability(player.slot_of("charge") + 1)
+		elif _chaser and _frame > 40 and _frame % 25 == 0:
+			print("HILL f%d dist %.1f enemy y %.2f hero y %.2f" % [_frame, _chaser.global_position.distance_to(player.global_position), _chaser.global_position.y, player.global_position.y])
 	if args.has("strafe-at") and player and _frame >= int(args["strafe-at"]):
 		# Test: Whirlwind (if on) ends, then the hero strafes left.
 		if _frame == int(args["strafe-at"]):

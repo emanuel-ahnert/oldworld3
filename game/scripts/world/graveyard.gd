@@ -29,7 +29,7 @@ static func spots(terrain: Terrain, count: int, seed: int) -> Array[Vector3]:
 	rng.seed = seed + 130
 	for tries in 800:
 		var a := rng.randf() * TAU
-		var d := rng.randf_range(60.0, 200.0)
+		var d := rng.randf_range(60.0, Terrain.HALF - 80.0)
 		var p := Vector3(sin(a) * d, 0, cos(a) * d)
 		if terrain.road_distance(p.x, p.z) < 22.0 or terrain.lake_distance(p.x, p.z) < 22.0:
 			continue

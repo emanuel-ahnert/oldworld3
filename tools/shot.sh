@@ -15,7 +15,7 @@ tools_dir=$(dirname "$0")
 
 # Test runs get their own window class (through override.cfg), so the run rule for
 # workspace 9 never matches them.
-printf '[application]\nconfig/name="Oldworld3 test"\n' > "$game/override.cfg"
+printf '[application]\nconfig/name="Oldworld3 test"\n[display]\nwindow/size/mode=0\n' > "$game/override.cfg"
 trap 'rm -f "$game/override.cfg"' EXIT
 if command -v hyprctl >/dev/null; then
   hyprctl eval 'hl.window_rule({ name = "oldworld3-test", match = { class = "^Oldworld3 test$" }, workspace = "special:oldworld silent", no_initial_focus = true })' >/dev/null

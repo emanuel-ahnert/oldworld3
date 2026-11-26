@@ -9,7 +9,7 @@ shift $(( $# < 2 ? $# : 2 ))
 root=$(cd "$(dirname "$0")/.." && pwd)
 game=$root/game
 {
-  printf '[application]\nconfig/name="Oldworld3 test"\n'
+  printf '[application]\nconfig/name="Oldworld3 test"\n[display]\nwindow/size/mode=0\n'
   [ -n "${FXAA:-}" ] && printf "[rendering]\nanti_aliasing/quality/screen_space_aa=1\n"
   [ -n "${MSAA:-}" ] && printf "[rendering]\nanti_aliasing/quality/msaa_3d=%s\n" "$MSAA"
   [ -n "$renderer" ] && printf '[rendering]\nrenderer/rendering_method="%s"\n' "$renderer"

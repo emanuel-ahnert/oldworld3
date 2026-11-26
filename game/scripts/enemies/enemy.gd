@@ -90,7 +90,39 @@ func setup(p_kind: String, level: int, pos: Vector3, champion_name := "", p_modi
 	stats.damaged.connect(_on_damaged)
 
 
+var _prepared := false
+var _queued := false
+const PREPARE_DIST := 170.0      ## m: within this the enemy gets its model (and starts acting)
+static var _wait: Array = []     ## enemies come near, waiting for their model (prepare_some)
+
+
 func _ready() -> void:
+	if not _prepared:
+		visible = false             # a placeholder until the hero comes near (prepare)
+		collision_layer = 0
+
+
+## Builds waiting enemies' models, nearest first, `budget_ms` worth per frame (ZoneManager).
+## Zones hold hundreds of enemies; building all of them (model, animation tree, ~26 ms each)
+## took 8 s per zone and their animation cost frames far away, so only those within
+## PREPARE_DIST of the hero are built.
+static func prepare_some(budget_ms: float) -> void:
+	if _wait.is_empty():
+		return
+	var t0 := Time.get_ticks_usec()
+	var p := World.player
+	if p:
+		_wait.sort_custom(func(a, b): return not is_instance_valid(b) or (is_instance_valid(a) and a.global_position.distance_squared_to(p.global_position) < b.global_position.distance_squared_to(p.global_position)))
+	while not _wait.is_empty() and (Time.get_ticks_usec() - t0) / 1000.0 < budget_ms:
+		var e = _wait.pop_front()
+		if is_instance_valid(e) and e.is_inside_tree() and not e._prepared:
+			e.prepare()
+			e.visible = true
+
+
+## Builds the enemy's nodes (collision, model, nameplate); needs no scene tree.
+func prepare() -> void:
+	_prepared = true
 	BlobShadow.attach(self, float(data.radius) * 1.4 * float(data.get("scale", 1.0)) * (1.2 if champion != "" else 1.0))
 	collision_layer = 2      # enemies (picking); they don't block the hero or each other
 	collision_mask = 1       # terrain and trees
@@ -226,6 +258,14 @@ func _humanoid_cfg(outfit: String) -> Dictionary:
 
 
 func _physics_process(dt: float) -> void:
+	if not _prepared:
+		# Far away: no model yet, nothing to do. Near the hero: wait in line for the model.
+		var pl := World.player
+		if not _queued and pl and Engine.get_physics_frames() % 15 == get_instance_id() % 15 \
+				and pl.global_position.distance_to(global_position) < PREPARE_DIST:
+			_queued = true
+			_wait.append(self)
+		return
 	var t := Combatant.now()
 	if state == State.DEAD:
 		_dead_process(t)
@@ -311,8 +351,11 @@ func _physics_process(dt: float) -> void:
 	move_and_slide()
 	# Enemies stand on the ground only: pressing against a crate, the tent or a rock in a fight
 	# the capsule slid up onto its edge, and the attacker rose into the air mid-swing.
+	# Only when clearly standing on something (a crate: 20 cm and more): on slopes the collision
+	# surface lies a few cm above the interpolated height, and pressing them down onto that
+	# pushed them into the hill, where they stuck.
 	var ground := World.height_at(global_position.x, global_position.z)
-	if global_position.y > ground + 0.04:
+	if global_position.y > ground + 0.2:
 		global_position.y = ground
 		velocity.y = 0.0
 	_animate(dt, speed)

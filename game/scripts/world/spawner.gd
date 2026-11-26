@@ -25,10 +25,10 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 	for kind in wanted:
 		var made := 0
 		var tries := 0
-		while made < wanted[kind] and tries < 4000:
+		while made < int(wanted[kind]) * GROUPS_PER and tries < 12000:
 			tries += 1
-			var x := rng.randf_range(-220, 220)
-			var z := rng.randf_range(-220, 220)
+			var x := rng.randf_range(-Terrain.HALF + 36, Terrain.HALF - 36)
+			var z := rng.randf_range(-Terrain.HALF + 36, Terrain.HALF - 36)
 			var d := Vector2(x, z).length()
 			if d < (ELITE_SAFE if EnemyData.get_kind(kind).tier == "elite" else SAFE):
 				continue
@@ -108,10 +108,15 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 ## Treasure chests: mostly in elite camps (one in each of up to three, guarded), one in front
 ## of a pyramid in the Ancient Desert; only a zone with fewer than two elite camps gets one
 ## hidden in the woods. Deterministic per zone; opened ones are saved by key.
+## Groups per kind: the zone types' numbers were made for zones a quarter of today's area; three
+## times as many (a little thinner than before, for the frame rate).
+const GROUPS_PER := 3
+
+
 func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:
 	var spots: Array[Vector3] = []
 	for g in groups:
-		if spots.size() >= 3:
+		if spots.size() >= 6:
 			break
 		if EnemyData.get_kind(g.kind).tier == "elite" and not g.has("champion"):
 			# In the camp, a few metres from its middle, on level ground.
@@ -130,8 +135,8 @@ func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:
 	for tries in 1500:
 		if spots.size() >= want:
 			break
-		var x := rng.randf_range(-215, 215)
-		var z := rng.randf_range(-215, 215)
+		var x := rng.randf_range(-Terrain.HALF + 41, Terrain.HALF - 41)
+		var z := rng.randf_range(-Terrain.HALF + 41, Terrain.HALF - 41)
 		var f := zone.scatter.forest.get_noise_2d(x, z) * 0.5 + 0.5
 		if Vector2(x, z).length() < 90.0 or terrain.road_distance(x, z) < 25.0 or terrain.lake_distance(x, z) < 6.0:
 			continue

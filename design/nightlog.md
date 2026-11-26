@@ -766,8 +766,33 @@ What was built overnight while the user slept, in order. Start the game from VS 
        terrain (an invisible disc at the opening marks it in the stencil buffer, the shaft is
        drawn there without depth test), weathered wooden posts, roof, crank, rope and bucket.
      - No distance fog in the Mediterranean (clear air, like the deserts).
+     - Strafing like WoW: the legs run toward where the hero moves (up to 75 degrees), the upper
+       body twisted back so chest and head keep facing ahead (`TorsoTwist`, a skeleton
+       modifier); no back shown to an enemy while running sideways.
+     - Charge follows the ground's height directly (at 22 m/s a bump lifted the hero off a slope
+       and the slope stopped him like a wall). Enemies are only put back on the ground when
+       20 cm or more above it (on a crate). Test: `--hill-chase [--hill-charge]`.
      - Running: the weapon hand turns fully with the arm, the wrist nearly straight (35°; it was
        bent 95° down like standing still, the blade kept pointing at the ground).
+
+118. **Zones twice as large, built in the background; autorun, a war horn, camera, wells.**
+     - Zones 1024 m across (were 512); the rim, foothills, forest band, lakes (5-9), spawn and
+       chest ranges, graveyards (5 in the Unholy lands) and border crossings follow the size;
+       three times the enemy groups per kind.
+     - A zone is built entirely on a worker thread (data and nodes) and attached a few nodes per
+       frame (4 ms; before, its nodes cost up to 1.3 s in single frames). Neighbors start 300 m
+       before their border. Enemies get their model only within 170 m of the hero, a few per
+       frame (all of a zone's took 8 s; far away they cost frames for nothing). If the hero
+       reaches a zone still being built, he waits; the main thread never waits for the worker
+       (that hung the game). `--zone-timing` prints the steps.
+     - Quests are dropped when leaving their zone. Black Bear is the Brown Bear.
+     - F2: autorun (until a key other than strafing or turning). The world map scrolls with the
+       arrow keys. Battle Cry blows a war horn over war drums. The camera keeps 0.4 m from the
+       ground and walls (a sphere, not a ray). Borderless fullscreen by default.
+     - The "jumping" swing: skeleton.py measured the feet for a clip's first key in whatever
+       pose the scene showed (attack1, made after sitting, floated 40 cm up its first frames);
+       it goes to the clip's frame first now.
+     - The well's wood is brown.
 
 
 ## Known issues / next
@@ -777,6 +802,8 @@ What was built overnight while the user slept, in order. Start the game from VS 
 - Elite groups (2–3 elites one level above you) kill rogues, priests, mages and hunters of the
   same level in automated fights; tune if that feels too hard in play.
 - Two-handed weapons are the one-handed models, larger.
+- After crossing zones, 78 plain RefCounted objects are reported leaked at exit (harmless,
+  probably a reference cycle in a script object).
 - Some generated buildings look rough up close (the Mediterranean villa), the obelisk has no
   pointed tip, the tomb guardian's kilt came out as trousers.
 - Sunrise and sunset light is dim on the side facing away from the sun.

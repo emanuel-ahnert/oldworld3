@@ -614,6 +614,10 @@ def make_clip(armature, name, keys):
         shift = pose.get("_shift", (0.0, 0.0))
         keyframe_pose(armature, f, {k: v for k, v in pose.items() if k != "_shift"})
         if drop is None or drop == "body":
+            # The scene on this clip's frame first: otherwise the feet were measured in whatever
+            # the scene showed (attack1, made after sitting, measured the seated legs and its first
+            # frames floated 40 cm up: the "jumping" swing).
+            bpy.context.scene.frame_set(f)
             hips.location = (0, 0, 0)
             bpy.context.view_layer.update()
             drop = ground_offset(armature) if drop is None else body_ground_offset(armature)

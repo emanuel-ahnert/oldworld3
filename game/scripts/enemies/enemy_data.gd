@@ -30,7 +30,7 @@ const KINDS := {
 		"abilities": ["sling_stone"], "weapon": "club",
 	},
 	"bear": {
-		"name": "Black Bear", "types": ["Physical", "Nature"], "resistance": 7, "tier": "trash", "hp": 320, "attack": 11, "defense": 12,
+		"name": "Brown Bear", "types": ["Physical", "Nature"], "resistance": 7, "tier": "trash", "hp": 320, "attack": 11, "defense": 12,
 		"behavior": "defensive", "speed": 6.5, "swing": 2.6, "reach": 1.7, "radius": 0.8,
 		"model": "creature:res://assets/creatures/bear.glb", "fallback": "res://assets/creatures/boar.glb",
 		"group": Vector2i(1, 1), "abilities": ["savage_bite"],

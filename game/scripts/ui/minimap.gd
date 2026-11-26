@@ -82,6 +82,8 @@ func _draw_map() -> void:
 			v.draw_circle(_w(o + c), 4.0, Color(1, 0.9, 0.5))
 		v.draw_rect(Rect2(_w(o + Vector2(-12, -38)), Vector2(14, 14) * k), Color(0.95, 0.85, 0.6))     # inn
 		for ch in z.chests:
+			if not ch.is_inside_tree():
+				continue                      # a zone still being attached (ZoneManager)
 			var cw := Vector2(ch.global_position.x, ch.global_position.z)
 			if not ch.opened and cw.distance_to(_center) < 40.0:
 				v.draw_rect(Rect2(_w(cw) - Vector2(3, 3), Vector2(6, 6)), Color(1, 0.8, 0.2))
@@ -95,7 +97,7 @@ func _draw_map() -> void:
 		for s in Settlement.shrine_spots(t):
 			v.draw_circle(_w(o + Vector2(s.x, s.z)), 3.0, Color(0.5, 0.75, 1.0))
 		for e in z.enemies:
-			if e.stats.dead or not e.visible:
+			if not e.is_inside_tree() or e.stats.dead or not e.visible:
 				continue
 			var ew := Vector2(e.global_position.x, e.global_position.z)
 			if e.champion != "":

@@ -14,6 +14,9 @@ const COLORS := {
 var player: Player
 var seed := 1
 var _canvas: Control
+var _pan := Vector2i.ZERO          ## the view moved by the arrow keys (cells)
+var _arrows := {}                  ## action -> its arrow-key events, taken out while the map is open
+const ARROWS := [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT]
 
 
 func _ready() -> void:
@@ -28,11 +31,38 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("map"):
-		visible = not visible
+		_show(not visible)
 		get_viewport().set_input_as_handled()
 	elif visible and event.is_action_pressed("menu"):
-		visible = false
+		_show(false)
 		get_viewport().set_input_as_handled()
+	elif visible and event is InputEventKey and event.pressed:
+		# The arrow keys scroll the map a zone at a time.
+		var k := (event as InputEventKey).physical_keycode
+		var d: Vector2i = {KEY_UP: Vector2i(0, -1), KEY_DOWN: Vector2i(0, 1), KEY_LEFT: Vector2i(-1, 0), KEY_RIGHT: Vector2i(1, 0)}.get(k, Vector2i.ZERO)
+		if d != Vector2i.ZERO:
+			_pan += d
+			get_viewport().set_input_as_handled()
+
+
+## Opening re-centres on the hero; while open the arrow keys scroll the map, not the hero (their
+## events are taken out of the movement actions and put back on closing; WASD still moves).
+func _show(on: bool) -> void:
+	visible = on
+	_pan = Vector2i.ZERO
+	for action in ["move_forward", "move_back", "turn_left", "turn_right"]:
+		if on:
+			var keep := []
+			for ev in InputMap.action_get_events(action):
+				if ev is InputEventKey and (ev as InputEventKey).physical_keycode in ARROWS:
+					keep.append(ev)
+					InputMap.action_erase_event(action, ev)
+			_arrows[action] = keep
+		else:
+			for ev in _arrows.get(action, []):
+				InputMap.action_add_event(action, ev)
+	if not on:
+		_arrows.clear()
 
 
 func _process(_dt: float) -> void:
@@ -49,7 +79,8 @@ func _draw_map() -> void:
 	_canvas.draw_rect(Rect2(origin - Vector2(20, 60), Vector2(span + 40, span + 110)), Color(0.06, 0.05, 0.04, 0.92))
 	var font := _canvas.get_theme_default_font()
 	_canvas.draw_string(font, origin + Vector2(0, -24), "World map", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(1, 0.85, 0.45))
-	var here := Vector2i(roundi(player.global_position.x / Terrain.SIZE), roundi(player.global_position.z / Terrain.SIZE))
+	var hero_cell := Vector2i(roundi(player.global_position.x / Terrain.SIZE), roundi(player.global_position.z / Terrain.SIZE))
+	var here := hero_cell + _pan
 	for dz in range(-RADIUS, RADIUS + 1):
 		for dx in range(-RADIUS, RADIUS + 1):
 			var cell := here + Vector2i(dx, dz)
@@ -76,12 +107,13 @@ func _draw_map() -> void:
 				_canvas.draw_string(font, r.get_center() + Vector2(-5, 6), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.9, 0.9, 0.85, 0.7))
 			if cell == ZoneTypes.home:
 				_canvas.draw_rect(r.grow(-3), Color(1, 0.85, 0.4), false, 2.0)
-	# The hero inside the current cell.
+	# The hero inside the current cell (when it is in view).
 	var local := Vector2(player.global_position.x, player.global_position.z) / Terrain.SIZE - Vector2(here)
-	var p := origin + (Vector2(RADIUS, RADIUS) + local + Vector2(0.5, 0.5)) * CELL
-	_canvas.draw_circle(p, 6.0, Color(0, 0, 0))
-	_canvas.draw_circle(p, 4.5, Color(1, 1, 1))
-	_canvas.draw_string(font, origin + Vector2(0, span + 30), "North is up. Gold frame: where you started. Difficulty rises outward. M or Esc closes.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.78, 0.7))
+	if absf(local.x) <= RADIUS + 0.5 and absf(local.y) <= RADIUS + 0.5:
+		var p := origin + (Vector2(RADIUS, RADIUS) + local + Vector2(0.5, 0.5)) * CELL
+		_canvas.draw_circle(p, 6.0, Color(0, 0, 0))
+		_canvas.draw_circle(p, 4.5, Color(1, 1, 1))
+	_canvas.draw_string(font, origin + Vector2(0, span + 30), "North is up. Gold frame: where you started. Difficulty rises outward. Arrow keys scroll, M or Esc closes.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.78, 0.7))
 
 
 func _next_to_visited(cell: Vector2i) -> bool:

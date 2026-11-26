@@ -277,7 +277,12 @@ func _ready() -> void:
 	_pivot.add_child(_pitch)
 	_arm = SpringArm3D.new()
 	_arm.spring_length = zoom
-	_arm.margin = 0.3
+	_arm.margin = 0.1
+	# A sphere, not a ray: the camera keeps 0.4 m from the ground and walls in every direction
+	# (low over the ground, the ray let it sink until the view clipped into the terrain).
+	var cam_ball := SphereShape3D.new()
+	cam_ball.radius = 0.4
+	_arm.shape = cam_ball
 	_arm.collision_mask = 1 | 8      # terrain, buildings, trunks and tree canopies
 	_pitch.add_child(_arm)
 	camera = Camera3D.new()
@@ -346,6 +351,10 @@ func _level_passives() -> void:
 
 # --- input -------------------------------------------------------------------------------
 
+func _input(event: InputEvent) -> void:
+	_autorun_input(event)            # every key, also those the HUD or a menu takes
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
@@ -407,6 +416,25 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## 1 = zoom out ("-"), -1 = zoom in ("."), 0 = not a zoom key.
+## F2: run forward until a key is pressed that isn't strafing or turning (or F2 again).
+var autorun := false
+const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right"]
+
+
+func _autorun_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if event.is_action("autorun"):
+		autorun = not autorun
+		return
+	if not autorun:
+		return
+	for a in AUTORUN_KEEPS:
+		if event.is_action(a):
+			return
+	autorun = false
+
+
 func _zoom_key(e: InputEventKey) -> int:
 	var label := e.key_label
 	if label == KEY_MINUS or e.keycode == KEY_KP_SUBTRACT:
@@ -730,7 +758,7 @@ func _execute(a: Dictionary) -> void:
 			stats.rage = minf(100.0, stats.rage + float(a.gain))
 			stats.add_buff("battle_cry", 120.0, {"attack": 1.25})
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Battle Cry", Color(1, 0.8, 0.3), 40, self)
-			Audio.sfx("stat_up")
+			Audio.sfx("battle_cry")
 		"thunder_clap":
 			model.anim.play_shot("strike")
 			for e in World.enemies:
@@ -1640,11 +1668,15 @@ func _physics_process(dt: float) -> void:
 		return
 	_combat_process(t)
 	_camp_process(dt)
+	if World.zones and not World.zones.zones.has(World.zones.cell_of(global_position)):
+		if not World.zones.ensure_here(global_position):
+			velocity = Vector3.ZERO                       # a zone still building: wait, don't fall
+			return
 	if t < _charge_until and _charge_target and not _charge_target.stats.dead:
 		_do_charge(dt)
 		return
 	var fwd := Input.get_axis("move_back", "move_forward")
-	if (_lmb and _rmb) or auto_forward:
+	if (_lmb and _rmb) or auto_forward or autorun:
 		fwd = 1.0
 	var side := Input.get_axis("strafe_left", "strafe_right")
 	var turn := Input.get_axis("turn_right", "turn_left")
@@ -1701,8 +1733,11 @@ func _do_charge(dt: float) -> void:
 		_charge_target.engage()
 		World.float_text(_charge_target.global_position + Vector3(0, 1.6, 0), "Stunned", Color(1, 0.8, 0.3), 36, _charge_target)
 		return
+	# Over the ground, whatever its slope: the height followed directly (at 22 m/s a bump
+	# lifted the hero off a slope, and in the air the slope stopped him like a wall).
 	velocity = d.normalized() * 22.0
-	velocity.y = -2.0
+	var ahead := global_position + velocity * dt
+	velocity.y = clampf((World.height_at(ahead.x, ahead.z) - global_position.y) / maxf(dt, 0.001), -30.0, 30.0)
 	move_and_slide()
 	model.anim.set_move("run", 2.0)
 
@@ -1717,13 +1752,18 @@ func _animate(local: Vector3, speed: float, dt: float) -> void:
 	var yaw_step := angle_difference(_last_yaw, global_rotation.y)
 	_last_yaw = global_rotation.y
 	_yaw_rate = lerpf(_yaw_rate, absf(yaw_step) / maxf(dt, 0.001), 1.0 - exp(-10.0 * dt))
-	# Turn the model toward strafe directions (no strafe animations yet).
+	# Strafing like WoW: the legs run toward where the hero moves (the model turned up to 75
+	# degrees that way), the upper body turned back so the chest and head keep facing ahead: no
+	# back shown to an enemy in front while running sideways.
 	var target_yaw := 0.0
 	if moving:
 		var a := atan2(-local.x, -local.z) if local.z <= 0.01 else atan2(local.x, local.z)
-		target_yaw = clampf(a, -PI / 3, PI / 3)
+		target_yaw = clampf(a, -deg_to_rad(75), deg_to_rad(75))
 	if not whirling and not _unwinding:
 		model.rotation.y = lerp_angle(model.rotation.y, target_yaw, 1.0 - exp(-12.0 * dt))
+		model.set_torso_twist(-model.rotation.y)
+	else:
+		model.set_torso_twist(0.0)
 	var st := "idle"
 	var rate := 1.0
 	if moving:

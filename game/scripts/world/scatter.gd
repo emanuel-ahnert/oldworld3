@@ -120,7 +120,7 @@ func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dict
 				continue
 			var edge := maxf(absf(px), absf(pz))
 			var f := forest.get_noise_2d(px, pz) * 0.5 + 0.5
-			f = maxf(f, smoothstep(205.0, 235.0, edge))   # forest band toward the border
+			f = maxf(f, smoothstep(Terrain.HALF - 51.0, Terrain.HALF - 21.0, edge))   # forest band toward the border
 			var r := rng.randf()
 			var kind := ""
 			if f > forest_min and r < (f - forest_min) * 1.6 * density:

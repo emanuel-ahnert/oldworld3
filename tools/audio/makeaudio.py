@@ -756,6 +756,23 @@ def sfx():
     for i, p in enumerate((1.0, 0.92, 1.08)):
         S[f"bow_shot{i + 1}"] = bow_shot(np.random.default_rng(300 + i), p)
 
+    # Battle Cry: a war horn, two long blasts (the low note swelling in, then a fifth up) over
+    # two war-drum beats, in a big space.
+    def horn(freq, dur):
+        n = int(dur * SR)
+        t = np.arange(n) / SR
+        f = freq * (0.93 + 0.07 * np.clip(t / 0.14, 0, 1)) * (1 + 0.004 * np.sin(2 * np.pi * 5.0 * t))
+        x = osc("saw", f, dur) + 0.6 * osc("saw", f * 1.005, dur) + 0.35 * osc("square", f / 2, dur)
+        lows = np.linspace(260, 1500, max(1, n // 1024))[: n // 1024 + 1]
+        x = sweep_filter(x, lows)
+        return x * env(n, a=0.09, d=0.2, s=0.85, r=0.25) * 0.5
+    buf = np.zeros(int(2.4 * SR))
+    place(buf, 0.0, horn(hz(50), 0.85))
+    place(buf, 0.62, horn(hz(57), 1.05))
+    place(buf, 0.0, timpani(hz(38), rng, 1.0), 0.9)
+    place(buf, 0.62, timpani(hz(38), rng, 1.0), 0.8)
+    S["battle_cry"] = reverb(buf, 1.8, 0.35)
+
     for kind in ("sword", "axe", "mace", "club", "staff", "dagger", "claw", "bite", "arrow"):
         for i, p in enumerate((1.0, 0.93, 1.07)):
             S[f"hit_{kind}{i + 1}"] = impact(kind, np.random.default_rng(100 + i * 17 + len(kind)), p)

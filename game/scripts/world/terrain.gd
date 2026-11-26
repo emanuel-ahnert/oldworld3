@@ -3,9 +3,10 @@ extends Node3D
 ## Heightmap terrain of one zone (design/world.md, section 2). Centered on the origin, Y up.
 ## Generated from a seed: the same seed always gives the same terrain.
 
-const SIZE := 512.0          ## zone size in meters
+const SIZE := 1024.0         ## zone size in meters (was 512)
+const HALF := SIZE / 2
 const STEP := 2.0            ## meters between height samples
-const N := 257               ## samples per side (SIZE / STEP + 1)
+const N := 513               ## samples per side (SIZE / STEP + 1)
 const CHUNK := 32            ## quads per chunk side (64 m)
 const PLAZA_RADIUS := 22.0        ## flat settlement area (the bare-earth plaza is smaller)
 const ROAD_WIDTH := 4.0
@@ -80,8 +81,8 @@ func compute(seed: int, p_zone: Zone = null, world_seed := 1) -> void:
 			# through to a crossing; at a crossing both zones meet at the same height.
 			var edge := maxf(absf(x), absf(z))
 			var r := ridge.get_noise_2d(x + origin.x, z + origin.y) * 0.5 + 0.5      # 0..1, sharp crests
-			var rim := pow(smoothstep(195.0, 256.0, edge), 1.6) * (32.0 + pow(r, 1.6) * 62.0)
-			rim += smoothstep(150.0, 230.0, edge) * r * r * r * 14.0               # craggy foothills
+			var rim := pow(smoothstep(HALF - 61.0, HALF, edge), 1.6) * (32.0 + pow(r, 1.6) * 62.0)
+			rim += smoothstep(HALF - 106.0, HALF - 26.0, edge) * r * r * r * 14.0   # craggy foothills
 			h += rim * smoothstep(5.0, 16.0, rd)
 			for c in crossings:
 				var w := (1.0 - smoothstep(0.0, 70.0, Vector2(x, z).distance_to(c))) * (1.0 - smoothstep(4.0, 18.0, rd))
@@ -109,7 +110,7 @@ func _make_crossings(cell: Vector2i, world_seed: int) -> void:
 		var b: Vector2i = cell + d
 		var lo: Vector2i = a if (a.x < b.x or (a.x == b.x and a.y < b.y)) else b
 		var hi: Vector2i = b if lo == a else a
-		var off := float(absi(hash([world_seed, lo.x, lo.y, hi.x, hi.y])) % 260) - 130.0
+		var off := float(absi(hash([world_seed, lo.x, lo.y, hi.x, hi.y])) % int(HALF)) - HALF / 2.0
 		if d.x != 0:
 			crossings.append(Vector2(half * d.x, off))
 		else:
@@ -120,11 +121,11 @@ func _carve_lakes(rng: RandomNumberGenerator) -> void:
 	lakes.clear()
 	shore.resize(N * N)
 	shore.fill(0.0)
-	var want := rng.randi_range(2, 4)
+	var want := rng.randi_range(5, 9)            # (zones four times the area of the first ones)
 	var tries := 0
 	while lakes.size() < want and tries < 600:
 		tries += 1
-		var c := Vector2(rng.randf_range(-190, 190), rng.randf_range(-190, 190))
+		var c := Vector2(rng.randf_range(-HALF + 66, HALF - 66), rng.randf_range(-HALF + 66, HALF - 66))
 		var r := rng.randf_range(16.0, 28.0)
 		if c.length() < 90.0 or _road_distance(c) < r * 1.5 + 6.0:
 			continue

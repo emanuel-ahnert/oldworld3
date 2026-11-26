@@ -375,6 +375,20 @@ var _ik: TwoHandGrip
 var _grip: Node3D
 
 
+## The upper body turned against the legs by `rad` (TorsoTwist; strafing).
+var _twist: TorsoTwist
+
+
+func set_torso_twist(rad: float) -> void:
+	if _twist == null:
+		if absf(rad) < 0.001:
+			return
+		_twist = TorsoTwist.new()
+		_twist.name = "TorsoTwist"
+		_skel.add_child(_twist)
+	_twist.angle = rad
+
+
 func set_two_handed(on: bool) -> void:
 	two_handed = on
 	if not on:
