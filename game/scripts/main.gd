@@ -798,6 +798,10 @@ func _process(_dt: float) -> void:
 				near = e
 		if near:
 			near.stats.take_damage(near.stats.hp + 1, false, player.stats)
+	if args.has("kill-at") and player and _frame == int(args["kill-at"]) + 110:
+		for e in World.enemies:
+			if e.stats.dead and e.global_position.distance_to(player.global_position) < 30.0:
+				print("CORPSE %s visible %s scale %s in view %s" % [e.kind, e.visible, e._model.scale, Enemy._in_view(e.global_position)])
 	if args.has("swing") and player and _frame >= 60 and _frame % 50 == 10:
 		player.model.anim.play_shot(String(args.swing))   # test: a one-shot clip on the spot
 	if args.has("whirl") and player and _frame == int(args.get("press-at", 100)):

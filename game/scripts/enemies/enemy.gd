@@ -762,14 +762,15 @@ func _dead_process(t: float) -> void:
 	var since := t - _died_at
 	var fl: float = data.get("float", 0.0)
 	if _visual and fl > 0.0:
-		# Flying creatures drop out of the air, tumbling, land on their side and then shrink
-		# away (a bat swarm scatters) instead of lying around.
+		# Flying creatures drop out of the air, tumbling, and land on their side. Bats lie there
+		# like any corpse; spirits and wisps (no body) then shrink away.
 		var fall := clampf(since / 0.7, 0.0, 1.0)
 		_visual.position.y = lerpf(fl, 0.15, fall * fall)
 		_visual.rotation.x = fall * 1.3
 		_model.rotation.z = lerpf(0.0, PI / 2, fall)
-		var gone := clampf((since - 2.0) / 1.2, 0.0, 1.0)
-		_model.scale = _base_scale * maxf(0.001, 1.0 - gone)
+		if not data.get("flying", false):
+			var gone := clampf((since - 2.0) / 1.2, 0.0, 1.0)
+			_model.scale = _base_scale * maxf(0.001, 1.0 - gone)
 	elif _visual and _canim == null and since < 1.0:
 		# Creatures: the blow jerks the head up and the body hops, then the legs give and it
 		# drops onto its side (falling faster and faster), bounces once and lies still.

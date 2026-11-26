@@ -808,6 +808,8 @@ What was built overnight while the user slept, in order. Start the game from VS 
      - Music at 50% by default. The volume bars in the options are real bars: a click (or a
        drag) sets the volume to where the mouse is; "<" and ">" step by 10%. Test:
        --menu options --menu-click N (a click at 30% of the music bar).
+     - Dead bat swarms lie on the ground like other corpses (only spirits and wisps, which
+       have no body, still shrink away after falling). Test: --kill-at N prints CORPSE lines.
 
 
 ## Known issues / next
