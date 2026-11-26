@@ -794,6 +794,21 @@ What was built overnight while the user slept, in order. Start the game from VS 
        it goes to the clip's frame first now.
      - The well's wood is brown.
 
+119. **Fur on wolves, bears and boars; corpses stay while seen; no falling out of the world.**
+     - The generated creature textures have a painted sheen (it stayed glossy fully rough).
+       shaders/fur.gdshader (Enemy._matte, HAIRY kinds): the painted color pulled toward its
+       blurred average (the highlights go), fine wavering strands and tufts in object space
+       flowing back and down, almost no specular.
+     - Corpses: after CORPSE s they vanish only when out of the camera's view (or 150 m off);
+       respawns at home only when home is out of view.
+     - A hero more than 2 m under the ground is put back on top (saves from before the zone
+       size change); loading a save never places the hero under the ground. Test: --sink-at N.
+     - Rend: 5% of max HP every 3 s for 30 s (was 1/32 for 15 s).
+     - Enemy groups per kind x4 per zone (GROUPS_PER 4): the density of the smaller zones.
+     - Music at 50% by default. The volume bars in the options are real bars: a click (or a
+       drag) sets the volume to where the mouse is; "<" and ">" step by 10%. Test:
+       --menu options --menu-click N (a click at 30% of the music bar).
+
 
 ## Known issues / next
 

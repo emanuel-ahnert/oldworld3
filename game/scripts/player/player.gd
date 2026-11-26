@@ -781,7 +781,7 @@ func _execute(a: Dictionary) -> void:
 			_whirl_hit()
 		"rend":
 			model.anim.play_shot("attack1")
-			target.stats.add_dot("rend", 15.0, 1.0 / 32.0, stats)
+			target.stats.add_dot("rend", 30.0, 0.05, stats)
 			target.engage()
 		"fire_bolt", "fireball", "ice_bolt", "smite", "hex_bolt", "storm_bolt", "thorn_lash", "moonbeam":
 			_bolt(a)
@@ -1672,6 +1672,11 @@ func _physics_process(dt: float) -> void:
 		if not World.zones.ensure_here(global_position):
 			velocity = Vector3.ZERO                       # a zone still building: wait, don't fall
 			return
+	# Fallen through the world (a save from an older version, a gap in the ground): back on top.
+	var ground := World.height_at(global_position.x, global_position.z)
+	if global_position.y < ground - 2.0:
+		global_position.y = ground + 0.5
+		velocity = Vector3.ZERO
 	if t < _charge_until and _charge_target and not _charge_target.stats.dead:
 		_do_charge(dt)
 		return

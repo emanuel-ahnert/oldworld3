@@ -280,6 +280,7 @@ func _ready() -> void:
 	add_child(_menu)
 	if args.has("menu"):
 		_menu.visible = true          # test: show the menu (not paused, so the screenshot runs)
+		_menu._options = String(args.menu) == "options"
 		_menu._refresh()
 	zones.streaming = not args.has("no-stream")
 	zones.entered_zone.connect(_on_entered_zone)
@@ -407,6 +408,7 @@ func _creature_lineup(clip: String, t: float) -> void:
 		if not ResourceLoader.exists(path):
 			continue
 		var n: Node3D = load(path).instantiate()
+		Enemy._matte(n, path)
 		add_child(n)
 		var p := player.global_position + fwd * ((9.0 + (i % 2) * 3.0) if names.size() > 3 else 5.0) + right * (i - (names.size() - 1) / 2.0) * 2.2
 		n.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
@@ -560,7 +562,8 @@ func _apply_save(d: Dictionary) -> void:
 	player.stats.hp = clampi(int(d.get("hp", player.stats.max_hp)), 1, player.stats.max_hp)
 	var p: Array = d.get("pos", [])
 	if p.size() == 3:
-		player.global_position = Vector3(p[0], p[1] + 0.3, p[2])
+		# Never under the ground (a save from an older version, whose terrain was different).
+		player.global_position = Vector3(p[0], maxf(p[1], World.height_at(p[0], p[2])) + 0.3, p[2])
 	player.rotation.y = float(d.get("yaw", PI))
 	var c: Array = d.get("checkpoint", [])
 	if c.size() == 3:
@@ -769,6 +772,24 @@ func _process(_dt: float) -> void:
 		_fighting = false                  # test: run away so the enemy evades (leash)
 		var away := player.global_position + Vector3(70, 0, 0)
 		player.global_position = Vector3(away.x, World.height_at(away.x, away.z) + 0.3, away.z)
+	if args.has("menu-click") and _frame == int(args["menu-click"]):
+		# Test: a click at 30% of the music bar (the second volume bar).
+		var bars := _menu.find_children("*", "Control", true, false).filter(func(c): return c.custom_minimum_size.x == GameMenu.BAR_W)
+		if bars.size() >= 2:
+			var r: Rect2 = bars[1].get_global_rect()
+			print("MUSIC before ", GameMenu.load_volume("music"))
+			for down in [true, false]:
+				var ev := InputEventMouseButton.new()
+				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.pressed = down
+				ev.position = r.position + r.size * Vector2(0.3, 0.5)
+				ev.global_position = ev.position
+				get_viewport().push_input(ev)
+			print("MUSIC after ", GameMenu.load_volume("music"))
+	if args.has("sink-at") and player and _frame == int(args["sink-at"]):
+		player.global_position.y -= 20.0           # test: under the ground (an old save)
+	if args.has("sink-at") and player and _frame == int(args["sink-at"]) + 30:
+		print("SINK above ground: ", player.global_position.y >= World.height_at(player.global_position.x, player.global_position.z) - 0.1)
 	if args.has("kill-at") and player and _frame == int(args["kill-at"]):
 		# Test: the nearest enemy dies (death animations).
 		var near: Enemy = null

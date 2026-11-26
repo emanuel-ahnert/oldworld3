@@ -110,7 +110,7 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 ## hidden in the woods. Deterministic per zone; opened ones are saved by key.
 ## Groups per kind: the zone types' numbers were made for zones a quarter of today's area; three
 ## times as many (a little thinner than before, for the frame rate).
-const GROUPS_PER := 3
+const GROUPS_PER := 4
 
 
 func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:

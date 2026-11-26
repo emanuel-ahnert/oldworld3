@@ -206,6 +206,7 @@ func prepare() -> void:
 
 static var _matted := {}
 const FURRED := ["wolf", "direwolf", "snowwolf", "bear", "boar", "bats", "spider"]
+const HAIRY := ["wolf", "direwolf", "snowwolf", "bear", "boar"]     ## shaders/fur
 
 
 ## The generated models come with a metal map (metallic 1.0): fur and hide then shine like
@@ -215,13 +216,22 @@ static func _matte(n: Node, path: String) -> void:
 	if _matted.has(path):
 		return
 	_matted[path] = true
-	var furred := FURRED.has(path.get_file().get_basename().trim_suffix("_rig"))
+	var kind := path.get_file().get_basename().trim_suffix("_rig")
+	var furred := FURRED.has(kind)
 	for mi: MeshInstance3D in n.find_children("*", "MeshInstance3D", true, false):
 		if mi.mesh == null:
 			continue
 		for i in mi.mesh.get_surface_count():
 			var mat := mi.mesh.surface_get_material(i) as StandardMaterial3D
 			if mat == null:
+				continue
+			if HAIRY.has(kind) and mat.albedo_texture:
+				# Fur: the painted sheen flattened, hair strands drawn over it (shaders/fur).
+				var fur := ShaderMaterial.new()
+				fur.shader = preload("res://shaders/fur.gdshader")
+				fur.set_shader_parameter("albedo_tex", mat.albedo_texture)
+				fur.set_shader_parameter("scale", mi.mesh.get_aabb().size.z / 1.3)
+				mi.mesh.surface_set_material(i, fur)
 				continue
 			mat.metallic = 0.0
 			mat.metallic_texture = null
@@ -771,14 +781,24 @@ func _dead_process(t: float) -> void:
 		_model.rotation.z = side * (PI / 2 * f * f - bounce)
 		_model.rotation.x = -0.35 * sin(r * PI)
 		_model.position.y = 0.1 * sin(r * PI) + 0.15 * f * f + bounce * 0.15
-	# Corpses sink into the ground before they go (instead of vanishing on the spot).
-	var sink := clampf((since - (CORPSE - 2.0)) / 2.0, 0.0, 1.0)
-	if sink > 0.0:
-		_model.position.y = (0.15 if _visual and _canim == null and fl <= 0.0 else 0.0) - sink * sink * 0.9
-	if t - _died_at > CORPSE:
+	# Corpses lie until the hero looks away (never vanishing in sight), then go.
+	if visible and since > CORPSE and not _in_view(global_position):
 		visible = false
-	if t - _died_at > RESPAWN and World.player.global_position.distance_to(home) > 60.0:
+	if since > RESPAWN and World.player.global_position.distance_to(home) > 60.0 and not _in_view(home):
 		_respawn()
+
+
+## Whether p could be on screen: in the camera's view and not too far off (behind hills counts
+## as seen, which is the safe side).
+static func _in_view(p: Vector3) -> bool:
+	var cam := World.player.get_viewport().get_camera_3d() if World.player else null
+	if cam == null:
+		return false
+	if cam.global_position.distance_to(p) > 150.0:
+		return false
+	# A little margin around the frustum: a body at the screen's edge still counts.
+	var up := Vector3(0, 1.0, 0)
+	return cam.is_position_in_frustum(p) or cam.is_position_in_frustum(p + up) or cam.is_position_in_frustum(p + cam.global_basis.x * 2.0) or cam.is_position_in_frustum(p - cam.global_basis.x * 2.0)
 
 
 func _process(dt: float) -> void:

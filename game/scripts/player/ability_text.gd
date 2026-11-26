@@ -59,7 +59,7 @@ const TEXT := {
 	"warrior:Charge": "Rush to the target from 8–25 m, stun 1.5 s, +15 rage; out of combat only (Juggernaut: also in combat, no rage there, no cooldown)",
 	"warrior:Heavy Strike": "Instant strong hit, power 50",
 	"warrior:Overwhelm": "Usable for 5 s after the target dodges or a Smoke miss; power 100, can't be dodged",
-	"warrior:Rend": "Bleed: 1/32 of max HP every 3 s for 15 s",
+	"warrior:Rend": "Bleed: 5% of max HP every 3 s for 30 s",
 	"warrior:Whirlwind": "Spin with the blade out: power 40 to every enemy within 4 m once a second, 10 rage a second (the first on use) until rage runs out or you press it again. Every kill by it takes 5 s off its cooldown. You can move; no other abilities but Battle Cry, no auto-attack meanwhile",
 	"warrior:Thunder Clap": "Area: power 25 to all enemies within 8 m, slows their attacks by 20% for 10 s. Answer to packs",
 }

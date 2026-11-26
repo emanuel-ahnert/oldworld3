@@ -43,8 +43,8 @@ func _items() -> Array:
 static func load_volume(kind: String) -> int:
 	var cfg := ConfigFile.new()
 	if cfg.load(SETTINGS) == OK:
-		return int(cfg.get_value("audio", kind, 100 if kind == "sfx" else 80))
-	return 100 if kind == "sfx" else 80
+		return int(cfg.get_value("audio", kind, 100 if kind == "sfx" else 50))
+	return 100 if kind == "sfx" else 50
 
 
 ## The "SFX" and "Music" buses (made here if missing) at the saved volumes.
@@ -124,7 +124,7 @@ func _ready() -> void:
 	_rows = VBoxContainer.new()
 	box.add_child(_rows)
 	var hint := Label.new()
-	hint.text = "Up/Down choose    Left/Right change    Enter select    Esc close"
+	hint.text = "Up/Down choose    Left/Right or click change    Enter select    Esc close"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_font_size_override("font_size", 14)
 	hint.add_theme_color_override("font_color", FADED)
@@ -196,7 +196,9 @@ func _refresh() -> void:
 		l.add_theme_color_override("font_color", GILT if i == _cursor else INK)
 		h.add_child(l)
 		var v := _value(ITEMS[i])
-		if v != "":
+		if ITEMS[i] in VOLUMES:
+			_volume_bar(h, VOLUMES[ITEMS[i]])
+		elif v != "":
 			var vl := Label.new()
 			vl.text = v
 			vl.add_theme_font_size_override("font_size", 22)
@@ -211,6 +213,63 @@ func _refresh() -> void:
 				_cursor = i
 				_select())
 		_rows.add_child(h)
+
+
+const VOLUMES := {"Sound effects": "sfx", "Music": "music"}
+const BAR_W := 260.0
+
+
+## A volume row's value: "<" and ">" step it, a click (or a drag) on the bar sets it to where
+## the mouse is (rounded to whole %).
+func _volume_bar(h: HBoxContainer, kind: String) -> void:
+	var lt := _arrow("<", kind, -1)
+	h.add_child(lt)
+	var bar := Control.new()
+	bar.custom_minimum_size = Vector2(BAR_W, 22)
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var pct := Label.new()
+	bar.draw.connect(func():
+		var v := load_volume(kind) / 100.0
+		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), Color(0.1, 0.09, 0.08, 0.9))
+		bar.draw_rect(Rect2(Vector2.ZERO, Vector2(bar.size.x * v, bar.size.y)), GILT * Color(1, 1, 1, 0.85))
+		bar.draw_rect(Rect2(Vector2.ZERO, bar.size), FADED, false, 1.5))
+	bar.gui_input.connect(func(ev: InputEvent):
+		var set_it: bool = (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+			or (ev is InputEventMouseMotion and (ev.button_mask & MOUSE_BUTTON_MASK_LEFT))
+		if set_it:
+			_store_volume(kind, roundi(clampf(ev.position.x / bar.size.x, 0.0, 1.0) * 100.0))
+			if kind == "sfx" and ev is InputEventMouseButton:
+				Audio.sfx("miss")
+			pct.text = "%d%%" % load_volume(kind)
+			bar.queue_redraw()
+			bar.accept_event())
+	h.add_child(bar)
+	pct.text = "%d%%" % load_volume(kind)
+	pct.custom_minimum_size = Vector2(64, 0)
+	pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pct.add_theme_font_size_override("font_size", 22)
+	pct.add_theme_color_override("font_color", INK)
+	h.add_child(pct)
+	h.add_child(_arrow(">", kind, 1))
+
+
+func _arrow(text: String, kind: String, step: int) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 22)
+	l.add_theme_color_override("font_color", INK)
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	l.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_set_volume(kind, step)
+			if kind == "sfx":
+				Audio.sfx("miss")
+			l.accept_event()
+			_refresh.call_deferred())
+	return l
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -255,7 +314,13 @@ func _change(step: int) -> void:
 
 
 func _set_volume(kind: String, step: int) -> void:
-	var v := clampi(load_volume(kind) + step * VOLUME_STEP, 0, 100)
+	# Onto the step grid (a click may have left it at, say, 47%).
+	var v := load_volume(kind)
+	v = clampi((v / VOLUME_STEP + step) * VOLUME_STEP if step > 0 or v % VOLUME_STEP == 0 else v / VOLUME_STEP * VOLUME_STEP, 0, 100)
+	_store_volume(kind, v)
+
+
+func _store_volume(kind: String, v: int) -> void:
 	var cfg := ConfigFile.new()
 	cfg.load(SETTINGS)
 	cfg.set_value("audio", kind, v)
