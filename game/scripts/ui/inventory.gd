@@ -184,8 +184,12 @@ func _rebuild() -> void:
 		_equip_box.add_child(b)
 	var s := player.stats
 	var first := "Health %d" % s.max_hp + ("   Mana %d" % roundi(s.max_mana) if s.uses_mana else "")
-	_stats.text = "%s\nWeapon damage %d (x%.2f)\nAttack %d   Defense %d\nMagic %d   Resistance %d\nCrit %.0f%%" % [first,
-		roundi(maxf(s.weapon_damage, 0.0)), s.weapon_mult, roundi(s.attack), roundi(s.defense), roundi(s.magic), roundi(s.resistance), s.crit_chance * 100.0]
+	var off := Items.weapon_damage(player.equipped.get("off", {}))
+	var weapon := "Weapon damage %d (x%.2f)" % [roundi(maxf(s.weapon_damage, 0.0)), s.weapon_mult]
+	if off > 0:
+		weapon += "   off hand %d (x%.2f)" % [off, Rules.weapon_mult(off)]
+	_stats.text = "%s\n%s\nAttack %d   Defense %d\nMagic %d   Resistance %d\nCrit %.0f%%" % [first,
+		weapon, roundi(s.attack), roundi(s.defense), roundi(s.magic), roundi(s.resistance), s.crit_chance * 100.0]
 
 	for c in _bag_grid.get_children():
 		c.queue_free()

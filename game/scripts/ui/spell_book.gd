@@ -282,7 +282,12 @@ func _select() -> void:
 	if player.stats.level < int(a.level):
 		_status.text = "%s is learned at level %d." % [a.name, int(a.level)]
 		return
-	var free := player.loadout.find("")
+	# A free slot: empty, or holding an ability not learned yet (it shows as empty: "—").
+	var free := -1
+	for k in Player.SLOTS:
+		if player.slot_ability(k).is_empty():
+			free = k
+			break
 	if player.slot_of(a.id) < 0 and free >= 0:
 		player.loadout[free] = a.id
 		player.loadout_changed.emit()

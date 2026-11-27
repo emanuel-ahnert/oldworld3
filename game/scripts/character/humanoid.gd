@@ -605,6 +605,7 @@ func _head_update() -> void:
 ## own instance fade didn't take); the shaded parts fade by the instance's transparency. Things
 ## equipped later fade too (equip_model).
 var _fade := 0.0
+var _fade_mats := {}               ## material -> its see-through copy (set_fade)
 
 
 func set_fade(f: float) -> void:
@@ -616,14 +617,20 @@ func set_fade(f: float) -> void:
 		if mi == null or mi.mesh == null or mi.material_override != null:
 			continue
 		for k in mi.mesh.get_surface_count():
-			if f <= 0.0:
-				mi.set_surface_override_material(k, null)
-				continue
 			var m := mi.mesh.surface_get_material(k) as BaseMaterial3D
 			if m == null:
 				continue
-			var m2 := m.duplicate() as BaseMaterial3D
-			m2.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+			if f <= 0.0:
+				if mi.get_surface_override_material(k) != null:
+					mi.set_surface_override_material(k, m)      # its own again (null: errors)
+				continue
+			# One see-through copy per material, kept (freed while the renderer still drew with
+			# it when stealth broke mid-fight: errors).
+			var m2: BaseMaterial3D = _fade_mats.get(m)
+			if m2 == null:
+				m2 = m.duplicate() as BaseMaterial3D
+				m2.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+				_fade_mats[m] = m2
 			m2.albedo_color.a = m.albedo_color.a * (1.0 - f)
 			mi.set_surface_override_material(k, m2)
 

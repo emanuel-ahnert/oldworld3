@@ -254,7 +254,7 @@ static func _matte(n: Node, path: String) -> void:
 ## fear, stun) gets its own row above it with icons twice the size.
 const DEBUFF_MAX := 6
 const DEBUFF_SIZE := 0.27          ## m per icon
-const CC := ["polymorph", "fear", "stunned", "gouge"]
+const CC := ["polymorph", "fear", "stunned", "gouge", "sap"]
 var _debuff_row: Node3D            ## turned to the camera; holds the two rows
 var _row_small: Node3D
 var _row_cc: Node3D
@@ -382,6 +382,15 @@ func gouge(seconds: float) -> void:
 	engage()
 
 
+## Sap (rogue, from stealth): out for `seconds` without noticing anyone (no fight starts); any
+## damage ends it (and then it fights).
+func sap(seconds: float) -> void:
+	if stats.dead:
+		return
+	stats.add_buff("sap", seconds, {"attack_speed": 0.0})
+	stats.stun_until = maxf(stats.stun_until, Combatant.now() + seconds)
+
+
 func is_feared() -> bool:
 	return stats.has_buff("fear")
 
@@ -504,7 +513,9 @@ func _physics_process(dt: float) -> void:
 	var speed := 0.0
 	match state:
 		State.IDLE:
-			if p and not p.stats.dead and _aggro_radius() > 0.0 and dist < _aggro_radius():
+			if stats.stunned():
+				_wander_to = global_position     # sapped: stands, notices no one
+			elif p and not p.stats.dead and _aggro_radius() > 0.0 and dist < _aggro_radius():
 				engage()
 			elif t > _wander_at:
 				_wander_at = t + randf_range(6, 16)
@@ -971,10 +982,11 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 	_swarm_count()
 	if _sheep != null and _sheep.visible and amount > 0:
 		end_polymorph()                  # any damage breaks it
-	if amount > 0 and stats.buffs.has("gouge"):
-		stats.buffs.erase("gouge")       # so does any damage a Gouge
-		stats.stun_until = Combatant.now()
-		World.float_text(global_position + Vector3(0, 2.0, 0), "Gouge broken", Color(0.85, 0.85, 0.85), 28, self)
+	for cc in ["gouge", "sap"]:
+		if amount > 0 and stats.buffs.has(cc):
+			stats.buffs.erase(cc)            # so does any damage a Gouge or a Sap
+			stats.stun_until = Combatant.now()
+			World.float_text(global_position + Vector3(0, 2.0, 0), "%s broken" % String(cc).capitalize(), Color(0.85, 0.85, 0.85), 28, self)
 	if OS.get_cmdline_user_args().has("--dmg-log"):
 		print("DMG %d %s t=%.2f" % [amount, "white" if stats.last_hit_auto else "yellow", Combatant.now()])      # test
 	_last_hurt = Combatant.now()

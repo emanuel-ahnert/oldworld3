@@ -64,6 +64,7 @@ const ABILITIES_MAGE := [
 const POLYMORPH_TIME := 20.0
 const FEAR_TIME := 8.0
 const GOUGE_TIME := 6.0
+const SAP_TIME := 15.0
 var _sheeped: Enemy                 ## the enemy this hero's Polymorph holds (one at a time)
 ## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
 const BLIZZARD_RADIUS := 8.0
@@ -78,6 +79,7 @@ const ABILITIES_ROGUE := [
 	{"id": "cheap_shot", "name": "Cheap Shot", "key": 5, "level": 6, "energy": 40, "cd": 20.0, "power": 10.0},
 	{"id": "gut_slash", "name": "Gut Slash", "key": 6, "level": 8, "energy": 30, "cd": 0.0, "power": 75.0},
 	{"id": "gouge", "name": "Gouge", "key": 8, "level": 5, "energy": 40, "cd": 10.0},
+	{"id": "sap", "name": "Sap", "key": 9, "level": 8, "energy": 40, "cd": 0.0},
 ]
 
 ## Priest (Oldworld2's Priest in real time): Holy damage, heals, a shield, Dark damage over time.
@@ -200,6 +202,7 @@ var _combo_t := 0.0
 ## between the main hand's, for OFFHAND of a swing's power.
 const OFFHAND := 0.5
 var _off_swing_at := 0.0
+var _off_damage := 0.0               ## the off-hand weapon's Damage (Items.weapon_damage)
 var stealthed := false             ## rogue: enemies barely notice the hero; the next hit +50%
 var bear := false                  ## druid in Bear Form
 var _bear_model: Node3D
@@ -734,6 +737,8 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 		return "Not enough mana"
 	if stats.energy < float(a.get("energy", 0)):
 		return "Not enough energy"
+	if a.id == "sap" and not stealthed:
+		return "Only in stealth"
 	if a.id == "eviscerate" and combo <= 0:
 		return "No combo points"
 	if a.id == "life_tap":
@@ -777,6 +782,8 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 
 ## Abilities without the "self" flag that are no attack (they don't start auto-attack).
 const NOT_ATTACKS := ["battle_horn", "mana_shield", "blink", "stealth"]
+## Attacks that don't start (and Gouge stops) the auto-attack: they take the target out.
+const NO_AUTO := ["gouge", "sap"]
 
 
 func use_ability(key: int) -> void:
@@ -791,7 +798,7 @@ func use_ability(key: int) -> void:
 			set_target(e)
 	# Any attack on a live target starts auto-attack (like WoW), even when the ability itself
 	# can't be used yet (not enough rage, cooldown, out of range).
-	if not a.get("self", false) and not a.id in NOT_ATTACKS and a.id != "gouge" and target and not target.stats.dead and stats.level >= int(a.level):
+	if not a.get("self", false) and not a.id in NOT_ATTACKS and not a.id in NO_AUTO and target and not target.stats.dead and stats.level >= int(a.level):
 		auto_attacking = true
 	if a.id == "whirlwind" and whirling:
 		# Pressed again: stop spinning, but not in the first WHIRL_LOCK s (no tap-cancel).
@@ -837,7 +844,7 @@ func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 	stats.rage -= float(a.get("rage", 0))
 	stats.mana -= float(a.get("mana", 0))
 	stats.energy -= float(a.get("energy", 0))
-	if a.id != "stealth":
+	if a.id != "stealth" and a.id != "sap":                # Sap keeps the rogue hidden
 		# The opener: remembered for the hit this ability makes (stealth is gone by then).
 		_opener = stealthed
 		_break_stealth()
@@ -1048,6 +1055,13 @@ func _execute(a: Dictionary) -> void:
 			combo = 0
 			_melee_hit(float(a.power_per_cp) * cp, "strike", 1.0)
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Eviscerate (%d)" % cp, Color(1, 0.8, 0.3), 34, self)
+		"sap":
+			# Sap: from stealth, the target out for SAP_TIME s without noticing the rogue
+			# (still hidden); any damage wakes it.
+			model.anim.play_shot("attack1")
+			target.sap(SAP_TIME)
+			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Sapped", Color(1, 0.8, 0.3), 34, target)
+			Audio.hit("club", false, -10.0, target.surface())
 		"gouge":
 			# Gouge: the target is out of the fight GOUGE_TIME s (any damage wakes it), and the
 			# hero stops swinging at it.
@@ -1126,7 +1140,7 @@ func _execute(a: Dictionary) -> void:
 			stats.root_until = 0.0
 			stats.slow_until = 0.0
 			Audio.sfx("magic")
-	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_horn", "stealth", "gouge"]):
+	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_horn", "stealth"] or a.id in NO_AUTO):
 		auto_attacking = true
 
 
@@ -1613,7 +1627,10 @@ func _combat_process(t: float) -> void:
 		if _target_distance() <= _melee_reach(target) and _facing_target(75.0 if _moving() else 60.0):
 			_off_swing_at = t + stats.swing_time
 			stats.auto_hit = true
-			_melee_hit(Rules.swing_power(stats.swing_time) * OFFHAND, "offhand", 1.0)
+			# With the off-hand weapon's own Damage (in place of the main hand's).
+			var main_mult := stats.weapon_mult
+			var off_mult := Rules.weapon_mult(_off_damage) if _off_damage > 0.0 else main_mult
+			_melee_hit(Rules.swing_power(stats.swing_time) * OFFHAND, "offhand", off_mult / maxf(main_mult, 0.01))
 			stats.auto_hit = false
 
 
@@ -2257,6 +2274,7 @@ func apply_gear() -> void:
 	stats.gear = Items.totals(equipped)
 	stats.gear.erase("damage")                  # not a stat: the weapon's own (weapon_damage)
 	stats.weapon_damage = float(Items.weapon_damage(equipped.get("main", {})))
+	_off_damage = float(Items.weapon_damage(equipped.get("off", {})))
 	stats.recompute()
 	if bear:
 		stats.attack = stats.magic

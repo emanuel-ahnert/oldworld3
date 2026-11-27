@@ -77,6 +77,8 @@ static func starter_kit(cls: String) -> Dictionary:
 		var st := {e[3]: 1}
 		if e[0] == "main":
 			st = {"damage": weapon_damage_for(1, "common", e[1])}
+		elif e[1] in OFF_WEAPONS:
+			st = {"damage": weapon_damage_for(1, "common", "dagger"), "attack": 1}
 			if e[3] == "magic":
 				st["magic"] = 1
 		out[e[0]] = {"name": e[2], "slot": e[0], "kind": e[1], "ilvl": 1, "rarity": "common", "stats": st}
@@ -93,13 +95,15 @@ static func weapon_damage_for(ilvl: int, rarity: String, kind: String) -> int:
 	return maxi(1, roundi(d))
 
 
-## The main-hand item's Damage (items from older saves have none: computed from it); 0 without one.
+## A weapon's Damage, main hand or an off-hand weapon (items from older saves have none:
+## computed from it); 0 for anything else.
 static func weapon_damage(item: Dictionary) -> int:
-	if item.is_empty() or not WEAPONS.has(String(item.get("kind", ""))):
+	var kind := String(item.get("kind", ""))
+	if item.is_empty() or not (WEAPONS.has(kind) or kind in OFF_WEAPONS):
 		return 0
 	if item.get("stats", {}).has("damage"):
 		return int(item.stats.damage)
-	return weapon_damage_for(int(item.get("ilvl", 1)), String(item.get("rarity", "common")), String(item.kind))
+	return weapon_damage_for(int(item.get("ilvl", 1)), String(item.get("rarity", "common")), "dagger" if kind in OFF_WEAPONS else kind)
 
 
 ## Materials by item level: 1-7, 8-15, 16+.
@@ -129,6 +133,9 @@ const OFFHANDS := {
 	"orb": {"classes": ["mage", "warlock", "priest", "druid"], "stat": "magic", "noun": "Orb", "mat": "jewel"},
 	"offdagger": {"classes": ["rogue"], "stat": "attack", "noun": "Parrying Dagger", "mat": "weapon"},
 }
+## Off-hand weapons (dual wield): Damage like a main-hand dagger of their level and rarity (the
+## off hand's strikes), and half the usual off-hand Attack.
+const OFF_WEAPONS := ["offdagger"]
 ## Which main-hand kinds hit with Magic: casters' weapons put their budget into Magic.
 const CASTERS := ["mage", "warlock", "priest", "druid"]
 
@@ -216,7 +223,11 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 				kinds = OFFHANDS.keys()
 			kind = kinds[rng.randi() % kinds.size()]
 			var o: Dictionary = OFFHANDS[kind]
-			_add(stats, o.stat, b * 1.5)
+			if kind in OFF_WEAPONS:
+				stats["damage"] = weapon_damage_for(ilvl, rarity, "dagger")
+				_add(stats, o.stat, b * 0.75)
+			else:
+				_add(stats, o.stat, b * 1.5)
 			name = "%s %s" % [MATERIALS[o.mat][tier], o.noun]
 		"neck", "ring":
 			kind = "jewel"
@@ -308,11 +319,11 @@ static func money_text(bronze: int) -> String:
 static func describe(item: Dictionary, cls: String, level: int) -> String:
 	var lines := [item.name]
 	if item.slot == "potion":
-		lines.append("Restores %d%% health (cooldown %d s). Key R." % [roundi(POTION_HEAL * 100), roundi(POTION_CD)])
+		lines.append("Restores %d%% health (cooldown %d s). Key G." % [roundi(POTION_HEAL * 100), roundi(POTION_CD)])
 		lines.append("x%d" % int(item.get("count", 1)))
 		return "\n".join(lines)
 	lines.append("%s  %s%s  (item level %d)" % [SLOT_NAMES[item.slot], String(item.kind).replace("offdagger", "dagger").capitalize(), "  (two-handed)" if two_handed(item.kind) else "", int(item.ilvl)])
-	if item.slot == "main" and not item.stats.has("damage") and WEAPONS.has(item.kind):
+	if not item.stats.has("damage") and (item.slot == "main" and WEAPONS.has(item.kind) or item.kind in OFF_WEAPONS):
 		lines.append("%d Damage" % weapon_damage(item))
 	for k in STAT_NAMES:
 		if k == "damage" and item.stats.has(k):

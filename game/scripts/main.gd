@@ -475,7 +475,7 @@ func _setup_fight(kind: String) -> void:
 			kinds[e.kind] = true
 		print("FIGHT no %s here; kinds: %s" % [kind, kinds.keys()])
 		return
-	var p := best.global_position + Vector3(float(args.get("hold", 7.0)), 0, 0)
+	var p := best.global_position + Vector3(float(args.get("hold", args.get("near", 7.0))), 0, 0)    # --near: that close, not stunned
 	if args.has("hold"):
 		# Test: the group stays put (stunned) with the hero --hold m away (arrows in flight).
 		for e in World.enemies:
@@ -852,6 +852,20 @@ func _process(_dt: float) -> void:
 		_fighting = false                  # test: run away so the enemy evades (leash)
 		var away := player.global_position + Vector3(70, 0, 0)
 		player.global_position = Vector3(away.x, World.height_at(away.x, away.z) + 0.3, away.z)
+	if args.has("clicks"):
+		# Test: left clicks at X,Y;X,Y;... one every 20 frames from frame 150; the loadout printed.
+		var pts: PackedStringArray = String(args.clicks).split(";")
+		var k := (_frame - 150) / 20
+		if _frame >= 150 and (_frame - 150) % 20 == 0 and k < pts.size():
+			var xy := pts[k].split(",")
+			for down in [true, false]:
+				var ev := InputEventMouseButton.new()
+				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.pressed = down
+				ev.position = Vector2(float(xy[0]), float(xy[1]))
+				ev.global_position = ev.position
+				get_viewport().push_input(ev)
+			print("CLICK ", pts[k], " -> ", player.loadout)
 	if args.has("menu-click") and _frame == int(args["menu-click"]):
 		# Test: a click at 30% of the music bar (the second volume bar).
 		var bars := _menu.find_children("*", "Control", true, false).filter(func(c): return c.custom_minimum_size.x == GameMenu.BAR_W)
@@ -1012,6 +1026,13 @@ func _process(_dt: float) -> void:
 	if args.has("slot6") and _frame == 50:
 		player.loadout[5] = String(args.slot6)       # test: an ability on key 6 (--press 6)
 		player.loadout_changed.emit()
+	if args.has("presses"):
+		# Test: ability keys "frame:key,frame:key" (e.g. stealth, then sap, then a stab).
+		for pk in String(args.presses).split(","):
+			var fk := pk.split(":")
+			if _frame == int(fk[0]):
+				player.use_ability(int(fk[1]))
+				print("PRESS %s -> stealthed %s target %s" % [fk[1], player.stealthed, player.target.stats.auras().map(func(x): return x.id) if player.target else []])
 	if args.has("press") and _frame == int(args.get("press-at", 450)):
 		player.use_ability(int(args.press))           # test: press an ability key
 	if args.has("camp") and _frame == 30:

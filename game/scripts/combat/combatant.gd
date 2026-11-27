@@ -148,7 +148,7 @@ func auras() -> Array:
 	for k: String in dots:
 		var d: Dictionary = dots[k]
 		out.append({"name": k.capitalize(), "id": k, "left": float(d.until) - t, "debuff": not d.heal})
-	if t < stun_until and not buffs.has("gouge"):          # (a Gouge shows as itself)
+	if t < stun_until and not buffs.has("gouge") and not buffs.has("sap"):    # (they show as themselves)
 		out.append({"name": "Stunned", "id": "stunned", "left": stun_until - t, "debuff": true})
 	if t < root_until:
 		out.append({"name": "Rooted", "id": "rooted", "left": root_until - t, "debuff": true})

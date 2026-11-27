@@ -48,6 +48,7 @@ const TEXT := {
 	"rogue:Stealth": "Out of combat: you fade (half transparent) and enemies don't notice you at all; 70% speed (Master of Subtlety: 120%). The first hit out of stealth is always a critical hit and deals +50%. Any action or damage breaks it",
 	"rogue:Eviscerate": "A finishing cut that spends all combo points: power 27 for each (5 points: power 135{phys:135}). Needs at least one",
 	"rogue:Gouge": "A blow that takes the target out of the fight for 6 s: it can't move, attack or use abilities. Any damage wakes it (poisons and bleeds too), and you stop swinging at it",
+	"rogue:Sap": "Only in stealth, and you stay hidden: the target is knocked out for 15 s without noticing you (no fight starts). Any damage wakes it",
 	"shaman:Chain Lightning": "Cast 2.0 s, 30 m: lightning hits the target and jumps to up to 2 more enemies within 10 m of it, Air damage (power 45{spell:45:Air}) each",
 	"shaman:Flame Shock": "Instant, 25 m: Fire damage (power 25{spell:25:Fire}) and a burn, 4% of the target's max health every 3 s for 24 s (32% in all)",
 	"shaman:Frost Shock": "Instant, 25 m: Ice damage (power 45{spell:45:Ice}) and the target is slowed by 50% for 8 s",
@@ -120,6 +121,7 @@ const EFFECTS := {
 	"demon_armor": ["Demon Armor", "Heals 2% of max health{hp:0.02} every 3 s in combat."],
 	"fear": ["Fear", "Runs about in panic: can't attack or use abilities."],
 	"gouge": ["Gouge", "Out of the fight: can't move, attack or use abilities. Any damage ends it."],
+	"sap": ["Sap", "Knocked out: can't move, attack or notice anyone. Any damage ends it."],
 	"polymorph": ["Polymorph", "A sheep: wanders about, can't attack, heals fast. Any damage breaks it."],
 }
 
