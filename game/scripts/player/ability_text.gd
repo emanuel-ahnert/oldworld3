@@ -42,10 +42,10 @@ const TEXT := {
 	"priest:Ward of Light": "Instant: a ward that soaks up the next 25% of your max health{hp:0.25} in damage",
 	"rogue:Cheap Shot": "A low blow (power 10{phys:10}) that stuns the target for 3 s",
 	"rogue:Gut Slash": "A deep slash, Physical damage (power 75{phys:75})",
-	"rogue:Knife Throw": "A thrown knife, 25 m: Physical damage (power 45{phys:45})",
+	"rogue:Knife Throw": "A thrown knife, 5–25 m: Physical damage (power 45{phys:45})",
 	"rogue:Poisoned Blade": "A poisoned cut (power 20{phys:20}): poison, 1/32 of the target's max health every 3 s for 15 s (about 16% in all)",
 	"rogue:Quick Stab": "A quick stab (power 45{phys:45}) with +25% crit chance",
-	"rogue:Stealth": "Out of combat: aggro radii ×0.3, 70% speed; the first hit out of stealth deals +50%; any action or damage breaks it",
+	"rogue:Stealth": "Out of combat: you fade (half transparent) and enemies don't notice you at all; 70% speed. The first hit out of stealth is always a critical hit and deals +50%. Any action or damage breaks it",
 	"shaman:Chain Lightning": "Cast 2.0 s, 30 m: lightning hits the target and jumps to up to 2 more enemies within 10 m of it, Air damage (power 45{spell:45:Air}) each",
 	"shaman:Flame Shock": "Instant, 25 m: Fire damage (power 25{spell:25:Fire}) and a burn, 1/32 of the target's max health every 3 s for 24 s (25% in all)",
 	"shaman:Frost Shock": "Instant, 25 m: Ice damage (power 45{spell:45:Ice}) and the target is slowed by 50% for 8 s",
@@ -53,8 +53,8 @@ const TEXT := {
 	"shaman:Stone Shock": "Instant, 25 m: Nature damage (power 40{spell:40:Nature}) and the target is silenced: no special abilities for 4 s",
 	"shaman:Storm Bolt": "Cast 1.6 s, 30 m, no mana: an Air bolt (power 45{spell:45:Air}). The filler",
 	"warlock:Curse of Weakness": "Instant, 30 m: the target's Attack −25% for 30 s",
-	"warlock:Drain Life": "Instant, 30 m: for 15 s takes 1/24 of the target's max health every 3 s (about 21% in all) and heals you by as much",
-	"warlock:Dread": "Instant, 30 m: the target attacks half as often for 8 s",
+	"warlock:Siphon Life": "Instant, 30 m: for 15 s takes 1/24 of the target's max health every 3 s (about 21% in all) and heals you by as much",
+	"warlock:Fear": "Cast 2.0 s, 30 m: the target panics and runs about at random for 8 s, its hands in the air; it doesn't attack or use abilities meanwhile",
 	"warlock:Hellfire Rain": "Cast 2.0 s, 30 m: meteors rain into an 8 m circle at the target (marked on the ground while casting): Fire damage (power 45{spell:45:Fire}) to every enemy in it when they land",
 	"warlock:Hex Bolt": "Cast 1.6 s, 30 m, no mana: a Dark bolt (power 40{spell:40:Dark}). The filler",
 	"warlock:Wither": "Instant, 30 m: Dark damage over time, 1/32 of the target's max health every 3 s for 30 s (about 31% in all)",
@@ -71,7 +71,7 @@ const TEXT := {
 ## class -> [[level, name, text]]
 const PASSIVES := {
 	"warrior": [[3, "Enrage", "Taking a crit (or 30% on any hit) gives +25% damage for 12 s"], [8, "Second Wind", "30% chance when hit (always on a crit taken): heals 1/32 of max health{hp:0.03125} every 3 s for 9 s; refreshes, doesn't stack"], [10, "Juggernaut", "Charge has no cooldown and works in combat (no rage from it there); 1 rage per second while fighting"]],
-	"warlock": [[4, "Demon Armor", "In combat you heal 1/32 of your max health{hp:0.03125} every 3 s (about 1% a second)."]],
+	"warlock": [[4, "Demon Armor", "In combat you heal 2% of your max health{hp:0.02} every 3 s."]],
 	"shaman": [[4, "Totems", "Entering combat places a Wrath Totem and a Healing Stream Totem for 30 s. Within 20 m of them your Magic is +25% and you heal 1/32 of your max health{hp:0.03125} every 3 s."]],
 	"rogue": [[6, "Improved Sprint", "Sprint stamina lasts five times as long."], [8, "Cheat Death", "Once every 2 minutes, a lethal hit leaves 10% health instead."],
 		[8, "Prey on the Weak", "+10% critical hit chance for each level above the enemy, up to 100%."],
@@ -114,7 +114,8 @@ const EFFECTS := {
 	"howl": ["Howl", "The pack's howl: wolves nearby hit harder."],
 	"enrage": ["Enrage", "Your damage +25%."],
 	"second_wind": ["Second Wind", "Heals 1/32 of max health{hp:0.03125} every 3 s."],
-	"demon_armor": ["Demon Armor", "Heals 1/32 of max health{hp:0.03125} every 3 s in combat."],
+	"demon_armor": ["Demon Armor", "Heals 2% of max health{hp:0.02} every 3 s in combat."],
+	"fear": ["Fear", "Runs about in panic: can't attack or use abilities."],
 	"polymorph": ["Polymorph", "A sheep: wanders about, can't attack, heals fast. Any damage breaks it."],
 }
 

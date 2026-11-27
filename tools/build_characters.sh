@@ -19,6 +19,15 @@ for k in hood coif cowl helm; do
   blender -b --python tools/pipeline/headgear.py -- spike/body $k spike/body/headgear/$k.glb 2>&1 | grep -E "Error|Traceback" || true
   cp spike/body/headgear/$k.glb game/assets/gear/head_$k.glb
 done
+# The head map (where each head texel is on the head: hair colours, beards; body_slots.gdshader).
+blender -b --python tools/pipeline/head_map.py -- spike/body game/assets/characters/warrior/body_head.png 2>&1 | grep -E "Error|Traceback" || true
+# The heroes' bald body (tools/pipeline/bald.py: the hair's place a bald scalp, ears, textures
+# painted over; needs the head map), worn with the hairstyles below.
+blender -b --python tools/pipeline/bald.py -- spike/body game/assets/characters/warrior 2>&1 | grep -E "Error|Traceback" || true
+# The hairstyles (one per class, worn as the "hair" layer; tools/pipeline/hair.py).
+for s in crop neat swept long slick messy wild knot mohawk; do
+  blender -b --python tools/pipeline/hair.py -- spike/body $s game/assets/gear/hair_$s.glb 2>&1 | grep -E "Error|Traceback" || true
+done
 # The casters' robe skirt (tools/pipeline/robe_layer.py), coloured per class in the game.
 blender -b --python tools/pipeline/robe_layer.py -- spike/body spike/body/robe_layer.glb 2>&1 | grep -E "Error|Traceback" || true
 cp spike/body/robe_layer.glb game/assets/gear/

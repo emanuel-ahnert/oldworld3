@@ -207,6 +207,8 @@ func _ready() -> void:
 		_heads()
 	if args.has("heads-goblin"):
 		_heads_goblin()
+	if args.has("class-heads"):
+		_class_heads()
 	player.message.connect(hud.show_message)
 	player.hint.connect(hud.show_hint)
 	if args.has("nohud"):
@@ -341,6 +343,30 @@ func _heads() -> void:
 		var p := player.global_position + Vector3(x, 0, 2.2)
 		h.global_position = Vector3(p.x, World.height_at(p.x, p.z), p.z)
 		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
+	player.visible = false
+
+
+## Test: every class's hero bareheaded in a row (hair, beards), turned --heads-turn degrees,
+## raised --heads-goblin-lift m (the faces at the camera's height).
+func _class_heads() -> void:
+	var classes := ["warrior", "mage", "rogue", "priest", "paladin", "warlock", "hunter", "shaman", "druid"]
+	if str(args["class-heads"]) in classes:
+		classes = [str(args["class-heads"])]          # one, close up
+	for i in classes.size():
+		var h := Humanoid.new()
+		add_child(h)
+		var look := Player.look_of(classes[i])
+		look.erase("helmet")
+		if args.has("no-hair"):
+			look.erase("hair_style")             # test: the bald head itself
+			look.erase("beard")
+		h.build(look)
+		var p := player.global_position + (Vector3((i - 4) * 0.55, 0, 2.0) if classes.size() > 1 else Vector3(0, 0, float(args.get("heads-dist", 1.2))))
+		h.global_position = Vector3(p.x, World.height_at(p.x, p.z) + float(args.get("heads-goblin-lift", 0.0)), p.z)
+		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
+		if args.has("panic"):
+			h.anim.set_move("run", 0.5)           # test: Fear's panic (arms up) on a run
+			h.set_panic(true)
 	player.visible = false
 
 
@@ -601,7 +627,7 @@ func _setup_input() -> void:
 		"turn_left": [KEY_A, KEY_LEFT], "turn_right": [KEY_D, KEY_RIGHT],
 		"strafe_left": [KEY_Q], "strafe_right": [KEY_E],
 		"jump": [KEY_SPACE], "sprint": [KEY_SHIFT], "menu": [KEY_ESCAPE], "help": [KEY_F1],
-		"target_next": [KEY_TAB], "auto_attack": [KEY_F], "bags": [KEY_B, KEY_I], "map": [KEY_M], "spellbook": [KEY_N], "camp": [KEY_C], "autorun": [KEY_F2],
+		"target_next": [KEY_TAB], "auto_attack": [KEY_T], "bags": [KEY_B, KEY_I], "map": [KEY_M], "spellbook": [KEY_N], "camp": [KEY_C], "autorun": [KEY_F2],
 	}
 	for action in keys:
 		if InputMap.has_action(action):
@@ -901,6 +927,27 @@ func _process(_dt: float) -> void:
 			var at: Vector3 = hz.position + out * (Palisade.RADIUS + 9.0)
 			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
 			player.rotation.y = atan2(out.x, out.z)
+	if args.has("guard-test") and player and _frame == 60:
+		# Test: the hero just inside the start village's first gate, a monster chasing it from
+		# 14 m outside: the gate guards go for it.
+		var gz: Zone = zones.zone_at(player.global_position)
+		var gp: Palisade = gz.settlement.get_node_or_null("Palisade") if gz and gz.settlement else null
+		if gp and not gp.gates().is_empty():
+			var g: Dictionary = gp.gates()[0]
+			var out: Vector3 = g.out
+			var at: Vector3 = gz.position + out * (Palisade.RADIUS - 6.0)
+			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
+			player.rotation.y = atan2(out.x, out.z) + PI
+			var near: Enemy = null
+			for e in World.enemies:
+				if not e.stats.dead and (near == null or e.global_position.distance_to(at) < near.global_position.distance_to(at)):
+					near = e
+			if near:
+				var m: Vector3 = gz.position + out * (Palisade.RADIUS + 14.0)
+				near.global_position = Vector3(m.x, World.height_at(m.x, m.z) + 0.5, m.z)
+				near.home = near.global_position
+				near.engage()
+				print("GUARD-TEST ", near.kind, " hp ", near.stats.hp)
 	if args.has("outfits") and player and _frame == 60:
 		# Test: outfits (characters/<name>) side by side in front of the hero.
 		var names: PackedStringArray = String(args.outfits).split(",")

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://hw7bnlepiapy"
-path="res://.godot/imported/dread.png-f4ab825c0908a4a913b4c54c0bf907ec.ctex"
+uid="uid://e7na0a4fdw31"
+path="res://.godot/imported/siphon_life.png-66504c32a4ff81f599fb9d89d0c1a982.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/icons/dread.png"
-dest_files=["res://.godot/imported/dread.png-f4ab825c0908a4a913b4c54c0bf907ec.ctex"]
+source_file="res://assets/ui/icons/siphon_life.png"
+dest_files=["res://.godot/imported/siphon_life.png-66504c32a4ff81f599fb9d89d0c1a982.ctex"]
 
 [params]
 

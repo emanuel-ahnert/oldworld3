@@ -18,7 +18,8 @@ done
 # Textures loaded from scripts (terrain, outfits) are never seen in a 3D material by the
 # importer, so they stay uncompressed without mipmaps (distant ground: the full 1024 px texture
 # per pixel, slow and shimmering). All 3D textures (not the UI's): VRAM compressed, mipmaps.
-for f in $(find "$game/assets" -name '*.png.import' -not -path '*/ui/*'); do
+# The head map (*_head.png, positions on the head) stays lossless.
+for f in $(find "$game/assets" -name '*.png.import' -not -path '*/ui/*' -not -name '*_head.png.import'); do
   if grep -q '^mipmaps/generate=false' "$f"; then
     sed -i -e 's/^mipmaps\/generate=false/mipmaps\/generate=true/' -e 's/^compress\/mode=[0-9]/compress\/mode=2/' "$f"
     changed=1

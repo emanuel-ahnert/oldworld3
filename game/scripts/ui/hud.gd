@@ -93,7 +93,7 @@ class CombatIcon extends Control:
 
 const HELP := """W/S forward/back   A/D turn (strafe with right mouse)   Q/E strafe   Space jump   Shift sprint
 left drag look   right drag steer   middle button re-center   both buttons run   wheel or - / . zoom   Tab target
-F auto-attack   F2 or mouse 4 autorun   1–6 abilities   R potion   C camp   B bags   M map   N abilities
+T auto-attack   F2 or mouse 4 autorun   1–6 abilities (F, R: 5, 6)   G potion   C camp   B bags   M map   N abilities
 right-click enemy attack   F1 hide help   Esc clear target / menu"""
 
 
@@ -233,9 +233,10 @@ func _aura_row(pos: Vector2, parent: Node = null) -> HFlowContainer:
 	return row
 
 
-## Shows a unit's buffs (green frame) then debuffs (red frame): each its icon with the seconds
-## left over it (the name when there is no icon); the name in the tooltip.
+## Shows a unit's buffs (green frame) then debuffs (red frame): each its icon, darkened by a
+## clockwise sweep as its time runs out, with the seconds left over it (the name when there is no icon); the name in the tooltip.
 const AURA_PX := 30
+const AURA_CLOCK := preload("res://shaders/aura_clock.gdshader")
 
 
 func _show_auras(row: HFlowContainer, s: Combatant) -> void:
@@ -259,6 +260,9 @@ func _show_auras(row: HFlowContainer, s: Combatant) -> void:
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var clock := ShaderMaterial.new()          # the timer sweep (shaders/aura_clock)
+		clock.shader = AURA_CLOCK
+		icon.material = clock
 		box.add_child(icon)
 		var l := Label.new()
 		l.add_theme_font_size_override("font_size", 13)
@@ -284,6 +288,8 @@ func _show_auras(row: HFlowContainer, s: Combatant) -> void:
 		var secs := ("%d" % ceili(left)) if left >= 0.0 else ""
 		icon.texture = tex
 		icon.visible = tex != null
+		var total := float(a.get("total", -1.0))
+		(icon.material as ShaderMaterial).set_shader_parameter("elapsed", clampf(1.0 - left / total, 0.0, 1.0) if total > 0.0 and left >= 0.0 else -1.0)
 		var c := Color(0.95, 0.4, 0.3) if a.debuff else Color(0.45, 0.9, 0.45)
 		if tex:
 			box.custom_minimum_size = Vector2(AURA_PX, AURA_PX)
@@ -320,7 +326,7 @@ func _build_action_bar() -> void:
 		slot.add_theme_stylebox_override("panel", sb)
 		bar.add_child(slot)
 		var key := _label(Vector2(5, 1), 14, slot)
-		key.text = str(i + 1)
+		key.text = str(i + 1) + ({4: " F", 5: " R"}.get(i, "") as String)        # F and R work for 5 and 6 too
 		if a.is_empty():
 			sb.bg_color = Color(0.08, 0.07, 0.06, 0.55)
 			_slots.append({"a": a})
@@ -505,7 +511,7 @@ func _process(_dt: float) -> void:
 		_cast_label.text = c.a.name
 	var e := player.target
 	if t > _auras_at:
-		_auras_at = t + 0.2
+		_auras_at = t + 0.1
 		_show_auras(_hero_auras, s)
 		_show_auras(_target_auras, e.stats if e else null)
 	_target.root.visible = e != null

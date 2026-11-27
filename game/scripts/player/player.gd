@@ -5,7 +5,7 @@ extends CharacterBody3D
 ##   W/S forward/back, A/D turn (strafe while the right mouse button is held), Q/E strafe,
 ##   Space jump, Shift sprint, left drag orbit camera, right drag orbit + turn hero,
 ##   both buttons run forward, wheel zoom. Tab target, click target, right-click attack,
-##   F auto-attack, 1–6 abilities.
+##   T auto-attack, 1–6 abilities (F and R also slots 5 and 6), G potion.
 
 signal leveled_up(level: int)
 signal level_banner(level: int, learned: Array)   ## new abilities and passives as text lines
@@ -62,6 +62,7 @@ const ABILITIES_MAGE := [
 ]
 ## Polymorph: the target a sheep for POLYMORPH_TIME s (any damage breaks it; Enemy.polymorph).
 const POLYMORPH_TIME := 20.0
+const FEAR_TIME := 8.0
 var _sheeped: Enemy                 ## the enemy this hero's Polymorph holds (one at a time)
 ## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
 const BLIZZARD_RADIUS := 8.0
@@ -70,7 +71,7 @@ const BLIZZARD_RADIUS := 8.0
 const ABILITIES_ROGUE := [
 	{"id": "quick_stab", "name": "Quick Stab", "key": 1, "level": 1, "energy": 40, "cd": 0.0, "power": 45.0},
 	{"id": "stealth", "name": "Stealth", "key": 2, "level": 1, "energy": 0, "cd": 6.0},
-	{"id": "knife_throw", "name": "Knife Throw", "key": 3, "level": 2, "energy": 20, "cd": 0.0, "power": 45.0, "range": 25.0, "element": "Physical"},
+	{"id": "knife_throw", "name": "Knife Throw", "key": 3, "level": 2, "energy": 30, "cd": 0.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
 	{"id": "poisoned_blade", "name": "Poisoned Blade", "key": 4, "level": 3, "energy": 30, "cd": 0.0, "power": 20.0},
 	{"id": "cheap_shot", "name": "Cheap Shot", "key": 5, "level": 6, "energy": 40, "cd": 20.0, "power": 10.0},
 	{"id": "gut_slash", "name": "Gut Slash", "key": 6, "level": 8, "energy": 30, "cd": 0.0, "power": 75.0},
@@ -100,11 +101,11 @@ const ABILITIES_PALADIN := [
 ## Warlock: the strongest damage over time and life drain (Oldworld2).
 const ABILITIES_WARLOCK := [
 	{"id": "hex_bolt", "name": "Hex Bolt", "key": 1, "level": 1, "mana": 0, "cd": 0.0, "cast": 1.6, "power": 40.0, "element": "Dark", "range": 30.0},
-	{"id": "drain_life", "name": "Drain Life", "key": 2, "level": 1, "mana": 30, "cd": 0.0, "cast": 0.0, "element": "Dark", "range": 30.0},
+	{"id": "siphon_life", "name": "Siphon Life", "key": 2, "level": 1, "mana": 30, "cd": 0.0, "cast": 0.0, "element": "Dark", "range": 30.0},
 	{"id": "wither", "name": "Wither", "key": 3, "level": 1, "mana": 20, "cd": 0.0, "cast": 0.0, "element": "Dark", "range": 30.0},
 	{"id": "hellfire_rain", "name": "Hellfire Rain", "key": 4, "level": 2, "mana": 30, "cd": 8.0, "cast": 2.0, "power": 45.0, "element": "Fire", "range": 30.0},
 	{"id": "curse_of_weakness", "name": "Curse of Weakness", "key": 5, "level": 3, "mana": 20, "cd": 0.0, "cast": 0.0, "range": 30.0},
-	{"id": "dread", "name": "Dread", "key": 6, "level": 6, "mana": 25, "cd": 20.0, "cast": 0.0, "range": 30.0},
+	{"id": "fear", "name": "Fear", "key": 6, "level": 6, "mana": 25, "cd": 20.0, "cast": 2.0, "range": 30.0},
 ]
 
 ## Hunter: a bow with an automatic ranged shot (5–30 m), shots and traps-like debuffs.
@@ -322,7 +323,41 @@ static func look_of(class_id: String) -> Dictionary:
 		look["layers"] = {"legs": LEG_LAYERS.plate, "shoulders": SHOULDER_LAYERS.plate}
 	if ROBES.has(class_id):
 		look["robe"] = ROBES[class_id]
+	if HEADS.has(class_id):
+		var hd: Array = HEADS[class_id]
+		if hd[0] != null:
+			look["hair"] = hd[0]
+		if float(hd[1]) > 0.0:
+			look["beard"] = [hd[1], hd[2]]
+		look["skin_tone"] = hd[3]
+		look["eye_color"] = hd[4]
+	if HAIRSTYLES.has(class_id):
+		look["bald"] = true                        # the bald head with its own hairstyle
+		look["hair_style"] = HAIRSTYLES[class_id]
 	return look
+
+
+## Each class's hairstyle (tools/pipeline/hair.py, Humanoid.set_hairstyle).
+const HAIRSTYLES := {
+	"warrior": "crop", "mage": "long", "rogue": "knot", "priest": "neat", "paladin": "swept",
+	"warlock": "slick", "hunter": "messy", "shaman": "mohawk", "druid": "wild",
+}
+
+
+## Each class's own head on the shared base body (Humanoid hair, beard; body_slots.gdshader):
+## [hair colour (null: the texture's dark brown), beard (0 none, 0.55 a chin beard and moustache,
+## 1 full), beard colour, skin, eyes] (the painted face of the bald head, body_slots.gdshader).
+const HEADS := {
+	"warrior": [Color(0.3, 0.17, 0.09), 1.0, Color(0.26, 0.15, 0.08), Color(0.8, 0.6, 0.46), Color(0.33, 0.21, 0.11)],
+	"mage": [Color(0.34, 0.15, 0.07), 0.0, Color.BLACK, Color(0.87, 0.69, 0.57), Color(0.3, 0.44, 0.52)],
+	"rogue": [Color(0.05, 0.045, 0.045), 1.0, Color(0.045, 0.04, 0.04), Color(0.78, 0.58, 0.45), Color(0.28, 0.2, 0.12)],
+	"priest": [Color(0.92, 0.68, 0.34), 0.0, Color.BLACK, Color(0.88, 0.71, 0.59), Color(0.33, 0.45, 0.55)],
+	"paladin": [Color(0.62, 0.45, 0.24), 0.55, Color(0.55, 0.4, 0.21), Color(0.84, 0.64, 0.5), Color(0.38, 0.42, 0.44)],
+	"warlock": [Color(0.04, 0.035, 0.035), 1.0, Color(0.035, 0.03, 0.03), Color(0.8, 0.63, 0.53), Color(0.3, 0.38, 0.2)],
+	"hunter": [Color(0.66, 0.27, 0.08), 0.55, Color(0.58, 0.25, 0.09), Color(0.86, 0.66, 0.52), Color(0.3, 0.42, 0.22)],
+	"shaman": [Color(0.16, 0.11, 0.08), 1.0, Color(0.15, 0.1, 0.07), Color(0.64, 0.45, 0.32), Color(0.25, 0.16, 0.08)],
+	"druid": [Color(0.38, 0.26, 0.15), 1.0, Color(0.34, 0.24, 0.14), Color(0.74, 0.54, 0.4), Color(0.34, 0.4, 0.2)],
+}
 
 
 ## A robe for anyone else in a cloth chest piece.
@@ -419,7 +454,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			k = k - KEY_KP_1 + KEY_1
 		if k >= KEY_1 and k <= KEY_6:
 			use_ability(k - KEY_1 + 1)
-		elif k == KEY_R:
+		elif k == KEY_F or k == KEY_R:
+			use_ability(5 if k == KEY_F else 6)       # F and R: slots 5 and 6 too (near WASD)
+		elif k == KEY_G:
 			use_potion()
 
 
@@ -582,7 +619,7 @@ func set_loadout(ids: Array) -> void:
 	if ids.size() != SLOTS:
 		return
 	var known := abilities().map(func(a): return a.id)
-	const RENAMED := {"battle_cry": "battle_horn"}      # saves from before an ability was renamed
+	const RENAMED := {"battle_cry": "battle_horn", "drain_life": "siphon_life", "dread": "fear"}      # saves from before an ability was renamed
 	for i in SLOTS:
 		var id := String(RENAMED.get(String(ids[i]), String(ids[i])))
 		loadout[i] = id if id in known else ""
@@ -698,6 +735,8 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 	if a.has("range") and float(a.range) > 0.0:
 		if d > float(a.range):
 			return "Out of range"
+		if d < float(a.get("min_range", 0.0)):
+			return "Too close (at least %d m)" % roundi(float(a.min_range))
 		if not _facing_target(90.0):
 			return "You must face the target"
 		return ""
@@ -760,6 +799,7 @@ func use_ability(key: int) -> void:
 		return
 	_spend_and_cooldown(a, t)
 	_execute(a)
+	_opener = false                      # an ability without a hit doesn't keep it for later
 
 
 ## Casters don't swing while they cast: a spell (cast, channel or instant) holds the auto-attack
@@ -776,6 +816,8 @@ func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 	stats.mana -= float(a.get("mana", 0))
 	stats.energy -= float(a.get("energy", 0))
 	if a.id != "stealth":
+		# The opener: remembered for the hit this ability makes (stealth is gone by then).
+		_opener = stealthed
 		_break_stealth()
 	if stats.uses_mana and float(a.get("mana", 0)) > 0.0:
 		stats.last_cast = t
@@ -920,10 +962,10 @@ func _execute(a: Dictionary) -> void:
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), a.name, Color(0.7, 0.4, 1.0), 34, target)
 			Audio.sfx("magic", -4.0)
 			target.engage()
-		"drain_life":
+		"siphon_life":
 			model.anim.play_shot("release")
-			target.stats.add_dot("drain_life", 15.0, 1.0 / 24.0, stats, false, true)
-			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Drain Life", Color(0.6, 1.0, 0.4), 34, target)
+			target.stats.add_dot("siphon_life", 15.0, 1.0 / 24.0, stats, false, true)
+			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Siphon Life", Color(0.6, 1.0, 0.4), 34, target)
 			Audio.sfx("magic", -4.0)
 			target.engage()
 		"hellfire_rain":
@@ -943,11 +985,12 @@ func _execute(a: Dictionary) -> void:
 			target.stats.add_buff("curse_of_weakness", 30.0, {"attack": 0.75})
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Weakened", Color(0.7, 0.4, 1.0), 34, target)
 			target.engage()
-		"dread":
+		"fear":
+			# Fear (like WoW's): the target runs about in panic for FEAR_TIME s, no attacks.
 			model.anim.play_shot("release")
-			target.stats.add_buff("dread", 8.0, {"attack_speed": 0.5})
-			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Dread", Color(0.6, 0.3, 0.9), 36, target)
-			target.engage()
+			target.fear(FEAR_TIME)
+			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Feared", Color(0.6, 0.3, 0.9), 36, target)
+			Audio.sfx("magic", -4.0)
 		"righteous_strike":
 			_melee_hit(float(a.power), "strike", 1.0, false, 0.0, "Holy")
 		"judgment_hammer":
@@ -976,16 +1019,23 @@ func _execute(a: Dictionary) -> void:
 		"knife_throw":
 			model.anim.play_shot("release")
 			var e := target
+			var opening := _from_stealth()
+			_opener = false
 			Projectile.launch(global_position + Vector3(0, 1.4, 0) - global_transform.basis.z * 0.5, e, Color(0.8, 0.8, 0.85), func():
 				if e.stats.dead or _smoke_miss(e):
 					return
-				var r := stats.roll_damage(e.stats, float(a.power), false, _ambush())
+				if opening:
+					stats.crit_chance += 1.0           # out of stealth: always a critical hit
+				var r := stats.roll_damage(e.stats, float(a.power), false, 1.5 if opening else 1.0)
+				if opening:
+					stats.crit_chance -= 1.0
 				e.stats.take_damage(r.amount, r.crit, stats)
 				Audio.hit("dagger", r.crit, 0.0, e.surface())
 				e.engage(), 0.07)
 		"stealth":
 			stealthed = not stealthed
 			model.mat.set_shader_parameter("stealth", 1.0 if stealthed else 0.0)
+			model.set_fade(0.5 if stealthed else 0.0)
 			message.emit("Stealth" if stealthed else "")
 		"frost_ring":
 			model.anim.play_shot("release")
@@ -1227,6 +1277,9 @@ func weapon_sound() -> String:
 func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extra_crit := 0.0, element := "Physical", on_hit := Callable()) -> void:
 	model.anim.play_shot(anim)
 	extra *= _ambush()
+	if _from_stealth():
+		extra_crit += 1.0                  # out of stealth: always a critical hit
+	_opener = false
 	_break_stealth()
 	var e := target
 	e.engage()
@@ -1380,13 +1433,23 @@ func _set_bear(on: bool) -> void:
 
 
 func _ambush() -> float:
-	return 1.5 if stealthed else 1.0
+	return 1.5 if _from_stealth() else 1.0
+
+
+## Whether the hit being made opens from stealth (an ability out of stealth, or an
+## auto-attack swing while still stealthed): +50% (_ambush) and always a critical hit.
+var _opener := false
+
+
+func _from_stealth() -> bool:
+	return stealthed or _opener
 
 
 func _break_stealth() -> void:
 	if stealthed:
 		stealthed = false
 		model.mat.set_shader_parameter("stealth", 0.0)
+		model.set_fade(0.0)
 		cooldowns["stealth"] = Combatant.now() + 6.0
 
 
@@ -1429,7 +1492,7 @@ func _combat_process(t: float) -> void:
 	_tips_process()
 	# Demon Armor (warlock, level 4): regenerates 1/32 max HP every 3 s while fighting.
 	if has_passive("Demon Armor") and stats.in_combat() and not stats.dots.has("demon_armor"):
-		stats.add_dot("demon_armor", 9.0, 1.0 / 32.0, stats, true)
+		stats.add_dot("demon_armor", 9.0, 0.02, stats, true)
 	if target and (target.stats.dead or not target.visible):
 		set_target(null)
 	if target:

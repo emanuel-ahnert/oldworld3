@@ -6,6 +6,10 @@ extends Node3D
 ## weapon in the right hand, and the animation tree. Faces -Z like the game's units.
 
 const BODY := "res://assets/characters/warrior/body"
+## Heroes' body: the same with a bald head (tools/pipeline/bald.py), worn with a hairstyle layer
+## and a beard (cfg "bald"); NPCs and enemies keep the base body's modelled hair.
+const BODY_BALD := "res://assets/characters/warrior/body_bald"
+const HEAD_MAP := preload("res://assets/characters/warrior/body_head.png")
 
 var anim: CharAnimator
 var trail: WeaponTrail        ## the swoosh behind the main weapon
@@ -29,12 +33,21 @@ func build(cfg: Dictionary) -> void:
 	_head = _skel.find_bone("Head")
 	_neck = _skel.find_bone("Neck")
 	_skel.skeleton_updated.connect(_head_update)
+	var base := BODY
+	if cfg.get("bald", false) and ResourceLoader.exists(BODY_BALD + ".glb"):
+		# The bald body: its mesh (same skeleton and UVs) into the animated body, its textures.
+		var bs: Node = load(BODY_BALD + ".glb").instantiate()
+		var bmi: MeshInstance3D = bs.find_children("*", "MeshInstance3D", true, false)[0]
+		_mesh.mesh = bmi.mesh
+		_mesh.skin = bmi.skin
+		bs.free()
+		base = BODY_BALD
 	mat = ShaderMaterial.new()
 	mat.shader = load("res://shaders/body_slots.gdshader")
 	var b: String = cfg.get("outfit", BODY)
 	if not ResourceLoader.exists(b + "_color.png"):
 		b = BODY          # outfit not generated yet: plain clothes
-	for k in [["tex_a", BODY + "_color.png"], ["mr_a", BODY + "_mr.png"], ["normal_a", BODY + "_normal.png"],
+	for k in [["tex_a", base + "_color.png"], ["mr_a", base + "_mr.png"], ["normal_a", base + "_normal.png"],
 			["tex_b", b + "_color.png"], ["mr_b", b + "_mr.png"], ["normal_b", b + "_normal.png"]]:
 		if ResourceLoader.exists(k[1]):
 			mat.set_shader_parameter(k[0], load(k[1]))
@@ -50,6 +63,23 @@ func build(cfg: Dictionary) -> void:
 	mat.set_shader_parameter("skin_hands", bool(cfg.get("skin_hands", false)))
 	if cfg.has("head_tint"):
 		mat.set_shader_parameter("head_tint", cfg.head_tint)
+	mat.set_shader_parameter("head_map", HEAD_MAP)
+	if OS.get_cmdline_user_args().has("--head-debug"):
+		mat.set_shader_parameter("head_debug", 2 if OS.get_cmdline_user_args().has("--beard-debug") else (3 if OS.get_cmdline_user_args().has("--hair-debug") else 1))          # test: the head map's bands
+	if cfg.get("bald", false):
+		mat.set_shader_parameter("face_paint", true)
+		mat.set_shader_parameter("skin_tone", cfg.get("skin_tone", Color(0.83, 0.64, 0.5)))
+		mat.set_shader_parameter("eye_color", cfg.get("eye_color", Color(0.32, 0.42, 0.5)))
+		var hc: Color = cfg.get("hair", Color(0.15, 0.09, 0.05))
+		mat.set_shader_parameter("brow_color", hc.darkened(0.35))
+	if cfg.has("hair") and not cfg.get("bald", false):
+		mat.set_shader_parameter("hair_color", cfg.hair)          # the base body's own hair dyed
+	_beard = cfg.has("beard")
+	if cfg.has("hair_style"):
+		set_hairstyle(String(cfg.hair_style), cfg.get("hair", Color(0.15, 0.09, 0.05)))
+	if cfg.has("beard"):
+		mat.set_shader_parameter("beard", float(cfg.beard[0]))
+		mat.set_shader_parameter("beard_color", cfg.beard[1])
 	head_egg = float(cfg.get("head_egg", 0.0))
 	mat.set_shader_parameter("head_egg", head_egg)
 	var bld: Vector3 = cfg.get("build", Vector3.ONE)
@@ -113,6 +143,7 @@ const HEAD_LAYERS := {
 ## face's half width, brow m above the head's middle] (the openings of headgear.py's KINDS).
 const FACE_SHOWN := [[0.6, 0.036], [0.68, 0.036], [0.24, 0.034], [2.0, 0.0]]
 var _face_shown := []
+var _beard := false             ## a beard or a hairstyle: the head's place every frame for the shader
 var head_egg := 0.0             ## > 0: the head egg-shaped, wide on top (goblins; body_slots)
 const HEAD_AHEAD := 0.09
 const HEAD_SIDE := 0.032       ## the face's center line is this far to the side of the head bone (headgear.py CX)
@@ -209,6 +240,8 @@ func equip_model(key: String, path: String, rot: Variant = null, size := 1.0) ->
 		var layer: Array = HEAD_LAYERS.get(path.get_file().get_basename(), ["", 0])
 		set_layer("head", layer[0], true)
 		helmet_worn = layer[0] != ""
+		if _layers.has("hair"):
+			(_layers["hair"] as MeshInstance3D).visible = not helmet_worn
 		_face_shown = FACE_SHOWN[int(layer[1])] if helmet_worn else []
 		if helmet_worn:
 			var hm := ShaderMaterial.new()
@@ -545,7 +578,7 @@ func _head_update() -> void:
 	if mat == null:
 		return
 	mat.set_shader_parameter("hide_hair", not _face_shown.is_empty())
-	if _face_shown.is_empty() and head_egg <= 0.0:
+	if _face_shown.is_empty() and head_egg <= 0.0 and not _beard:
 		return
 	var to_mesh := _mesh.global_transform.affine_inverse() * _skel.global_transform
 	var pose := _skel.get_bone_global_pose(_head)
@@ -563,3 +596,53 @@ func _head_update() -> void:
 	if not _face_shown.is_empty():
 		mat.set_shader_parameter("face_cos", _face_shown[0])
 		mat.set_shader_parameter("brow", _face_shown[1])
+
+
+## See-through (0 solid .. 1 gone): the whole figure with what it holds and wears (a rogue in
+## stealth: 0.5).
+func set_fade(f: float) -> void:
+	for gi in find_children("*", "GeometryInstance3D", true, false):
+		(gi as GeometryInstance3D).transparency = f
+
+
+## Panic (Fear): both arms up over the head, flailing (PanicArms, after every other change to the
+## pose), eased in and out over PANIC_EASE s.
+const PANIC_EASE := 0.25
+var panicking := false
+var _panic: PanicArms
+var _panic_tw: Tween
+
+
+func set_panic(on: bool) -> void:
+	if on == panicking:
+		return
+	panicking = on
+	if _panic == null:
+		_panic = PanicArms.new()
+		_panic.name = "PanicArms"
+		_panic.influence = 0.0
+		_skel.add_child(_panic)
+	_skel.move_child(_panic, -1)              # last: over the two-handed grip too
+	if _panic_tw:
+		_panic_tw.kill()
+	_panic.active = true
+	_panic_tw = create_tween()
+	_panic_tw.tween_property(_panic, "influence", 1.0 if on else 0.0, PANIC_EASE)
+	if not on:
+		_panic_tw.tween_callback(func(): _panic.active = false)
+
+
+## A hairstyle (tools/pipeline/hair.py: crop, neat, swept, long, slick, messy, wild, knot,
+## mohawk): the "hair" layer in `color`, made for the bald head (cfg "bald"). Under headgear
+## the layer is hidden (the headgear shows).
+func set_hairstyle(style: String, color: Color) -> void:
+	set_layer("hair", "res://assets/gear/hair_%s.glb" % style, true)
+	var mi := _layers.get("hair") as MeshInstance3D
+	if mi == null:
+		return
+	var hm := ShaderMaterial.new()
+	hm.shader = load("res://shaders/hair.gdshader")
+	hm.set_shader_parameter("hair_color", color)
+	hm.set_shader_parameter("strand_scale", 120.0 if style == "mohawk" else 700.0)
+	mi.material_override = hm
+	mi.visible = not helmet_worn

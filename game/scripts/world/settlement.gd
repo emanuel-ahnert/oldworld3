@@ -131,6 +131,7 @@ func build(zone: Zone, seed: int) -> void:
 			var gv := Villager.new()
 			gv.look = GUARD_LOOKS.get(zone.type, GUARD_LOOKS.grassland)
 			gv.face = atan2(-out.x, -out.z)               # looking out of the gate (units face -Z)
+			gv.guard = true
 			gv.setup("guard", Vector3(g.pos) + side * k * (Palisade.GATE * 0.5 - 0.6), terrain, false, seed + 40 + gi * 2 + int(k))
 			add_child(gv)
 	for s in shrine_spots(terrain):

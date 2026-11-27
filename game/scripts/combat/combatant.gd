@@ -158,7 +158,28 @@ func auras() -> Array:
 		out.append({"name": "Immune", "id": "immune", "left": immune_until - t, "debuff": false})
 	if absorb > 0:
 		out.append({"name": "Absorb %d" % absorb, "id": "absorb", "left": -1.0, "debuff": false})
+	# "total": the whole duration, for the icons' clock sweep. Kept here per aura: when its end
+	# moves later (applied anew, refreshed) the clock starts over.
+	var seen := {}
+	for a: Dictionary in out:
+		var id := String(a.id)
+		var left := float(a.left)
+		if left < 0.0:
+			a["total"] = -1.0
+			continue
+		var end := t + left
+		var was: Array = _aura_clock.get(id, [])
+		if was.is_empty() or end > float(was[0]) + 0.05:
+			was = [end, left]
+		else:
+			was[0] = end
+		seen[id] = was
+		a["total"] = maxf(float(was[1]), left)
+	_aura_clock = seen
 	return out
+
+
+var _aura_clock := {}                 ## aura id -> [end time, duration] (auras())
 
 
 func has_buff(name: String) -> bool:

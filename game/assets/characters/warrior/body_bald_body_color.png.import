@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cco543mmfdrkl"
-path="res://.godot/imported/drain_life.png-f0d82f468dbaf56f01f30ecc089b2dca.ctex"
+uid="uid://cshmius0tfamr"
+path="res://.godot/imported/body_bald_body_color.png-ba839356ab987fe111c626a740aedeee.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "aa37151304974dd2dd15db1981a745aa"
 }
 
 [deps]
 
-source_file="res://assets/ui/icons/drain_life.png"
-dest_files=["res://.godot/imported/drain_life.png-f0d82f468dbaf56f01f30ecc089b2dca.ctex"]
+source_file="res://assets/characters/warrior/body_bald_body_color.png"
+dest_files=["res://.godot/imported/body_bald_body_color.png-ba839356ab987fe111c626a740aedeee.ctex"]
 
 [params]
 
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -41,11 +41,11 @@ healing_light | a warm beam of golden healing light with sparkles, soft gold bac
 divine_shield | a glowing golden dome of holy light over the ground, bright yellow background
 # --- Warlock
 hex_bolt | a swirling ball of green and purple shadow magic with a dark skull shape inside, black-purple background
-drain_life | a red glowing heart with streams of red life energy being pulled out of it into dark smoke, dark crimson background
+siphon_life | a red glowing heart with streams of red life energy being pulled out of it into dark smoke, dark crimson background
 wither | a black rotting withered rose with decaying petals, sickly green-black background
 hellfire_rain | green hellfire meteors raining down from a dark sky, dark green background
 curse_of_weakness | a cracked broken sword wrapped in purple curse chains, dark purple background
-dread | a ghostly screaming skull made of dark smoke, black and purple background
+fear | a pale terrified screaming face with huge wide eyes and hands clutching its cheeks, fleeing into swirling purple shadow, dark purple background
 # --- Hunter
 steady_shot | a single wooden longbow fully drawn with an arrow nocked, aiming, forest green background
 venom_arrow | an arrow with a green dripping poisoned tip, dark green background

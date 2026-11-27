@@ -250,38 +250,78 @@ static func _matte(n: Node, path: String) -> void:
 
 
 ## Debuff icons over the nameplate (Rend, poisons, stuns, slows; WoW style): a row of
-## billboards above the bar, at most DEBUFF_MAX, centered.
+## billboards above the bar, at most DEBUFF_MAX, left-aligned. Crowd control (CC: polymorph,
+## fear, stun) gets its own row above it with icons twice the size.
 const DEBUFF_MAX := 6
 const DEBUFF_SIZE := 0.27          ## m per icon
-var _debuff_row: Node3D
+const CC := ["polymorph", "fear", "stunned"]
+var _debuff_row: Node3D            ## turned to the camera; holds the two rows
+var _row_small: Node3D
+var _row_cc: Node3D
 var _debuff_t := 0.0
 var _plate_w := 1.0                ## the nameplate bar's width (m)
 
 
 func _show_debuffs() -> void:
-	var list: Array = []
+	var small: Array = []
+	var cc: Array = []
 	for a: Dictionary in stats.auras():
 		if a.debuff and Icons.get_icon(String(a.id)) != null:
-			list.append(a)
-	list = list.slice(0, DEBUFF_MAX)
-	while _debuff_row.get_child_count() < list.size():
-		var sp := Sprite3D.new()
-		sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		sp.no_depth_test = true
-		sp.render_priority = 3
-		sp.shaded = false
-		sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		_debuff_row.add_child(sp)
-	for i in _debuff_row.get_child_count():
-		var sp := _debuff_row.get_child(i) as Sprite3D
-		sp.visible = i < list.size()
-		if not sp.visible:
+			(cc if String(a.id) in CC else small).append(a)
+	if _row_small == null:
+		_row_small = Node3D.new()
+		_row_cc = Node3D.new()
+		_debuff_row.add_child(_row_small)
+		_debuff_row.add_child(_row_cc)
+	_fill_row(_row_small, small.slice(0, DEBUFF_MAX), 1.0)
+	_fill_row(_row_cc, cc, 2.0)
+	# The CC row sits on the small one (or on the bar when there is none), its bottom edge level
+	# with where the small row's would be.
+	_row_cc.position.y = (DEBUFF_SIZE * 0.5 + 0.04 + DEBUFF_SIZE) if not small.is_empty() else DEBUFF_SIZE * 0.5
+
+
+func _fill_row(row: Node3D, list: Array, size: float) -> void:
+	while row.get_child_count() < list.size():
+		var mi := MeshInstance3D.new()
+		mi.mesh = _debuff_quad()
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		row.add_child(mi)
+	for i in row.get_child_count():
+		var mi := row.get_child(i) as MeshInstance3D
+		mi.visible = i < list.size()
+		if not mi.visible:
 			continue
-		var tex := Icons.get_icon(String(list[i].id))
-		sp.texture = tex
-		sp.pixel_size = DEBUFF_SIZE / float(tex.get_width())
+		var a: Dictionary = list[i]
+		mi.material_override = _debuff_mat(String(a.id))
+		mi.scale = Vector3.ONE * size
+		var total := float(a.get("total", -1.0))
+		mi.set_instance_shader_parameter("elapsed", clampf(1.0 - float(a.left) / total, 0.0, 1.0) if total > 0.0 and float(a.left) >= 0.0 else -1.0)
 		# Left-aligned over the bar: the first icon at the bar's left edge.
-		sp.position.x = -_plate_w / 2.0 + DEBUFF_SIZE / 2.0 + i * (DEBUFF_SIZE + 0.03)
+		var w := DEBUFF_SIZE * size
+		mi.position.x = -_plate_w / 2.0 + w / 2.0 + i * (w + 0.03)
+
+
+## The debuff icons' quad and their materials (one per icon, shared by all enemies; the clock
+## is a per-instance parameter).
+static var _dq: QuadMesh
+static var _dmats := {}
+
+
+static func _debuff_quad() -> QuadMesh:
+	if _dq == null:
+		_dq = QuadMesh.new()
+		_dq.size = Vector2(DEBUFF_SIZE, DEBUFF_SIZE)
+	return _dq
+
+
+static func _debuff_mat(id: String) -> ShaderMaterial:
+	if not _dmats.has(id):
+		var m := ShaderMaterial.new()
+		m.shader = load("res://shaders/aura_clock_3d.gdshader")
+		m.set_shader_parameter("icon", Icons.get_icon(id))
+		m.render_priority = 3
+		_dmats[id] = m
+	return _dmats[id]
 
 
 ## How wide a hold round the feet is drawn (Frost Ring's ice, Grasping Roots).
@@ -314,6 +354,41 @@ func polymorph(duration: float) -> void:
 	if _canim:
 		_canim.move(0.0)
 	SpellFx.puff(global_position + Vector3(0, 0.6, 0), Color(1.0, 0.6, 0.95))
+
+
+## Fear (warlock): runs about at random for `seconds`, no attacks, no abilities; humanoids
+## with their arms up in panic. Kept as the buff "fear" (its timer and icon).
+var _fear_from := Vector3.ZERO
+var _fear_dir := Vector3.ZERO
+var _fear_turn := 0.0
+const FEAR_ROAM := 14.0             ## m: past this from where it was feared it turns back
+
+
+func fear(seconds: float) -> void:
+	if stats.dead:
+		return
+	stats.add_buff("fear", seconds, {"attack_speed": 0.0})
+	_fear_from = global_position
+	_fear_turn = 0.0
+	engage()
+
+
+func is_feared() -> bool:
+	return stats.has_buff("fear")
+
+
+## The way a feared enemy runs: a new random direction every second or so, back toward where it
+## was feared when it strays too far.
+func _fear_move(t: float) -> Vector3:
+	if t >= _fear_turn:
+		_fear_turn = t + randf_range(0.8, 1.6)
+		var a := randf() * TAU
+		_fear_dir = Vector3(cos(a), 0, sin(a))
+		var back := _fear_from - global_position
+		back.y = 0.0
+		if back.length() > FEAR_ROAM:
+			_fear_dir = (back.normalized() + _fear_dir * 0.5).normalized()
+	return _fear_dir
 
 
 func is_sheep() -> bool:
@@ -414,6 +489,8 @@ func _physics_process(dt: float) -> void:
 	if _sheep != null and _sheep.visible:
 		_sheep_process(dt, t)
 		return
+	if humanoid and humanoid.panicking != is_feared():
+		humanoid.set_panic(is_feared())
 	var want := Vector3.ZERO
 	var speed := 0.0
 	match state:
@@ -429,7 +506,12 @@ func _physics_process(dt: float) -> void:
 				want = w.normalized()
 				speed = 1.6
 		State.CHASE:
-			if p == null or p.stats.dead or (global_position.distance_to(home) > LEASH and t - _last_hurt > LEASH_GRACE):
+			if is_feared():
+				stats.mark_combat()
+				if not stats.stunned():
+					want = _fear_move(t)
+					speed = data.speed * stats.move_factor() * 0.85
+			elif p == null or p.stats.dead or (global_position.distance_to(home) > LEASH and t - _last_hurt > LEASH_GRACE):
 				_go_home()
 			else:
 				stats.mark_combat()
@@ -470,6 +552,7 @@ func _physics_process(dt: float) -> void:
 			h.y = 0
 			if h.length() < 1.0:
 				state = State.IDLE
+				_clear_guard_hit()
 				stats.hp = stats.max_hp
 				stats.dots.clear()
 				stats.buffs.clear()
@@ -501,12 +584,12 @@ func _physics_process(dt: float) -> void:
 		_plate_bar.set_instance_shader_parameter("fill", float(stats.hp) / stats.max_hp)
 		_debuff_t -= dt
 		if _debuff_t <= 0.0:
-			_debuff_t = 0.2
+			_debuff_t = 0.1
 			_show_debuffs()
 		# The row faces the camera like the bar does (its "left" is the screen's left).
 		var view_cam := get_viewport().get_camera_3d()
 		if view_cam and _debuff_row.get_child_count() > 0:
-			_debuff_row.global_basis = view_cam.global_basis
+			_debuff_row.global_basis = view_cam.global_basis.orthonormalized().scaled_local(nameplate.global_basis.get_scale())
 		# About the same size on screen near and far (like WoW's nameplates).
 		var cam := get_viewport().get_camera_3d()
 		if cam:
@@ -602,7 +685,7 @@ func _aggro_radius() -> float:
 		return 0.0
 	var diff := World.player.stats.level - stats.level
 	var r := maxf(4.0, base - diff)
-	return r * 0.3 if World.player.stealthed else r
+	return 0.0 if World.player.stealthed else r          # a rogue in stealth: never noticed
 
 
 func _face(dir: Vector3, dt: float, rate: float) -> void:
@@ -902,8 +985,30 @@ func _swarm_count() -> void:
 		(_visual as BatSwarm).set_alive(0 if stats.dead or stats.hp <= 0 else ceili(f * BatSwarm.COUNT))
 
 
+## A town guard struck it: its death gives the hero nothing (Villager guards). Its health bar
+## turns grey to show it.
+var guard_hit := false
+
+
+func mark_guard_hit() -> void:
+	if guard_hit:
+		return
+	guard_hit = true
+	if _plate_bar:
+		_plate_bar.set_instance_shader_parameter("color", Color(0.5, 0.5, 0.5))
+
+
+func _clear_guard_hit() -> void:
+	if guard_hit:
+		guard_hit = false
+		if _plate_bar:
+			_plate_bar.set_instance_shader_parameter("color", Color(0.85, 0.7, 0.1) if data.behavior == "defensive" else (Color(0.9, 0.42, 0.06) if champion != "" else Color(0.8, 0.1, 0.07)))
+
+
 func _on_died(killer: Combatant) -> void:
 	state = State.DEAD
+	if humanoid:
+		humanoid.set_panic(false)
 	_swarm_count()
 	_base_scale = _model.scale
 	_died_at = Combatant.now()
@@ -913,8 +1018,10 @@ func _on_died(killer: Combatant) -> void:
 		humanoid.anim.set_move("death")
 	if _canim:
 		_canim.die()
-	if killer and killer.body is Player:
+	if killer and killer.body is Player and not guard_hit:
 		(killer.body as Player).on_kill(self)
+	elif guard_hit:
+		World.float_text(global_position + Vector3(0, 2.0, 0), "Guards' kill", Color(0.7, 0.7, 0.7), 32, self)
 
 
 func _dead_process(t: float) -> void:
@@ -970,6 +1077,7 @@ func _process(dt: float) -> void:
 
 func _respawn() -> void:
 	stats.revive()
+	_clear_guard_hit()
 	state = State.IDLE
 	visible = true
 	collision_layer = 2

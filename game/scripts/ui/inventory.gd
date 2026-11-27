@@ -204,7 +204,7 @@ func _rebuild() -> void:
 				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
 					player.sell(i))
 		_bag_grid.add_child(b)
-	_money.text = "Money: %s    Potions (R): %d" % [Items.money_text(player.money), player.potion_count()]
+	_money.text = "Money: %s    Potions (G): %d" % [Items.money_text(player.money), player.potion_count()]
 
 	for c in _shop_list.get_children():
 		c.queue_free()
