@@ -100,7 +100,7 @@ func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dict
 			var pz := z + rng.randf_range(-1.4, 1.4)
 			x += step
 			var d := Vector2(px, pz).length()
-			if d < Terrain.PLAZA_RADIUS + 18.0:
+			if d < Terrain.PLAZA_RADIUS + 18.0 or Palisade.on_wall(px, pz):
 				continue
 			if terrain.road_distance(px, pz) < Terrain.ROAD_WIDTH + 2.0:
 				continue

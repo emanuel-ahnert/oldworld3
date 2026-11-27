@@ -1,0 +1,93 @@
+# Ability, passive and effect icons (tools/icons/make_icons.sh): id | motif, background color.
+# The style words and the negative prompt are added by the script.
+# --- Warrior
+heavy_strike | a steel sword blade striking down with a bright white impact burst, deep blue background
+battle_horn | a curved bronze war horn instrument, its open bell blasting red sound rings, dark red background
+overwhelm | a battle axe smashing through a cracked round shield, orange background
+thunder_clap | a heavy iron hammer hitting the ground with a ring of crackling thunder and dust, stormy blue-grey background
+charge | a warrior's round shield and sword bursting forward with dust clouds and speed lines, warm amber background
+rend | three deep bleeding claw-like gashes in red flesh with blood dripping down, dark crimson background
+whirlwind | two crossed swords spinning in a fierce whirlwind of steel streaks, grey-blue background
+# --- Mage
+fire_bolt | a single spear-shaped bolt of bright fire flying diagonally, a burning arrowhead of flame, dark red background
+ice_bolt | a single long sharp icicle shard flying forward with a frosty trail, deep blue background
+frost_ring | a ring of sharp ice spikes bursting up from frozen ground in a circle, seen from above, icy blue background
+mana_shield | a glowing violet magic bubble shield with arcane runes, dark purple background
+ignite | a small flame bursting into a big fire on a burning ember, dark orange background
+blink | a swirl of purple arcane sparks with a fading afterimage outline, violet background
+fireball | a blazing ball of fire with a short flame trail, dark red background
+blizzard | swirling snowflakes and ice shards falling from a dark storm cloud, pale blue background
+polymorph | a fluffy white sheep surrounded by a swirl of pink arcane magic sparkles, violet background
+# --- Rogue
+quick_stab | a curved dagger stabbing fast with a bright glint, dark green background
+stealth | a dark hooded cloak fading into shadow smoke, deep purple-black background
+knife_throw | a spinning throwing knife flying with motion streaks, dark teal background
+poisoned_blade | a dagger blade dripping bright green poison, dark green background
+cheap_shot | a fist with knuckles hitting with yellow stars bursting, ochre background
+gut_slash | a curved dagger blade with a bright red slash arc trailing behind it, dark red background
+# --- Priest
+smite | a single bolt of holy golden light striking down from a bright cloud, gold background
+mend | two glowing hands of light closing a wound with golden sparkles, warm cream-gold background
+holy_burst | a radiant burst of white and gold holy light, bright gold background
+ward_of_light | a glowing golden shield made of light, pale gold background
+renewal | a golden leaf sprouting with a soft glow of renewing light, light green-gold background
+mind_pain | a glowing purple brain-shaped swirl of psychic pain lightning, dark violet background
+# --- Paladin
+righteous_strike | a golden war hammer glowing with holy white light, sparks flying, royal blue background
+holy_seal | a glowing golden holy rune seal stamped in light, deep blue background
+judgment_hammer | a giant hammer of golden light falling from the sky, golden orange background
+devotion | a glowing golden aura ring with a blazing sun symbol, royal purple background
+healing_light | a warm beam of golden healing light with sparkles, soft gold background
+divine_shield | a glowing golden dome of holy light over the ground, bright yellow background
+# --- Warlock
+hex_bolt | a swirling ball of green and purple shadow magic with a dark skull shape inside, black-purple background
+drain_life | a red glowing heart with streams of red life energy being pulled out of it into dark smoke, dark crimson background
+wither | a black rotting withered rose with decaying petals, sickly green-black background
+hellfire_rain | green hellfire meteors raining down from a dark sky, dark green background
+curse_of_weakness | a cracked broken sword wrapped in purple curse chains, dark purple background
+dread | a ghostly screaming skull made of dark smoke, black and purple background
+# --- Hunter
+steady_shot | a single wooden longbow fully drawn with an arrow nocked, aiming, forest green background
+venom_arrow | an arrow with a green dripping poisoned tip, dark green background
+mark_prey | a red hunter's target mark crosshair glowing over a beast's eye, dark red background
+volley | many arrows raining down from the sky, brown-orange background
+first_aid | a rolled linen bandage with a red cross herb, warm tan background
+# --- Shaman
+storm_bolt | a single jagged bolt of blue lightning striking down from a dark cloud, dark stormy blue background
+flame_shock | a burst of orange fire exploding outward with a shockwave ring, dark orange background
+chain_lightning | a single lightning bolt bouncing in a zigzag chain between three glowing points, deep blue background
+healing_wave | a curling wave of glowing green-blue healing water with sparkles, dark teal background
+stone_shock | flying rock shards bursting from cracked earth, earthy brown background
+frost_shock | a burst of jagged ice crystals exploding outward with a frost shockwave ring, icy cyan background
+# --- Druid
+thorn_lash | a whipping thorny vine lashing with green motion, forest green background
+rejuvenate | a glowing green leaf with spiral healing sparkles, light green background
+insect_swarm | a swarm of buzzing beetles and flies, olive green background
+grasping_roots | thick gnarled tree roots erupting from cracked earth and twisting upward like grasping hands, earthy brown background
+moonbeam | a bright vertical beam of silver moonlight shining down from a crescent moon in the night sky, midnight blue background
+bear_form | a roaring bear head with fierce eyes, dark brown background
+# --- Passives
+enrage | a snarling red berserker rage aura with flames around clenched teeth, deep red background
+second_wind | a swirl of fresh green wind with a glowing heart, light green background
+juggernaut | a heavy wooden battering ram with a spiked iron head smashing forward, steel grey background
+demon_armor | an empty spiked black breastplate armor wreathed in green demonic flames, black-green background
+totems | a carved wooden tribal totem pole with glowing runes, earthy orange background
+improved_sprint | a single leather boot with small feathered wings and speed lines, sky blue background
+cheat_death | a cracked skull with a glowing white spark of life, black background
+prey_on_the_weak | a predator's fanged jaw closing on a bleeding mark, dark red background
+poison_resistance | a green vial with a protective glowing ward against poison, teal background
+concussive_shots | an arrow hitting with a blunt shockwave and stars, steel blue background
+thorns | a rose vine with sharp thorns curling around a shield, dark green background
+# --- Effects
+stunned | swirling golden stars and dizzy spiral, dark grey-blue background
+rooted | twisted roots binding a boot to the ground, earthy brown background
+slowed | a spiral snail shell covered in frost with a blue swirl of slowness, dull blue background
+immune | a shining silver shield deflecting sparks, light grey-blue background
+absorb | a glowing cyan hexagonal energy barrier with a blow cracking against it, no one behind it, dark cyan background
+poison | a dripping green skull poison drop, dark green background
+burn | flames licking up from burning embers, dark orange background
+life_drain | a red heart being drained into dark purple smoke, dark crimson background
+healing_stream | a flowing stream of glowing blue healing water, teal background
+berserk | a roaring red rage face mask with glowing eyes, blood red background
+howl | a wolf howling at the moon with sound waves, midnight blue background
+wrath_totem | a carved wooden totem pole with an angry red glowing carved face and red sparks, dark red background

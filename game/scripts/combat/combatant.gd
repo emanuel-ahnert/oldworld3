@@ -133,6 +133,7 @@ func add_buff(name: String, duration: float, data: Dictionary) -> void:
 
 ## Everything on this unit for the HUD: [{name, left (s, < 0: no timer), debuff}]. Buffs that
 ## lower a stat, damage over time and stun, root and slow are debuffs.
+## Buffs, debuffs and states for the HUD: {name, id (Icons), left (s, -1 = lasting), debuff}.
 func auras() -> Array:
 	var t := now()
 	var out: Array = []
@@ -143,20 +144,20 @@ func auras() -> Array:
 			if v is float and v < 1.0 and v != b.until:
 				debuff = true
 		var left := float(b.until) - t
-		out.append({"name": k.capitalize(), "left": left if left < 600.0 else -1.0, "debuff": debuff})
+		out.append({"name": k.capitalize(), "id": k, "left": left if left < 600.0 else -1.0, "debuff": debuff})
 	for k: String in dots:
 		var d: Dictionary = dots[k]
-		out.append({"name": k.capitalize(), "left": float(d.until) - t, "debuff": not d.heal})
+		out.append({"name": k.capitalize(), "id": k, "left": float(d.until) - t, "debuff": not d.heal})
 	if t < stun_until:
-		out.append({"name": "Stunned", "left": stun_until - t, "debuff": true})
+		out.append({"name": "Stunned", "id": "stunned", "left": stun_until - t, "debuff": true})
 	if t < root_until:
-		out.append({"name": "Rooted", "left": root_until - t, "debuff": true})
+		out.append({"name": "Rooted", "id": "rooted", "left": root_until - t, "debuff": true})
 	if t < slow_until:
-		out.append({"name": slow_name, "left": slow_until - t, "debuff": true})
+		out.append({"name": slow_name, "id": "slowed", "left": slow_until - t, "debuff": true})
 	if t < immune_until:
-		out.append({"name": "Immune", "left": immune_until - t, "debuff": false})
+		out.append({"name": "Immune", "id": "immune", "left": immune_until - t, "debuff": false})
 	if absorb > 0:
-		out.append({"name": "Absorb %d" % absorb, "left": -1.0, "debuff": false})
+		out.append({"name": "Absorb %d" % absorb, "id": "absorb", "left": -1.0, "debuff": false})
 	return out
 
 

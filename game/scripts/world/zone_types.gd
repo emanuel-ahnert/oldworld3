@@ -5,6 +5,7 @@ extends RefCounted
 
 const TYPES := {
 	"grassland": {
+		"clouds": 0.5,
 		"name": "Grassland",
 		"ground": {"grass": "res://assets/terrain/grass.png", "dirt": "res://assets/terrain/dirt.png", "rock": "res://assets/terrain/cliff.png", "rock_top": "res://assets/terrain/cliff_top.png"},
 		"ground_tint": Color(1, 1, 1), "snow": 0.0, "snow_line": 82.0,
@@ -17,6 +18,7 @@ const TYPES := {
 		"rock_tint": Color(1.06, 0.94, 0.8), "rock_moss": Color(0.3, 0.42, 0.15, 0.6),
 	},
 	"north": {
+		"clouds": 0.55,
 		"name": "North",
 		"ground": {"grass": "res://assets/terrain/snow.png", "dirt": "res://assets/terrain/dirt.png", "rock": "res://assets/terrain/cliff.png", "rock_top": "res://assets/terrain/cliff_top.png"},
 		"ground_tint": Color(1, 1, 1), "snow": 1.0, "snow_line": 40.0,
@@ -30,6 +32,7 @@ const TYPES := {
 		"road_tint": Color(0.46, 0.47, 0.5, 0.12),   # roads: dark grey gravel and trodden snow, not brown
 	},
 	"desert": {
+		"clouds": 0.0,
 		"name": "Desert",
 		"ground": {"grass": "res://assets/terrain/sand.png", "dirt": "res://assets/terrain/sandpath.png", "rock": "res://assets/terrain/desertrock.png"},
 		"ground_tint": Color(1, 1, 1), "snow": 1.0, "tree_density": 0.3,
@@ -42,6 +45,7 @@ const TYPES := {
 		"sky": [Color(0.3, 0.52, 0.85), Color(0.9, 0.82, 0.68)],
 	},
 	"ancient": {
+		"clouds": 0.0,
 		"name": "Ancient Desert",
 		"ground": {"grass": "res://assets/terrain/sand.png", "dirt": "res://assets/terrain/sandpath.png", "rock": "res://assets/terrain/desertrock.png"},
 		"ground_tint": Color(1, 0.97, 0.9), "snow": 1.0, "tree_density": 0.15,
@@ -55,6 +59,7 @@ const TYPES := {
 		"sky": [Color(0.28, 0.5, 0.85), Color(0.95, 0.85, 0.65)],
 	},
 	"mediterranean": {
+		"clouds": 0.34,
 		"name": "Mediterranean",
 		"ground": {"grass": "res://assets/terrain/med_grass.png", "dirt": "res://assets/terrain/med_path.png", "rock": "res://assets/terrain/cliff.png", "rock_top": "res://assets/terrain/cliff_top.png"},
 		"ground_tint": Color(1, 1, 1), "snow": 0.5, "bare": 0.7, "tree_density": 0.6,
@@ -69,6 +74,7 @@ const TYPES := {
 		"rock_tint": Color(1.12, 1.0, 0.8), "rock_moss": Color(0.42, 0.44, 0.2, 0.35),
 	},
 	"unholy": {
+		"clouds": 0.75, "cloud_tint": Color(0.55, 0.55, 0.6),
 		"name": "Unholy lands",
 		"ground": {"grass": "res://assets/terrain/unholy_grass.png", "dirt": "res://assets/terrain/unholy_path.png", "rock": "res://assets/terrain/cliff.png", "rock_top": "res://assets/terrain/cliff_top.png"},
 		# A dark, dense, misty forest with a sickly green hue; eyes flare up in the bushes

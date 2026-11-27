@@ -135,11 +135,11 @@ func _refresh() -> void:
 	_left.add_child(_label("Action bar" + ("  — choose a slot" if _pending != "" and not _pending_passive else ""), 18, GILT))
 	for i in Player.SLOTS:
 		var a := player.slot_ability(i)
-		_left.add_child(_entry_row(0, i, "%d   %s" % [i + 1, a.name if not a.is_empty() else "—"], "", INK if not a.is_empty() else FADED))
+		_left.add_child(_entry_row(0, i, "%d   %s" % [i + 1, a.name if not a.is_empty() else "—"], "", INK if not a.is_empty() else FADED, String(a.get("name", ""))))
 	_left.add_child(_label("Passive slots" + ("  — choose a slot" if _pending_passive else ""), 18, GILT))
 	for j in Player.PASSIVE_SLOTS:
 		var nm: String = player.passive_loadout[j]
-		_left.add_child(_entry_row(0, Player.SLOTS + j, "◇   %s" % (nm if nm != "" else "—"), "", INK if nm != "" else FADED))
+		_left.add_child(_entry_row(0, Player.SLOTS + j, "◇   %s" % (nm if nm != "" else "—"), "", INK if nm != "" else FADED, nm))
 	_right.add_child(_label("Abilities", 18, GILT))
 	var lvl := player.stats.level
 	var entries := _entries()
@@ -163,7 +163,7 @@ func _refresh() -> void:
 	_show_details()
 
 
-func _entry_row(side: int, i: int, text: String, value: String, color: Color) -> Control:
+func _entry_row(side: int, i: int, text: String, value: String, color: Color, icon_name := "_") -> Control:
 	var h := HBoxContainer.new()
 	h.custom_minimum_size = Vector2(0, 32)
 	h.add_theme_constant_override("separation", 10)
@@ -172,6 +172,17 @@ func _entry_row(side: int, i: int, text: String, value: String, color: Color) ->
 	var gem := _label("◆" if on else "", 18, GILT)
 	gem.custom_minimum_size = Vector2(22, 0)
 	h.add_child(gem)
+	# The ability's or passive's icon before its name (dimmed when not learned yet).
+	var tex := Icons.get_icon(text if icon_name == "_" else icon_name) if (icon_name != "") else null
+	if tex:
+		var icon := TextureRect.new()
+		icon.texture = tex
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		icon.custom_minimum_size = Vector2(30, 30)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.modulate = Color.WHITE if color != FADED else Color(0.45, 0.45, 0.45)
+		h.add_child(icon)
 	var l := _label(text, 21, GILT if on else color)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
@@ -199,7 +210,7 @@ func _show_details() -> void:
 		text = "Empty passive slot." if nm == "" else ""
 		for p: Array in player.passives():
 			if p[1] == nm:
-				text = "%s\nPassive, level %d\n%s" % [p[1], int(p[0]), p[2]]
+				text = "%s\nPassive, level %d\n%s" % [p[1], int(p[0]), AbilityText.fill(p[2])]
 	elif _side == 0:
 		var a := player.slot_ability(_row[0])
 		text = AbilityText.describe(player.cls, a, _row[0] + 1) if not a.is_empty() else "Empty slot (key %d)." % (_row[0] + 1)
@@ -209,7 +220,7 @@ func _show_details() -> void:
 			text = AbilityText.describe(player.cls, e[1], 0)
 		else:
 			var p: Array = e[1]
-			text = "%s\nPassive, level %d\n%s" % [p[1], int(p[0]), p[2]]
+			text = "%s\nPassive, level %d\n%s" % [p[1], int(p[0]), AbilityText.fill(p[2])]
 	var lines := text.split("\n")
 	for k in lines.size():
 		var l := _label(lines[k], 20 if k == 0 else 16, GILT if k == 0 else INK)

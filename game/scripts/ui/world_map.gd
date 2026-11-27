@@ -95,25 +95,31 @@ func _draw_map() -> void:
 			var col: Color = COLORS.get(type, Color.GRAY)
 			_canvas.draw_rect(r, col if known else col.darkened(0.55))
 			if type == "ancient":
-				var c := r.get_center() + Vector2(0, 14)
-				_canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -14), c + Vector2(14, 8), c + Vector2(-14, 8)]), col.darkened(0.35))
+				# A small pyramid at the right, between the name and the type (clear of the text).
+				var c := r.position + Vector2(CELL - 18, CELL * 0.5 + 2)
+				_canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -8), c + Vector2(8, 5), c + Vector2(-8, 5)]), col.darkened(0.35))
 			var ink := Color(0.1, 0.08, 0.06) if col.get_luminance() > 0.45 or not known else Color(0.95, 0.92, 0.85)
 			if known:
 				var info: Dictionary = ZoneTypes.TYPES[type]
 				var name := ZoneNames.make(info.names, hash([seed, cell.x, cell.y]))
-				_canvas.draw_multiline_string(font, r.position + Vector2(5, 16), name, HORIZONTAL_ALIGNMENT_LEFT, CELL - 10, 12, 4, ink)
-				_canvas.draw_string(font, r.position + Vector2(5, CELL - 10), "%s  %d" % [info.name, ZoneTypes.difficulty(cell)], HORIZONTAL_ALIGNMENT_LEFT, CELL - 10, 11, ink)
+				# The name (at most two lines), then the type and, on a line of its own so a long
+				# type never pushes it out, the difficulty.
+				_canvas.draw_multiline_string(font, r.position + Vector2(5, 16), name, HORIZONTAL_ALIGNMENT_LEFT, CELL - 10, 12, 2, ink)
+				_canvas.draw_string(font, r.position + Vector2(5, CELL - 22), info.name, HORIZONTAL_ALIGNMENT_LEFT, CELL - 10, 11, ink)
+				_canvas.draw_string(font, r.position + Vector2(5, CELL - 8), "Difficulty %d" % ZoneTypes.difficulty(cell), HORIZONTAL_ALIGNMENT_LEFT, CELL - 10, 11, ink)
 			else:
 				_canvas.draw_string(font, r.get_center() + Vector2(-5, 6), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.9, 0.9, 0.85, 0.7))
-			if cell == ZoneTypes.home:
-				_canvas.draw_rect(r.grow(-3), Color(1, 0.85, 0.4), false, 2.0)
+			if cell == hero_cell:
+				# Where the hero is: gold over a dark edge, so it shows on the pale cells too.
+				_canvas.draw_rect(r.grow(1), Color(0.05, 0.04, 0.03), false, 5.0)
+				_canvas.draw_rect(r.grow(-1), Color(1, 0.82, 0.3), false, 3.0)
 	# The hero inside the current cell (when it is in view).
 	var local := Vector2(player.global_position.x, player.global_position.z) / Terrain.SIZE - Vector2(here)
 	if absf(local.x) <= RADIUS + 0.5 and absf(local.y) <= RADIUS + 0.5:
 		var p := origin + (Vector2(RADIUS, RADIUS) + local + Vector2(0.5, 0.5)) * CELL
 		_canvas.draw_circle(p, 6.0, Color(0, 0, 0))
 		_canvas.draw_circle(p, 4.5, Color(1, 1, 1))
-	_canvas.draw_string(font, origin + Vector2(0, span + 30), "North is up. Gold frame: where you started. Difficulty rises outward. Arrow keys scroll, M or Esc closes.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.78, 0.7))
+	_canvas.draw_string(font, origin + Vector2(0, span + 30), "North is up. Gold frame: the zone you are in. Difficulty rises outward. Arrow keys scroll, M or Esc closes.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(0.8, 0.78, 0.7))
 
 
 func _next_to_visited(cell: Vector2i) -> bool:

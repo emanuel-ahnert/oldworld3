@@ -653,3 +653,160 @@ class Crackle extends MeshInstance3D:
 				_im.surface_add_vertex(q)
 				p = q
 		_im.surface_end()
+
+
+## Frost Ring (frost nova): ice spikes burst from the ground in a wave running out to `radius`,
+## a frost mist and a frosted disc on the ground, a flash of cold light; the spikes sink back.
+static func frost_nova(at: Vector3, radius: float) -> void:
+	var n := Node3D.new()
+	World.root.add_child(n)
+	n.global_position = at
+	var ice := Color(0.62, 0.86, 1.0)
+	var count := int(radius * 6)
+	for i in count:
+		var a := TAU * i / count + randf_range(-0.12, 0.12)
+		var r := radius * sqrt(randf_range(0.08, 1.0))
+		var p := Vector3(cos(a) * r, 0, sin(a) * r)
+		var h := randf_range(0.5, 1.3) * (1.1 - 0.5 * r / radius)
+		var sp := shard(ice, h, h * 0.16, 5, 1.6, 0.9)
+		n.add_child(sp)
+		sp.position = Vector3(p.x, World.height_at(at.x + p.x, at.z + p.z) - at.y - 0.05, p.z)
+		# Pointing up and a little outward.
+		var out := Vector3(cos(a), 0, sin(a))
+		sp.basis = Basis.looking_at((Vector3.UP + out * randf_range(0.15, 0.45)).normalized(), out)
+		sp.scale = Vector3.ONE * 0.01
+		var tw := sp.create_tween()
+		tw.tween_interval(0.28 * r / radius)
+		tw.tween_property(sp, "scale", Vector3.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_interval(randf_range(0.9, 1.3))
+		tw.tween_property(sp, "position:y", sp.position.y - h * 0.9, 0.5).set_ease(Tween.EASE_IN)
+	var mist := particles(70, 0.9, 0.9, Color(0.8, 0.92, 1.0, 0.55), Color(0.6, 0.8, 1.0), false, 80.0, Vector2(2.5, radius * 1.1), Vector3(0, -0.5, 0), 0.3)
+	mist.one_shot = true
+	mist.explosiveness = 0.9
+	n.add_child(mist)
+	mist.emitting = true
+	var disc := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius
+	cm.bottom_radius = radius
+	cm.height = 0.02
+	cm.radial_segments = 40
+	disc.mesh = cm
+	var dm := _emissive(Color(0.75, 0.9, 1.0), 0.5, 0.16)
+	disc.material_override = dm
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	disc.position.y = 0.06
+	disc.scale = Vector3(0.1, 1, 0.1)
+	n.add_child(disc)
+	var light := OmniLight3D.new()
+	light.light_color = ice
+	light.light_energy = 3.0
+	light.omni_range = radius * 1.2
+	light.position.y = 1.0
+	n.add_child(light)
+	var tw2 := n.create_tween().set_parallel(true)
+	tw2.tween_property(disc, "scale", Vector3.ONE, 0.3)
+	tw2.tween_property(light, "light_energy", 0.0, 0.6)
+	tw2.tween_property(dm, "albedo_color:a", 0.0, 1.1).set_delay(0.2)
+	tw2.chain().tween_interval(0.4)
+	tw2.chain().tween_callback(n.queue_free)
+
+
+## Held fast (Frost Ring's ice, Grasping Roots): on `body`'s feet for `duration` s, then gone.
+## kind "ice": a block of ice crystals around the feet; "roots": gnarled roots grow up out of the
+## ground and coil round the legs, and sink back at the end.
+static func bind_feet(body: Node3D, duration: float, kind: String, size := 1.0) -> void:
+	var n := Node3D.new()
+	body.add_child(n)
+	n.top_level = false
+	if kind == "ice":
+		var ice := Color(0.7, 0.9, 1.0)
+		for i in 9:
+			var a := TAU * i / 9 + randf_range(-0.2, 0.2)
+			var h := randf_range(0.35, 0.7) * size
+			var sp := shard(ice, h, h * 0.28, 5, 1.0, 0.75)
+			n.add_child(sp)
+			var out := Vector3(cos(a), 0, sin(a))
+			sp.position = out * 0.25 * size
+			sp.basis = Basis.looking_at((Vector3.UP + out * 0.5).normalized(), out)
+			sp.scale = Vector3.ONE * 0.01
+			var tw := sp.create_tween()
+			tw.tween_property(sp, "scale", Vector3.ONE, 0.15).set_delay(i * 0.012)
+			tw.tween_interval(maxf(0.1, duration - 0.5))
+			tw.tween_property(sp, "scale", Vector3.ONE * 0.01, 0.3)
+	else:
+		var bark := StandardMaterial3D.new()
+		bark.albedo_color = Color(0.24, 0.17, 0.1)
+		bark.roughness = 1.0
+		var leaf := _emissive(Color(0.45, 0.8, 0.3), 0.6, 1.0)
+		for i in 6:
+			var root := _root_mesh(randf_range(0.7, 1.1) * size, TAU * i / 6 + randf_range(-0.3, 0.3), size)
+			root.material_override = bark
+			n.add_child(root)
+			root.scale = Vector3(1, 0.01, 1)
+			var tw := root.create_tween()
+			tw.tween_property(root, "scale", Vector3.ONE, 0.45).set_delay(i * 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			tw.tween_interval(maxf(0.1, duration - 0.9))
+			tw.tween_property(root, "scale", Vector3(1, 0.01, 1), 0.4)
+		var sprout := particles(10, 1.2, 0.12, Color(0.55, 0.9, 0.35, 0.8), Color(0.3, 0.6, 0.2), false, 50.0, Vector2(0.2, 0.5), Vector3(0, -0.3, 0), 0.4 * size)
+		sprout.one_shot = true
+		sprout.explosiveness = 0.8
+		n.add_child(sprout)
+		sprout.emitting = true
+	var t := n.create_tween()
+	t.tween_interval(duration + 0.5)
+	t.tween_callback(n.queue_free)
+
+
+## One root: a tapering tube rising out of the ground beside the feet and curling in round them.
+static func _root_mesh(height: float, angle: float, size: float) -> MeshInstance3D:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var steps := 9
+	var sides := 5
+	var rings: Array = []
+	for i in steps + 1:
+		var f := float(i) / steps
+		# A spiral: out at the ground, round and in toward the legs as it climbs.
+		var a := angle + f * 2.4
+		var rad := (0.42 - 0.22 * f) * size
+		var c := Vector3(cos(a) * rad, -0.1 + f * height, sin(a) * rad)
+		var thick := (0.07 * (1.0 - f) + 0.012) * size
+		var ring: Array = []
+		for k in sides:
+			var b := TAU * k / sides
+			ring.append(c + Vector3(cos(b) * thick, sin(b) * thick * 0.5, sin(b) * thick))
+		rings.append(ring)
+	for i in steps:
+		for k in sides:
+			var a0: Vector3 = rings[i][k]
+			var a1: Vector3 = rings[i][(k + 1) % sides]
+			var b0: Vector3 = rings[i + 1][k]
+			var b1: Vector3 = rings[i + 1][(k + 1) % sides]
+			for v in [a0, b0, b1, a0, b1, a1]:
+				st.add_vertex(v)
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+
+## A puff of colored sparkles (Polymorph turning someone into a sheep and back).
+static func puff(at: Vector3, c: Color) -> void:
+	var n := Node3D.new()
+	World.root.add_child(n)
+	n.global_position = at
+	var p := particles(40, 0.7, 0.25, Color(c.r, c.g, c.b, 0.9), Color(1, 1, 1), true, 180.0, Vector2(1.0, 2.5), Vector3(0, -1.0, 0), 0.4)
+	p.one_shot = true
+	p.explosiveness = 0.95
+	n.add_child(p)
+	p.emitting = true
+	var smoke := particles(14, 0.9, 0.7, Color(1, 0.9, 1, 0.5), Color(1, 1, 1), false, 180.0, Vector2(0.3, 0.9), Vector3(0, 0.5, 0), 0.3)
+	smoke.one_shot = true
+	smoke.explosiveness = 0.9
+	n.add_child(smoke)
+	smoke.emitting = true
+	var t := n.create_tween()
+	t.tween_interval(1.5)
+	t.tween_callback(n.queue_free)

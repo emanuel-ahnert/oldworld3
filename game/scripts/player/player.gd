@@ -33,7 +33,7 @@ const SWING := 2.6                  ## two-handed sword swing time
 ## Warrior abilities (design/classes.md, section 2.2). key: action bar slot (1-based).
 const ABILITIES_WARRIOR := [
 	{"id": "heavy_strike", "name": "Heavy Strike", "key": 1, "level": 1, "rage": 15, "cd": 0.0, "power": 50.0},
-	{"id": "battle_cry", "name": "Battle Cry", "key": 2, "level": 1, "rage": 0, "cd": 120.0, "gain": 10},
+	{"id": "battle_horn", "name": "Battle Horn", "key": 2, "level": 1, "rage": 0, "cd": 30.0, "gain": 20},
 	{"id": "overwhelm", "name": "Overwhelm", "key": 3, "level": 2, "rage": 5, "cd": 0.0, "power": 100.0},
 	{"id": "thunder_clap", "name": "Thunder Clap", "key": 6, "level": 4, "rage": 20, "cd": 6.0, "power": 25.0},
 	{"id": "charge", "name": "Charge", "key": 5, "level": 6, "rage": 0, "cd": 15.0, "gain": 15},
@@ -58,7 +58,11 @@ const ABILITIES_MAGE := [
 	{"id": "blink", "name": "Blink", "key": 6, "level": 6, "mana": 15, "cd": 15.0, "cast": 0.0},
 	{"id": "fireball", "name": "Fireball", "key": 8, "level": 10, "mana": 25, "cd": 0.0, "cast": 2.0, "power": 60.0, "element": "Fire", "range": 30.0},
 	{"id": "blizzard", "name": "Blizzard", "key": 7, "level": 8, "mana": 45, "cd": 0.0, "channel": 6.0, "tick": 1.0, "power": 22.0, "element": "Ice", "range": 30.0},
+	{"id": "polymorph", "name": "Polymorph", "key": 9, "level": 5, "mana": 30, "cd": 0.0, "cast": 1.5, "range": 30.0},
 ]
+## Polymorph: the target a sheep for POLYMORPH_TIME s (any damage breaks it; Enemy.polymorph).
+const POLYMORPH_TIME := 20.0
+var _sheeped: Enemy                 ## the enemy this hero's Polymorph holds (one at a time)
 ## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
 const BLIZZARD_RADIUS := 8.0
 
@@ -422,7 +426,9 @@ func _unhandled_input(event: InputEvent) -> void:
 ## 1 = zoom out ("-"), -1 = zoom in ("."), 0 = not a zoom key.
 ## F2: run forward until a key is pressed that isn't strafing or turning (or F2 again).
 var autorun := false
-const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right"]
+## Keys that leave autorun running: steering, jumping, and the windows (bags, the world map,
+## the abilities, help), which should never stop the hero (opening the map looked like a pause).
+const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right", "jump", "bags", "map", "spellbook", "help"]
 
 
 func _autorun_input(event: InputEvent) -> void:
@@ -576,8 +582,10 @@ func set_loadout(ids: Array) -> void:
 	if ids.size() != SLOTS:
 		return
 	var known := abilities().map(func(a): return a.id)
+	const RENAMED := {"battle_cry": "battle_horn"}      # saves from before an ability was renamed
 	for i in SLOTS:
-		loadout[i] = String(ids[i]) if String(ids[i]) in known else ""
+		var id := String(RENAMED.get(String(ids[i]), String(ids[i])))
+		loadout[i] = id if id in known else ""
 	loadout_changed.emit()
 
 
@@ -660,11 +668,11 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 		return "Can't do that now"
 	if t < float(cooldowns.get(a.id, 0.0)):
 		return "Not ready yet"
-	if a.id != "battle_cry" and t < gcd_until and not ignore_gcd:
+	if a.id != "battle_horn" and t < gcd_until and not ignore_gcd:
 		return "Not ready yet"
 	if bear and a.id != "bear_form":
 		return "Not in Bear Form"
-	if whirling and a.id not in ["whirlwind", "battle_cry"]:
+	if whirling and a.id not in ["whirlwind", "battle_horn"]:
 		return "Whirlwinding"
 	if not casting.is_empty():
 		return "Already casting"
@@ -675,7 +683,7 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 	if stats.energy < float(a.get("energy", 0)):
 		return "Not enough energy"
 	match a.id:
-		"battle_cry", "thunder_clap", "frost_ring", "mana_shield", "blink", "whirlwind":
+		"battle_horn", "thunder_clap", "frost_ring", "mana_shield", "blink", "whirlwind":
 			return ""
 		"stealth":
 			return "Not while in combat" if stats.in_combat() else ""
@@ -707,7 +715,7 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 
 
 ## Abilities without the "self" flag that are no attack (they don't start auto-attack).
-const NOT_ATTACKS := ["battle_cry", "mana_shield", "blink", "stealth"]
+const NOT_ATTACKS := ["battle_horn", "mana_shield", "blink", "stealth"]
 
 
 func use_ability(key: int) -> void:
@@ -735,6 +743,7 @@ func use_ability(key: int) -> void:
 		return
 	break_camp()
 	var t := Combatant.now()
+	_hold_swing(a, t)
 	if a.has("channel"):
 		# A channel: paid when it starts, then it works every tick while the hero stands still.
 		_spend_and_cooldown(a, t)
@@ -753,6 +762,15 @@ func use_ability(key: int) -> void:
 	_execute(a)
 
 
+## Casters don't swing while they cast: a spell (cast, channel or instant) holds the auto-attack
+## until a full swing after it ends, so the staff is only the fallback when the mana runs out.
+func _hold_swing(a: Dictionary, t: float) -> void:
+	if not (cls in CASTERS) or bear or float(a.get("mana", 0)) <= 0.0:
+		return
+	var ends := t + float(a.get("channel", a.get("cast", 0.0)))
+	_swing_at = maxf(_swing_at, ends + stats.swing_time)
+
+
 func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 	stats.rage -= float(a.get("rage", 0))
 	stats.mana -= float(a.get("mana", 0))
@@ -765,7 +783,7 @@ func _spend_and_cooldown(a: Dictionary, t: float) -> void:
 		cooldowns[a.id] = t + float(a.cd)
 	# The global cooldown follows instant abilities only: a spell with a cast time is free to
 	# chain into the next one the moment it goes off (its cast already took longer).
-	if a.id != "battle_cry" and float(a.get("cast", 0.0)) <= 0.0:
+	if a.id != "battle_horn" and float(a.get("cast", 0.0)) <= 0.0:
 		gcd_until = maxf(gcd_until, t + GCD)
 
 
@@ -781,10 +799,10 @@ func _execute(a: Dictionary) -> void:
 		"overwhelm":
 			overwhelm_until = 0.0
 			_melee_hit(float(a.power), "attack2", 1.0, true)
-		"battle_cry":
+		"battle_horn":
+			# Battle Horn: a blast on the war horn, 20 rage (no damage bonus any more).
 			stats.rage = minf(100.0, stats.rage + float(a.gain))
-			stats.add_buff("battle_cry", 120.0, {"attack": 1.25})
-			World.float_text(global_position + Vector3(0, 2.2, 0), "Battle Cry", Color(1, 0.8, 0.3), 40, self)
+			World.float_text(global_position + Vector3(0, 2.2, 0), "Battle Horn", Color(1, 0.8, 0.3), 40, self)
 			Audio.sfx("battle_cry")
 		"thunder_clap":
 			model.anim.play_shot("strike")
@@ -870,6 +888,7 @@ func _execute(a: Dictionary) -> void:
 			model.anim.play_shot("release")
 			_spell_hit(target, float(a.power), "Nature")
 			target.stats.root_until = Combatant.now() + 6.0
+			SpellFx.bind_feet(target, 6.0, "roots", target.foot_size())
 			World.float_text(target.global_position + Vector3(0, 1.6, 0), "Rooted", Color(0.5, 0.8, 0.3), 34, target)
 			target.engage()
 		"bear_form":
@@ -917,7 +936,7 @@ func _execute(a: Dictionary) -> void:
 			SpellFx.hellfire(c, HELLFIRE_RADIUS, func():
 				for e in World.enemies:
 					if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < HELLFIRE_RADIUS:
-						_spell_hit(e, power, "Fire")
+						_spell_hit(e, power, "Fire", false)
 						e.engage())
 		"curse_of_weakness":
 			model.anim.play_shot("release")
@@ -958,7 +977,7 @@ func _execute(a: Dictionary) -> void:
 			model.anim.play_shot("release")
 			var e := target
 			Projectile.launch(global_position + Vector3(0, 1.4, 0) - global_transform.basis.z * 0.5, e, Color(0.8, 0.8, 0.85), func():
-				if e.stats.dead:
+				if e.stats.dead or _smoke_miss(e):
 					return
 				var r := stats.roll_damage(e.stats, float(a.power), false, _ambush())
 				e.stats.take_damage(r.amount, r.crit, stats)
@@ -970,20 +989,30 @@ func _execute(a: Dictionary) -> void:
 			message.emit("Stealth" if stealthed else "")
 		"frost_ring":
 			model.anim.play_shot("release")
-			_ring_effect(Color(0.6, 0.85, 1.0), 8.0)
+			SpellFx.frost_nova(Vector3(global_position.x, World.height_at(global_position.x, global_position.z), global_position.z), 8.0)
 			Audio.sfx("water")
 			for e in World.enemies:
 				if not e.stats.dead and e.global_position.distance_to(global_position) < 8.0:
-					_spell_hit(e, float(a.power), "Ice")
+					_spell_hit(e, float(a.power), "Ice", false)
 					e.stats.root_until = Combatant.now() + 5.0
+					SpellFx.bind_feet(e, 5.0, "ice", e.foot_size())
 					e.engage()
+		"polymorph":
+			model.anim.play_shot("release")
+			# One sheep at a time: a new Polymorph turns the last one back.
+			if is_instance_valid(_sheeped) and _sheeped != target and _sheeped.is_sheep():
+				_sheeped.end_polymorph()
+			target.polymorph(POLYMORPH_TIME)
+			_sheeped = target
+			World.float_text(target.global_position + Vector3(0, 1.6, 0), "Polymorph", Color(1, 0.65, 0.95), 34, target)
+			Audio.sfx("magic")
 		"mana_shield":
 			stats.add_buff("mana_shield", 20.0, {})
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Mana Shield", Color(0.6, 0.7, 1.0), 40, self)
 			Audio.sfx("magic")
 		"ignite":
 			model.anim.play_shot("release")
-			target.stats.add_dot("ignite", 24.0, 1.0 / 32.0, stats)
+			target.stats.add_dot("ignite", 24.0, 0.05, stats)
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Ignite", Color(1, 0.55, 0.2), 36, target)
 			Audio.sfx("fireball", -4.0)
 			target.engage()
@@ -995,7 +1024,7 @@ func _execute(a: Dictionary) -> void:
 			stats.root_until = 0.0
 			stats.slow_until = 0.0
 			Audio.sfx("magic")
-	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_cry", "stealth"]):
+	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_horn", "stealth"]):
 		auto_attacking = true
 
 
@@ -1022,11 +1051,23 @@ func _bolt(a: Dictionary) -> void:
 			e.stats.slow(6.0, 0.6)
 		if a.id == "fireball" and not e.stats.dead:
 			# Fireball: sets the target alight (Ignite's burn).
-			e.stats.add_dot("ignite", 24.0, 1.0 / 32.0, stats)
+			e.stats.add_dot("ignite", 24.0, 0.05, stats)
 		e.engage(), 1.7 if a.id == "fireball" else 1.0)
 
 
-func _spell_hit(e: Enemy, power: float, element: String) -> void:
+## Smoke between the hero and a target farther than World.SMOKE_CLEAR: half the ranged attacks
+## and spells miss ("Miss", the miss sound); melee isn't hindered.
+func _smoke_miss(e: Enemy) -> bool:
+	if World.smoke_blocks(global_position + Vector3(0, 1.4, 0), e.global_position + Vector3(0, 1.0, 0)) and randf() < 0.5:
+		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Miss", Color(0.8, 0.8, 0.8), 40, e)
+		Audio.sfx("miss")
+		return true
+	return false
+
+
+func _spell_hit(e: Enemy, power: float, element: String, aimed := true) -> void:
+	if aimed and _smoke_miss(e):
+		return
 	var r := stats.roll_spell(e.stats, power, element)
 	e.stats.take_damage(r.amount, r.crit, stats)
 	stats.mark_combat()
@@ -1092,7 +1133,7 @@ func _channel_tick(a: Dictionary, c: Vector3) -> void:
 		"blizzard":
 			for e in World.enemies:
 				if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < BLIZZARD_RADIUS:
-					_spell_hit(e, float(a.power), "Ice")
+					_spell_hit(e, float(a.power), "Ice", false)
 					e.stats.slow(2.0, 0.5, "Chilled")
 					e.engage()
 
@@ -1221,7 +1262,7 @@ func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bo
 		Audio.sfx("miss", -4.0)              # it got away during the swing
 		return
 	stats.mark_combat()
-	if not no_miss and (World.in_smoke(global_position) or e.is_flying()) and randf() < 0.5:
+	if not no_miss and e.is_flying() and randf() < 0.5:
 		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Miss", Color(0.8, 0.8, 0.8), 40, e)
 		Audio.sfx("miss")
 		overwhelm_until = Combatant.now() + 5.0
@@ -1257,7 +1298,7 @@ func _arrow(e: Enemy, power: float, element: String, kind: String) -> void:
 	Audio.sfx("bow_shot%d" % (randi() % 3 + 1), -3.0)
 	stats.mark_combat()
 	Projectile.arrow(global_position + Vector3(0, 1.4, 0) - global_transform.basis.z * 0.5, e, func():
-		if e.stats.dead:
+		if e.stats.dead or _smoke_miss(e):
 			return
 		var r := stats.roll_damage_elem(e.stats, power, element) if element != "Physical" else stats.roll_damage(e.stats, power, kind == "auto")
 		stats.auto_hit = kind == "auto"
@@ -1421,7 +1462,7 @@ func _combat_process(t: float) -> void:
 			_swing_at = t + stats.swing_time
 			_arrow(target, Rules.swing_power(stats.swing_time), "Physical", "auto")
 			return
-	if auto_attacking and target and t >= _swing_at and not stats.stunned():
+	if auto_attacking and target and t >= _swing_at and not stats.stunned() and casting.is_empty():
 		if _target_distance() <= _melee_reach(target) and _facing_target(75.0 if _moving() else 60.0):
 			_swing_at = t + stats.swing_time
 			stats.auto_hit = true

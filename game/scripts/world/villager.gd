@@ -14,6 +14,10 @@ var _model: Humanoid
 var _target := Vector3.ZERO
 var _wait := 0.0
 var _rng := RandomNumberGenerator.new()
+## A guard (Settlement, at the palisade's gates): its own look (Humanoid cfg), standing still,
+## facing `face` (world yaw) unless the hero is close.
+var look := {}
+var face := NAN
 
 
 func setup(p_outfit: String, p_home: Vector3, p_terrain: Terrain, p_wander: bool, seed: int) -> void:
@@ -29,10 +33,10 @@ func _ready() -> void:
 	_model = Humanoid.new()
 	add_child(_model)
 	var dir := "res://assets/characters/%s/" % outfit
-	_model.build({"outfit": dir + outfit, "pick": [1, 1, 1, 1, 1]})
+	_model.build(look if not look.is_empty() else {"outfit": dir + outfit, "pick": [1, 1, 1, 1, 1]})
 	position = home
 	position.y = terrain.height_at(home.x, home.z)
-	rotation.y = atan2(home.x, home.z)          # face the plaza's center (units face -Z)
+	rotation.y = atan2(home.x, home.z) if is_nan(face) else face      # face the plaza's center (units face -Z)
 	_target = home
 	_wait = _rng.randf_range(1.0, 6.0)
 	for gi in _model.find_children("*", "GeometryInstance3D", true, false):
@@ -52,6 +56,8 @@ func _process(dt: float) -> void:
 		return
 	if not wander:
 		_model.anim.set_move("idle")
+		if not is_nan(face):
+			rotation.y = lerp_angle(rotation.y, face, minf(1.0, dt * 3.0))      # back to the post
 		return
 	if to.length() < 0.3:
 		_model.anim.set_move("idle")

@@ -63,6 +63,48 @@ vec3 rock_triplanar_t(vec3 p, vec3 n, float tile, vec3 dx, vec3 dy) {
 	return c / max(w.x * step(0.02, w.x) + w.y * step(0.02, w.y) + w.z * step(0.02, w.z), 0.001);
 }
 
+// Stochastic hex tiling (after Heitz & Neyret / Mikkelsen): the ground is split into large
+// hexagonal cells (HEX_CELL texture repeats across), each reading the texture with its own random
+// offset and rotation, blended over the cells' corners. No grid of repeats shows; three reads
+// replace the two it took before (the second, rotated read only softened the repeat).
+const float HEX_CELL = 2.6;
+
+vec2 hex_hash(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.xx + q.yz) * q.zy);
+}
+
+vec3 hex_sample(sampler2D tex, vec2 uv, vec2 dx, vec2 dy) {
+	vec2 st = uv / HEX_CELL * 3.4641;
+	vec2 skew = vec2(st.x - 0.57735027 * st.y, 1.15470054 * st.y);
+	vec2 base = floor(skew);
+	vec3 f = vec3(fract(skew), 0.0);
+	f.z = 1.0 - f.x - f.y;
+	vec3 w;
+	vec2 v1, v2, v3;
+	if (f.z > 0.0) {
+		w = vec3(f.z, f.y, f.x); v1 = base; v2 = base + vec2(0.0, 1.0); v3 = base + vec2(1.0, 0.0);
+	} else {
+		w = vec3(-f.z, 1.0 - f.y, 1.0 - f.x); v1 = base + vec2(1.0); v2 = base + vec2(1.0, 0.0); v3 = base + vec2(0.0, 1.0);
+	}
+	vec3 c = vec3(0.0);
+	vec3 wsum = vec3(0.0);
+	vec2 vs[3] = vec2[3](v1, v2, v3);
+	for (int i = 0; i < 3; i++) {
+		vec2 h = hex_hash(vs[i]);
+		float a = h.x * 6.2832;
+		mat2 rot = mat2(vec2(cos(a), sin(a)), vec2(-sin(a), cos(a)));
+		vec2 ouv = rot * uv + h * 17.0;
+		vec3 s = textureGrad(tex, ouv, rot * dx, rot * dy).rgb;
+		// Sharper blending than linear keeps the texture's contrast where cells meet.
+		float k = pow(w[i], 5.0);
+		c += s * k;
+		wsum += vec3(k);
+	}
+	return c / max(wsum.x, 1e-5);
+}
+
 void fragment() {
 	// Texture reads are the main cost on integrated graphics (the terrain was half of the frame):
 	// rock and dirt are only sampled where they show (branches are coherent: whole screen areas
@@ -70,12 +112,8 @@ void fragment() {
 	vec2 uv = wpos.xz;
 	vec3 dpx = dFdx(wpos);
 	vec3 dpy = dFdy(wpos);
-	vec3 g = texture(grass_tex, uv / grass_tile).rgb;
-	// Second read, rotated and a little larger, hides the repetition (a much larger scale
-	// showed giant blades).
-	vec2 ruv = vec2(uv.x * 0.8 - uv.y * 0.6, uv.x * 0.6 + uv.y * 0.8);
-	vec3 g2 = texture(grass_tex_plain, ruv / (grass_tile * 2.9) + vec2(0.37, 0.71)).rgb;
-	g = mix(g, g2, 0.45);
+	// The grass without a visible repeat: stochastic hex tiling (hex_sample).
+	vec3 g = hex_sample(grass_tex, uv / grass_tile, dpx.xz / grass_tile, dpy.xz / grass_tile);
 	// Large-scale tint variation so meadows are not one flat green.
 	g *= mix(0.82, 1.08, large.x);
 	g = mix(mix(vec3(dot(g, vec3(0.3, 0.59, 0.11))), g, 0.82) * 0.88, g * 1.02, snow);   // grass: a bit less saturated
@@ -106,7 +144,7 @@ void fragment() {
 		// with a noise pattern (the grass texture's brightness at a mid scale).
 		float n = n_mid * 0.6 + 0.2;
 		float dw = smoothstep(0.35, 0.65, dirt_w * 1.15 - (n - 0.45) * 0.9);
-		vec3 d = textureGrad(dirt_tex, uv / dirt_tile, dpx.xz / dirt_tile, dpy.xz / dirt_tile).rgb;
+		vec3 d = hex_sample(dirt_tex, uv / dirt_tile, dpx.xz / dirt_tile, dpy.xz / dirt_tile);
 		// Pull the generated soil toward a muted earth brown, with large-scale variation.
 		d = mix(vec3(dot(d, vec3(0.33))), d, road_sat) * road_tint;
 		d *= mix(0.85, 1.1, large.y);
@@ -114,7 +152,7 @@ void fragment() {
 	}
 	if (shore_w > 0.01) {
 		// Lake shores and beds: pale wet sand.
-		vec3 sand = textureGrad(dirt_tex, uv / 2.4, dpx.xz / 2.4, dpy.xz / 2.4).rgb;
+		vec3 sand = hex_sample(dirt_tex, uv / 2.4, dpx.xz / 2.4, dpy.xz / 2.4);
 		sand = mix(vec3(dot(sand, vec3(0.33))), sand, 0.4) * vec3(0.82, 0.76, 0.62);
 		col = mix(col, sand, smoothstep(0.1, 0.6, shore_w));
 	}

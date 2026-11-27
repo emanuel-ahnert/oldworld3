@@ -904,6 +904,57 @@ What was built overnight while the user slept, in order. Start the game from VS 
        builds a knobbly wooden club (knots, leather grip, iron studs). Goblins, trolls,
        berserkers, nomads, corsairs and hoplites with "weapon": "club" carry it.
 
+125. **Ability icons; Battle Horn; Polymorph; frost and root effects; ground without repeats.**
+     - Icons for every ability, passive and effect (tools/icons: prompts.txt, make_icons.sh, SDXL on
+       the GPU box through gen3d, a hand-painted comic style; 128 px in assets/ui/icons). Icons
+       (scripts/ui/icons.gd: id = snake_case of the name) on the action bar, in the abilities menu,
+       the buff/debuff rows (seconds over the icon, the name in the tooltip) and as a row of
+       debuff billboards above enemy nameplates. Combatant.auras() carries an id.
+     - World map: the gold frame marks the zone the hero is in; the difficulty on its own line.
+       Minimap: zones drawn at their full 1024 m (only 400 m before: dark patches).
+     - Autorun keeps going through jump, bags, map, abilities and help.
+     - Battle Cry is Battle Horn: 20 rage, 30 s cooldown, no damage bonus (saves converted).
+     - Casters don't swing while casting: a spell holds the auto-attack until a swing after it.
+       Ignite 5% max HP every 3 s.
+     - Polymorph (mage, level 5, 1.5 s cast): the target a sheep (scripts/enemies/sheep.gd) for
+       20 s, wandering, harmless, healing 20% HP a second; any damage breaks it; one sheep per
+       hero (a new Polymorph frees the last). Test: --sheep-test.
+     - Icon prompts: the subject first ("game icon of ..."), the style short after; with the long
+       style first SDXL lost the subject (19 icons redone, two takes each, the better one kept:
+       VARIANT=b SEED_SHIFT=n tools/icons/make_icons.sh <ids>).
+     - Tooltips (scripts/ui/tip.gd): a panel anchored right of the mouse cursor (its left side
+       at the screen's edge), following it; name in gold, the small print in grey, then the
+       description. On the action bar and the buff/debuff icons (AbilityText.describe_aura:
+       the ability of any class, else EFFECTS; the seconds left update live). Test: --hover X,Y.
+     - Nameplate debuff icons left-aligned on the bar, the row turned to the camera.
+     - Smoke Screen (bandits, nomads, corsairs) turned round: it no longer makes melee miss;
+       ranged attacks and spells (arrows, Knife Throw, bolts) from farther than 8 m whose line
+       passes through a cloud miss half the time (World.smoke_blocks). Ground area spells
+       (Blizzard, Hellfire Rain) and Frost Ring aren't hindered.
+     - Palisade round every settlement (scripts/world/palisade.gd): a ring of upright logs
+       sharpened at the top, ~2 m, 47 m from the plaza (past the houses and the inn), open
+       8 m where a road crosses, each gate framed by two taller posts; one MultiMesh, thin
+       collision boxes along the closed stretches. Two guards inside every gate (Villager with
+       a look: plate, helmet, sword and shield; facing out, turning to the hero when close).
+       Trees keep clear of the wall's line. Monsters don't path round it (they come in through
+       a gate only when chasing straight through one). Test: --gate-view N.
+     - Guards face out of their gate (the first version had them watching the village), in
+       each land's dress (Settlement.GUARD_LOOKS): knights in plate in the grassland, berserkers
+       with axe and shield in the north, nomads with a sword in the desert, white-robed temple
+       guardians with mace and shield by the pyramids, hoplites with sword and shield by the
+       Mediterranean, dark-leathered hunters in the unholy lands. Test: --outfits a,b,c.
+     - Clouds (shaders/clouds.gdshader, DayNight): a dome round the camera inside the far plane
+       (in front of the moon); each view ray goes up to a flat cloud layer of drifting layered
+       noise; sunlit tops and grey undersides with the time of day (warm at dusk, dark at night),
+       faded into the horizon. Cover per zone type ("clouds"): grassland 0.5, north 0.55,
+       Mediterranean 0.34 (a few), unholy 0.75 (dark), deserts none. ~2 fps at Medium.
+     - Frost Ring: SpellFx.frost_nova (ice spikes bursting out in a wave, mist, a frosted disc)
+       and ice round the held enemies' feet; Grasping Roots: roots growing round the legs
+       (SpellFx.bind_feet).
+     - Ground: stochastic hex tiling for grass, roads and shores (terrain.gdshader hex_sample):
+       random offset and rotation per large hex cell, no visible repeat (~1% of the frame).
+     - Title pictures retaken with today's look (High, no HUD).
+
 
 ## Known issues / next
 

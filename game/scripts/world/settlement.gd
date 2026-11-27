@@ -6,6 +6,25 @@ extends Node3D
 ## combat makes one the respawn point and heals fully.
 
 const CHECK_RADIUS := 6.0
+## The gate guards in each land's own dress: knights in plate in the green countryside,
+## a berserker's furs and axe in the north, a nomad's headwrap and sword in the desert, the
+## temple guardians' white robes by the pyramids, a hoplite's armor and shield by the
+## Mediterranean, a monster-hunter's dark leathers in the unholy lands.
+const GUARD_LOOKS := {
+	"grassland": {"outfit": "res://assets/characters/warrior/plate", "pick": [0, 1, 1, 1, 1],
+		"helmet": "res://assets/characters/warrior/helmet.glb", "weapon": "res://assets/characters/warrior/sword.glb",
+		"shield": "res://assets/weapons/shield.glb"},
+	"north": {"outfit": "res://assets/characters/berserker/berserker", "pick": [1, 1, 1, 1, 1],
+		"weapon": "res://assets/weapons/axe.glb", "shield": "res://assets/weapons/shield.glb"},
+	"desert": {"outfit": "res://assets/characters/nomad/nomad", "pick": [1, 1, 1, 1, 1],
+		"weapon": "res://assets/characters/warrior/sword.glb"},
+	"ancient": {"outfit": "res://assets/characters/guardian/guardian", "pick": [1, 1, 1, 1, 1],
+		"weapon": "res://assets/weapons/mace.glb", "shield": "res://assets/weapons/shield.glb"},
+	"mediterranean": {"outfit": "res://assets/characters/hoplite/hoplite", "pick": [1, 1, 1, 1, 1],
+		"weapon": "res://assets/characters/warrior/sword.glb", "shield": "res://assets/weapons/shield.glb"},
+	"unholy": {"outfit": "res://assets/characters/hunter/hunter", "pick": [1, 1, 1, 1, 1],
+		"weapon": "res://assets/characters/warrior/sword.glb"},
+}
 
 var _at_inn := false
 var checkpoints: Array[Dictionary] = []     ## {name, pos, spawn}
@@ -100,6 +119,20 @@ func build(zone: Zone, seed: int) -> void:
 		v.setup(pp[0], pp[1], terrain, pp[2], seed + i)
 		add_child(v)
 	Well.build(self, terrain, Vector3(6, 0, -6), 0.3)
+	# The palisade round the village, open to the roads; two guards inside each gate, facing out.
+	var wall := Palisade.new()
+	add_child(wall)
+	wall.build(terrain, seed)
+	for gi in wall.gates().size():
+		var g: Dictionary = wall.gates()[gi]
+		var out: Vector3 = g.out
+		var side := Vector3(out.z, 0, -out.x)
+		for k in [-1.0, 1.0]:
+			var gv := Villager.new()
+			gv.look = GUARD_LOOKS.get(zone.type, GUARD_LOOKS.grassland)
+			gv.face = atan2(-out.x, -out.z)               # looking out of the gate (units face -Z)
+			gv.setup("guard", Vector3(g.pos) + side * k * (Palisade.GATE * 0.5 - 0.6), terrain, false, seed + 40 + gi * 2 + int(k))
+			add_child(gv)
 	for s in shrine_spots(terrain):
 		_place("res://assets/buildings/shrine.glb", terrain, s, 2.8, rng.randf() * TAU, true)
 		checkpoints.append({"name": "the shrine", "pos": s + origin, "spawn": s + Vector3(2.5, 0, 0) + origin})

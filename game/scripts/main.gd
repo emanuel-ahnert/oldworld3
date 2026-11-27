@@ -883,6 +883,45 @@ func _process(_dt: float) -> void:
 	if args.has("quest-one-done") and player and _frame == 60 and not player.quests.active.is_empty():
 		player.quests.active[0].have = player.quests.active[0].need     # test: one quest done
 		player.quests_changed.emit()
+	if args.has("hover") and _frame >= int(args.get("hover-at", 200)):
+		# Test: the mouse resting at X,Y (screen pixels): tooltips.
+		var hp: PackedStringArray = String(args.hover).split(",")
+		var mm := InputEventMouseMotion.new()
+		mm.position = Vector2(float(hp[0]), float(hp[1]))
+		mm.global_position = mm.position
+		get_viewport().warp_mouse(mm.position)
+		get_viewport().push_input(mm)
+	if args.has("gate-view") and player and _frame == 40:
+		# Test: the hero 9 m outside the start village's first gate, looking in.
+		var hz: Zone = zones.zone_at(player.global_position)
+		var pal: Palisade = hz.settlement.get_node_or_null("Palisade") if hz and hz.settlement else null
+		if pal and not pal.gates().is_empty():
+			var g: Dictionary = pal.gates()[mini(int(args.get("gate-view", 0)) if String(args["gate-view"]).is_valid_int() else 0, pal.gates().size() - 1)]
+			var out: Vector3 = g.out
+			var at: Vector3 = hz.position + out * (Palisade.RADIUS + 9.0)
+			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
+			player.rotation.y = atan2(out.x, out.z)
+	if args.has("outfits") and player and _frame == 60:
+		# Test: outfits (characters/<name>) side by side in front of the hero.
+		var names: PackedStringArray = String(args.outfits).split(",")
+		for i in names.size():
+			var h := Humanoid.new()
+			add_child(h)
+			h.build({"outfit": "res://assets/characters/%s/%s" % [names[i], names[i]], "pick": [1, 1, 1, 1, 1]})
+			var q := player.global_position - player.global_basis.z * 4.0 + player.global_basis.x * (i - (names.size() - 1) / 2.0) * 1.1
+			h.global_position = Vector3(q.x, World.height_at(q.x, q.z), q.z)
+			h.rotation.y = player.rotation.y + PI
+		player.model.visible = false
+	if args.has("sheep-test") and player and _frame == 60:
+		# Test: two sheep (Polymorph's) in front of the hero, one walking.
+		for i in 2:
+			var sh := Sheep.new()
+			add_child(sh)
+			var q := player.global_position - player.global_basis.z * 3.0 + player.global_basis.x * (i - 0.5) * 1.6
+			sh.global_position = Vector3(q.x, World.height_at(q.x, q.z), q.z)
+			sh.rotation.y = player.rotation.y + PI * (0.65 + 0.5 * i)
+			sh.walking = i == 1
+		player.model.visible = false
 	if args.has("swarm-test") and player and _frame == 60:
 		# Test: a bat swarm 4 m in front of the hero; at frame 150 half of the bats drop.
 		var sw := BatSwarm.new()

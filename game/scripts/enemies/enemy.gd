@@ -191,6 +191,7 @@ func prepare() -> void:
 	var font: Font = _plate_name.font if _plate_name.font else ThemeDB.fallback_font
 	var text_w := font.get_string_size(_plate_name.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _plate_name.font_size).x * _plate_name.pixel_size
 	var bar := Vector2(maxf(PLATE_W, text_w + 0.24), 0.2)
+	_plate_w = bar.x
 	var quad := QuadMesh.new()
 	quad.size = bar
 	_plate_bar.mesh = quad
@@ -200,6 +201,9 @@ func prepare() -> void:
 	_plate_bar.position.y = 0.0
 	_plate_bar.set_instance_shader_parameter("color", Color(0.85, 0.7, 0.1) if data.behavior == "defensive" else (Color(0.9, 0.42, 0.06) if champion != "" else Color(0.8, 0.1, 0.07)))
 	nameplate.add_child(_plate_bar)
+	_debuff_row = Node3D.new()
+	_debuff_row.position.y = 0.28
+	nameplate.add_child(_debuff_row)
 	nameplate.visible = false
 	add_child(nameplate)
 	for gi in _model.find_children("*", "GeometryInstance3D", true, false):
@@ -243,6 +247,120 @@ static func _matte(n: Node, path: String) -> void:
 			if furred:
 				mat.roughness_texture = null
 				mat.roughness = 1.0
+
+
+## Debuff icons over the nameplate (Rend, poisons, stuns, slows; WoW style): a row of
+## billboards above the bar, at most DEBUFF_MAX, centered.
+const DEBUFF_MAX := 6
+const DEBUFF_SIZE := 0.27          ## m per icon
+var _debuff_row: Node3D
+var _debuff_t := 0.0
+var _plate_w := 1.0                ## the nameplate bar's width (m)
+
+
+func _show_debuffs() -> void:
+	var list: Array = []
+	for a: Dictionary in stats.auras():
+		if a.debuff and Icons.get_icon(String(a.id)) != null:
+			list.append(a)
+	list = list.slice(0, DEBUFF_MAX)
+	while _debuff_row.get_child_count() < list.size():
+		var sp := Sprite3D.new()
+		sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sp.no_depth_test = true
+		sp.render_priority = 3
+		sp.shaded = false
+		sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_debuff_row.add_child(sp)
+	for i in _debuff_row.get_child_count():
+		var sp := _debuff_row.get_child(i) as Sprite3D
+		sp.visible = i < list.size()
+		if not sp.visible:
+			continue
+		var tex := Icons.get_icon(String(list[i].id))
+		sp.texture = tex
+		sp.pixel_size = DEBUFF_SIZE / float(tex.get_width())
+		# Left-aligned over the bar: the first icon at the bar's left edge.
+		sp.position.x = -_plate_w / 2.0 + DEBUFF_SIZE / 2.0 + i * (DEBUFF_SIZE + 0.03)
+
+
+## How wide a hold round the feet is drawn (Frost Ring's ice, Grasping Roots).
+func foot_size() -> float:
+	return clampf(float(data.get("radius", 0.5)) / 0.5, 0.7, 2.2)
+
+
+## Polymorph (mage): turned into a sheep for `duration` s. It wanders slowly at random and
+## can't attack; any damage (or the end of the time) turns it back, angry.
+var _sheep: Node3D
+var _sheep_until := 0.0
+var _sheep_to := Vector3.ZERO
+var _sheep_turn := 0.0
+var _sheep_heal := 0.0
+
+
+func polymorph(duration: float) -> void:
+	if stats.dead:
+		return
+	if _sheep == null:
+		_sheep = Sheep.new()
+		add_child(_sheep)
+	_sheep.visible = true
+	_sheep.scale = Vector3.ONE * clampf(float(data.get("scale", 1.0)) * (1.0 if humanoid else 1.1), 0.8, 1.4)
+	_model.visible = false
+	_sheep_until = Combatant.now() + duration
+	_sheep_to = global_position
+	_sheep_turn = 0.0
+	stats.add_buff("polymorph", duration, {"attack_speed": 0.0})
+	if _canim:
+		_canim.move(0.0)
+	SpellFx.puff(global_position + Vector3(0, 0.6, 0), Color(1.0, 0.6, 0.95))
+
+
+func is_sheep() -> bool:
+	return _sheep != null and _sheep.visible
+
+
+func end_polymorph() -> void:
+	if _sheep == null or not _sheep.visible:
+		return
+	_sheep.visible = false
+	_model.visible = true
+	stats.buffs.erase("polymorph")
+	SpellFx.puff(global_position + Vector3(0, 0.6, 0), Color(1.0, 0.6, 0.95))
+	if not stats.dead:
+		state = State.IDLE
+		engage()
+
+
+func _sheep_process(dt: float, t: float) -> void:
+	if t >= _sheep_until:
+		end_polymorph()
+		return
+	# A sheep mends fast: 20% of its health a second (WoW-like: sheeping heals, so it is for
+	# taking one enemy out of a fight, not for free damage).
+	_sheep_heal += float(stats.max_hp) * 0.2 * dt
+	if _sheep_heal >= 1.0 and stats.hp < stats.max_hp:
+		var add := int(_sheep_heal)
+		_sheep_heal -= add
+		stats.hp = mini(stats.max_hp, stats.hp + add)
+	_sheep_turn -= dt
+	if _sheep_turn <= 0.0 or Vector2(_sheep_to.x - global_position.x, _sheep_to.z - global_position.z).length() < 0.4:
+		_sheep_turn = randf_range(1.5, 4.0)
+		var a := randf() * TAU
+		_sheep_to = global_position + Vector3(cos(a), 0, sin(a)) * randf_range(1.0, 3.5)
+		if randf() < 0.35:
+			_sheep_to = global_position             # stands and grazes a moment
+	var w := _sheep_to - global_position
+	w.y = 0
+	var moving := w.length() > 0.3
+	var v := w.normalized() * 1.1 if moving else Vector3.ZERO
+	velocity.x = v.x
+	velocity.z = v.z
+	velocity.y = velocity.y - 20.0 * dt if not is_on_floor() else 0.0
+	if moving:
+		rotation.y = lerp_angle(rotation.y, atan2(-v.x, -v.z), 1.0 - exp(-6.0 * dt))
+	move_and_slide()
+	(_sheep as Sheep).walking = moving
 
 
 func plate_name() -> String:
@@ -293,6 +411,9 @@ func _physics_process(dt: float) -> void:
 		if _sleep % 15 != 0:
 			return
 	_sleep = 0
+	if _sheep != null and _sheep.visible:
+		_sheep_process(dt, t)
+		return
 	var want := Vector3.ZERO
 	var speed := 0.0
 	match state:
@@ -378,6 +499,14 @@ func _physics_process(dt: float) -> void:
 	nameplate.visible = state == State.CHASE or (p != null and p.target == self)
 	if nameplate.visible:
 		_plate_bar.set_instance_shader_parameter("fill", float(stats.hp) / stats.max_hp)
+		_debuff_t -= dt
+		if _debuff_t <= 0.0:
+			_debuff_t = 0.2
+			_show_debuffs()
+		# The row faces the camera like the bar does (its "left" is the screen's left).
+		var view_cam := get_viewport().get_camera_3d()
+		if view_cam and _debuff_row.get_child_count() > 0:
+			_debuff_row.global_basis = view_cam.global_basis
 		# About the same size on screen near and far (like WoW's nameplates).
 		var cam := get_viewport().get_camera_3d()
 		if cam:
@@ -748,6 +877,8 @@ func is_flying() -> bool:
 
 func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 	_swarm_count()
+	if _sheep != null and _sheep.visible and amount > 0:
+		end_polymorph()                  # any damage breaks it
 	if OS.get_cmdline_user_args().has("--dmg-log"):
 		print("DMG %d %s" % [amount, "white" if stats.last_hit_auto else "yellow"])      # test
 	_last_hurt = Combatant.now()

@@ -61,9 +61,15 @@ func _draw_map() -> void:
 		match z.type:
 			"north":
 				ground = Color(0.8, 0.85, 0.9, 0.85)
-			"desert":
+			"desert", "ancient":
 				ground = Color(0.8, 0.68, 0.45, 0.85)
-		v.draw_rect(Rect2(_w(o - Vector2(200, 200)), Vector2(400, 400) * k), ground)
+			"mediterranean":
+				ground = Color(0.5, 0.52, 0.32, 0.85)
+			"unholy":
+				ground = Color(0.28, 0.3, 0.24, 0.85)
+		# The whole zone (it was a 400 m square from the first, smaller zones: the rest of a
+		# 1024 m zone showed as dark patches).
+		v.draw_rect(Rect2(_w(o - Vector2(Terrain.HALF, Terrain.HALF)), Vector2(Terrain.SIZE, Terrain.SIZE) * k), ground)
 	for z: Zone in zones:
 		if z.terrain == null:
 			continue

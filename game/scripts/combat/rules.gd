@@ -19,6 +19,12 @@ static func damage(level: int, power: float, atk: float, def: float, affinity: f
 	return maxi(1, int(floor(3.0 * base * affinity * crit_mult * rnd * other)))
 
 
+## The range of damage() without a crit (its random 85–100%), for the tooltips' estimates.
+static func damage_range(level: int, power: float, atk: float, def: float, affinity: float, other: float) -> Vector2i:
+	var base := grow((2.4 * power * atk / maxf(def, 1.0)) / 50.0 + 2.0, level, true)
+	var top := 3.0 * base * affinity * other
+	return Vector2i(maxi(1, int(floor(top * 0.85))), maxi(1, int(floor(top))))
+
 ## Weapon damage (Items.weapon_damage): a common one-handed weapon of item level L has
 ## WEAPON_BASE grown 10% per level; two-handed ones TWO_HANDED times that. The hero's physical
 ## hits don't grow with the hero's level (Combatant.roll_damage): the weapon brings the growth,

@@ -68,10 +68,22 @@ static func height_at(x: float, z: float) -> float:
 	return zones.height_at(x, z) if zones else 0.0
 
 
-static func in_smoke(pos: Vector3) -> bool:
+## A smoke screen (bandits, nomads, corsairs) hides what is in or behind it from afar: a ranged
+## attack or spell from farther than SMOKE_CLEAR m whose line passes through a cloud.
+const SMOKE_CLEAR := 8.0
+
+
+static func smoke_blocks(from: Vector3, to: Vector3) -> bool:
+	if from.distance_to(to) <= SMOKE_CLEAR:
+		return false
 	var t := Combatant.now()
 	for s in smokes:
-		if t < float(s.until) and pos.distance_to(s.pos) < float(s.radius):
+		if t >= float(s.until):
+			continue
+		var c: Vector3 = s.pos
+		var d := to - from
+		var k := clampf((c - from).dot(d) / maxf(d.length_squared(), 1e-4), 0.0, 1.0)
+		if (from + d * k).distance_to(c) < float(s.radius):
 			return true
 	return false
 

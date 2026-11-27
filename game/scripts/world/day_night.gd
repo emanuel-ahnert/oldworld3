@@ -26,6 +26,8 @@ var sky: ProceduralSkyMaterial
 var _moon: MeshInstance3D
 var _moon_mat: ShaderMaterial
 var _moon_strength := 0.0
+var _clouds: MeshInstance3D
+var _cloud_mat: ShaderMaterial
 var _day := {"sun": Color(1, 0.96, 0.88), "energy": 1.3, "sky": [Color(0.32, 0.5, 0.78), Color(0.7, 0.78, 0.86)], "fog": Color(0.68, 0.76, 0.85)}
 
 
@@ -45,6 +47,7 @@ func set_zone(info: Dictionary) -> void:
 		"fog_density": float(info.get("fog_density", 0.002)),
 		"distance_fog": bool(info.get("distance_fog", true)), "fog_end": float(info.get("fog_end", DIST_FOG_END)),
 		"night_fog": info.get("night_fog", NIGHT_FOG), "night_sky": info.get("night_sky", NIGHT_SKY),
+		"clouds": float(info.get("clouds", 0.0)), "cloud_tint": info.get("cloud_tint", Color(1, 1, 1)),
 	}
 	apply()
 
@@ -155,10 +158,45 @@ func apply() -> void:
 		env.fog_sky_affect = 1.0
 		env.fog_density = float(_day.get("fog_density", 0.002))
 		sky.ground_bottom_color = Color(0.25, 0.3, 0.2)
+	_cloud_colors(day, dusk)
 	# At night the sky is nearly black: a bluish ambient fill keeps the world readable.
 	env.ambient_light_color = NIGHT_AMBIENT.lerp(Color(1, 0.85, 0.7), dusk * 0.5).lerp(Color.WHITE, day * (1.0 - dusk * 0.5))
 	env.ambient_light_sky_contribution = lerpf(0.25, 1.0, day)
 	env.ambient_light_energy = lerpf(0.85, 0.9, day)
+
+
+## The cloud dome round the camera (shaders/clouds), a little inside the moon's distance so
+## the clouds pass in front of it; hidden where a zone has none (the deserts).
+func _clouds_process(cam: Camera3D) -> void:
+	if _clouds == null:
+		_cloud_mat = ShaderMaterial.new()
+		_cloud_mat.shader = load("res://shaders/clouds.gdshader")
+		var nt := NoiseTexture2D.new()
+		nt.width = 512
+		nt.height = 512
+		nt.seamless = true
+		var fn := FastNoiseLite.new()
+		fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+		fn.frequency = 0.008
+		fn.fractal_octaves = 4
+		nt.noise = fn
+		_cloud_mat.set_shader_parameter("noise_tex", nt)
+		var sm := SphereMesh.new()
+		sm.radius = 1.0
+		sm.height = 1.0                 # a flattened dome is enough (only the upper half shows)
+		sm.radial_segments = 24
+		sm.rings = 12
+		_clouds = MeshInstance3D.new()
+		_clouds.mesh = sm
+		_clouds.material_override = _cloud_mat
+		_clouds.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_clouds.extra_cull_margin = 16384.0
+		add_child(_clouds)
+		apply()
+	_clouds.visible = float(_day.get("clouds", 0.0)) > 0.001
+	if _clouds.visible:
+		var r := cam.far * 0.78
+		_clouds.global_transform = Transform3D(Basis().scaled(Vector3(r, r * 2.0, r)), cam.global_position)
 
 
 ## The moon in the sky at night, where its light comes from: a quad far out (inside the camera's
@@ -181,6 +219,7 @@ func _moon_process() -> void:
 		_moon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_moon.extra_cull_margin = 16384.0
 		add_child(_moon)
+	_clouds_process(cam)
 	_moon.visible = _moon_strength > 0.001
 	if not _moon.visible:
 		return
@@ -191,6 +230,20 @@ func _moon_process() -> void:
 	var across := 2.0 * dist * tan(deg_to_rad(MOON_SIZE) / 2.0) * MOON_HALO
 	_moon.global_transform = Transform3D(Basis().scaled(Vector3(across, across, 1.0)), cam.global_position + dir * dist)
 	_moon_mat.set_shader_parameter("strength", _moon_strength)
+
+
+## The clouds' colors with the time of day: white tops and grey undersides by day, warm at
+## dusk, dark blue-grey at night; the horizon they fade into is the sky's.
+func _cloud_colors(day: float, dusk: float) -> void:
+	if _cloud_mat == null:
+		return
+	var tint: Color = _day.get("cloud_tint", Color(1, 1, 1))
+	var lit := Color(0.16, 0.19, 0.27).lerp(Color(1.0, 0.98, 0.95) * tint, day).lerp(Color(1.0, 0.72, 0.5), dusk * 0.6)
+	var dark := Color(0.08, 0.1, 0.15).lerp(Color(0.6, 0.64, 0.72) * tint, day).lerp(Color(0.55, 0.42, 0.45), dusk * 0.5)
+	_cloud_mat.set_shader_parameter("light", lit)
+	_cloud_mat.set_shader_parameter("shade", dark)
+	_cloud_mat.set_shader_parameter("horizon", sky.sky_horizon_color)
+	_cloud_mat.set_shader_parameter("coverage", float(_day.get("clouds", 0.0)))
 
 
 ## "06:30" for the menu / HUD.

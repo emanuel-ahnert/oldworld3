@@ -98,6 +98,8 @@ right-click enemy attack   F1 hide help   Esc clear target / menu"""
 
 
 func _ready() -> void:
+	if Tip.instance == null:
+		add_child(Tip.new())
 	_info = _label(Vector2(16, 0), 16)
 	_info.anchor_top = 1.0
 	_info.offset_top = -154
@@ -231,7 +233,11 @@ func _aura_row(pos: Vector2, parent: Node = null) -> HFlowContainer:
 	return row
 
 
-## Shows a unit's buffs (green frame) then debuffs (red frame), each with the seconds left.
+## Shows a unit's buffs (green frame) then debuffs (red frame): each its icon with the seconds
+## left over it (the name when there is no icon); the name in the tooltip.
+const AURA_PX := 30
+
+
 func _show_auras(row: HFlowContainer, s: Combatant) -> void:
 	var list: Array = s.auras() if s else []
 	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.debuff) < int(b.debuff))
@@ -239,15 +245,30 @@ func _show_auras(row: HFlowContainer, s: Combatant) -> void:
 		var chip := PanelContainer.new()
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = Color(0.06, 0.05, 0.04, 0.8)
-		sb.set_border_width_all(1)
-		sb.set_content_margin_all(3)
-		sb.content_margin_left = 6
-		sb.content_margin_right = 6
+		sb.set_border_width_all(2)
+		sb.set_content_margin_all(1)
 		chip.add_theme_stylebox_override("panel", sb)
-		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS
+		Tip.attach(chip, func(): return String(chip.get_meta("tip", "")))
+		var box := Control.new()
+		box.custom_minimum_size = Vector2(AURA_PX, AURA_PX)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_child(box)
+		var icon := TextureRect.new()
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(icon)
 		var l := Label.new()
 		l.add_theme_font_size_override("font_size", 13)
-		chip.add_child(l)
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		l.add_theme_constant_override("outline_size", 4)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+		l.set_anchors_preset(Control.PRESET_FULL_RECT)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(l)
 		row.add_child(chip)
 	for i in row.get_child_count():
 		var chip := row.get_child(i) as PanelContainer
@@ -255,11 +276,24 @@ func _show_auras(row: HFlowContainer, s: Combatant) -> void:
 		if not chip.visible:
 			continue
 		var a: Dictionary = list[i]
-		var l := chip.get_child(0) as Label
+		var box := chip.get_child(0) as Control
+		var icon := box.get_child(0) as TextureRect
+		var l := box.get_child(1) as Label
+		var tex := Icons.get_icon(String(a.get("id", a.name)))
 		var left := float(a.left)
-		l.text = String(a.name) + (("  %d" % ceili(left)) if left >= 0.0 else "")
+		var secs := ("%d" % ceili(left)) if left >= 0.0 else ""
+		icon.texture = tex
+		icon.visible = tex != null
 		var c := Color(0.95, 0.4, 0.3) if a.debuff else Color(0.45, 0.9, 0.45)
-		l.add_theme_color_override("font_color", c.lerp(Color.WHITE, 0.45))
+		if tex:
+			box.custom_minimum_size = Vector2(AURA_PX, AURA_PX)
+			l.text = secs
+			l.add_theme_color_override("font_color", Color(1, 1, 1))
+		else:
+			l.text = String(a.name) + (("  " + secs) if secs != "" else "")
+			l.add_theme_color_override("font_color", c.lerp(Color.WHITE, 0.45))
+			box.custom_minimum_size = l.get_combined_minimum_size() + Vector2(10, 4)
+		chip.set_meta("tip", AbilityText.describe_aura(String(a.get("id", "")), String(a.name), left))
 		(chip.get_theme_stylebox("panel") as StyleBoxFlat).border_color = c
 
 
@@ -291,9 +325,24 @@ func _build_action_bar() -> void:
 			sb.bg_color = Color(0.08, 0.07, 0.06, 0.55)
 			_slots.append({"a": a})
 			continue
-		slot.tooltip_text = AbilityText.describe(player.cls, a, i + 1)
+		var desc := AbilityText.describe(player.cls, a, i + 1)
+		Tip.attach(slot, desc)
 		var nm := _label(Vector2(4, 18), 11, slot)
 		nm.text = String(a.name).replace(" ", "\n")
+		# The ability's icon fills the slot (under the key, the cost and the cooldown); the name
+		# only when there is none (it is in the tooltip).
+		var tex := Icons.get_icon(String(a.id))
+		if tex:
+			var icon := TextureRect.new()
+			icon.texture = tex
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			icon.position = Vector2(2, 2)
+			icon.size = Vector2(64, 60)
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			slot.add_child(icon)
+			slot.move_child(icon, 0)
+			nm.visible = false
 		var cost := _label(Vector2(42, 1), 12, slot)
 		var c := int(a.get("rage", 0)) + int(a.get("mana", 0)) + int(a.get("energy", 0))
 		cost.text = "%d" % c if c > 0 else ""
@@ -473,7 +522,7 @@ func _process(_dt: float) -> void:
 		# The clock runs over the ability's own cooldown or the global cooldown, whichever ends
 		# later.
 		var own := float(player.cooldowns.get(a.id, 0.0)) - t
-		var gcd := (player.gcd_until - t) if a.id != "battle_cry" else 0.0
+		var gcd := (player.gcd_until - t) if a.id != "battle_horn" else 0.0
 		var left := maxf(own, gcd)
 		var total := float(a.cd) if own >= gcd else Player.GCD
 		var learned := s.level >= int(a.level)
