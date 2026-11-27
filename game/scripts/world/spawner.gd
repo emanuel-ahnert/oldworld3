@@ -34,6 +34,8 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 				continue
 			if terrain.normal_at(x, z).y < 0.85 or terrain.lake_distance(x, z) < 5.0:
 				continue
+			if not terrain.open_ground(x, z, CAMP_R):
+				continue                      # (camps were found on mountain tops and slopes)
 			var road := terrain.road_distance(x, z)
 			var forest := forest_noise.get_noise_2d(x, z) * 0.5 + 0.5
 			match kind:
@@ -101,7 +103,8 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 				elite_d = minf(elite_d, gd)
 			elif gd < ELITE_SAFE:
 				near += 1
-		print("SPAWN %s: %d normal groups within %d m, nearest elite group %d m" % [zone.info.get("name", zone.cell), near, ELITE_SAFE, elite_d])
+		var high := groups.filter(func(g): return terrain.mountain(g.pos.x, g.pos.z) > 2.0).size()
+		print("SPAWN %s: %d normal groups within %d m, nearest elite group %d m; %d groups, %d on mountains" % [zone.info.get("name", zone.cell), near, ELITE_SAFE, elite_d, groups.size(), high])
 	_place_chests(rng, terrain)
 
 
@@ -111,6 +114,7 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 ## Groups per kind: the zone types' numbers were made for zones a quarter of today's area; three
 ## times as many (a little thinner than before, for the frame rate).
 const GROUPS_PER := 4
+const CAMP_R := 12.0             ## m round a group's spot that must be low, flat land (tents)
 
 
 func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:
@@ -140,7 +144,7 @@ func _place_chests(rng: RandomNumberGenerator, terrain: Terrain) -> void:
 		var f := zone.scatter.forest.get_noise_2d(x, z) * 0.5 + 0.5
 		if Vector2(x, z).length() < 90.0 or terrain.road_distance(x, z) < 25.0 or terrain.lake_distance(x, z) < 6.0:
 			continue
-		if terrain.normal_at(x, z).y < 0.9 or (zone.info.get("bushes", true) and f < 0.6):
+		if terrain.normal_at(x, z).y < 0.9 or (zone.info.get("bushes", true) and f < 0.6) or terrain.mountain(x, z) > 2.0:
 			continue
 		if zone.landmarks.any(func(q): return Vector2(x - q.x, z - q.z).length() < 50.0):
 			continue
@@ -170,6 +174,8 @@ func _spawn_champion(rng: RandomNumberGenerator, terrain: Terrain, placed: Array
 		var x := rng.randf_range(-210, 210)
 		var z := rng.randf_range(-210, 210)
 		if Vector2(x, z).length() < ELITE_SAFE + 20.0 or terrain.normal_at(x, z).y < 0.9 or terrain.lake_distance(x, z) < 8.0 or terrain.road_distance(x, z) < 12.0:
+			continue
+		if not terrain.open_ground(x, z, CAMP_R):
 			continue
 		if zone.landmarks.any(func(q): return Vector2(x - q.x, z - q.z).length() < 55.0):
 			continue

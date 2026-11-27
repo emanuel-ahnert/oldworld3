@@ -56,6 +56,7 @@ static func attach(control: Control, text: Variant) -> void:
 		control.mouse_filter = Control.MOUSE_FILTER_PASS
 	control.mouse_entered.connect(func():
 		if instance:
+			instance._free = false
 			instance._source = text
 			instance._show(control, String(text.call()) if text is Callable else String(text)))
 	control.mouse_exited.connect(func():
@@ -64,6 +65,28 @@ static func attach(control: Control, text: Variant) -> void:
 	control.tree_exiting.connect(func():
 		if instance and instance._owner == control:
 			instance._hide())
+
+
+## A tooltip for something in the world under the cursor (an enemy): shown at the mouse until
+## clear_mouse() (or a control's own tooltip takes over).
+var _free := false
+
+
+static func at_mouse(text: String) -> void:
+	if instance == null or (instance._owner != null and is_instance_valid(instance._owner)):
+		return                        # a control's tooltip is showing
+	instance._free = true
+	instance._source = null
+	if text != instance._last or not instance._panel.visible:
+		instance._show(null, text)
+	else:
+		instance._place()
+
+
+static func clear_mouse() -> void:
+	if instance and instance._free:
+		instance._free = false
+		instance._hide()
 
 
 func _show(control: Control, text: String) -> void:
@@ -91,6 +114,9 @@ func _hide() -> void:
 
 func _process(_dt: float) -> void:
 	if _panel.visible:
+		if _free:
+			_place()
+			return
 		if _owner == null or not is_instance_valid(_owner) or not _owner.is_visible_in_tree():
 			_hide()
 			return

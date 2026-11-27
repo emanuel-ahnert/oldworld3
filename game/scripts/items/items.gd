@@ -31,7 +31,7 @@ const ARMOR_STATS := {"cloth": [0.5, 1.0], "leather": [0.8, 0.6], "mail": [0.95,
 const ARMOR_NOUNS := {
 	"plate": {"head": "Helm", "chest": "Breastplate", "legs": "Legplates", "hands": "Gauntlets", "feet": "Sabatons"},
 	"mail": {"head": "Coif", "chest": "Hauberk", "legs": "Leggings", "hands": "Gloves", "feet": "Boots"},
-	"leather": {"head": "Cap", "chest": "Jerkin", "legs": "Breeches", "hands": "Gloves", "feet": "Boots"},
+	"leather": {"head": "Mask", "chest": "Jerkin", "legs": "Breeches", "hands": "Gloves", "feet": "Boots"},
 	"cloth": {"head": "Hood", "chest": "Robe", "legs": "Trousers", "hands": "Handwraps", "feet": "Slippers"},
 }
 ## What each class starts with, worn: plain common items (1 point of their stat) that are what
@@ -213,9 +213,10 @@ static func cloth_style(item: Dictionary) -> String:
 	return "hood" if hash(String(item.get("name", ""))) % 4 == 0 else "jellycap"
 
 
-## A cloth head item's colors as [Color, Color]; [] when it has none (it takes the robe's).
+## A cloth or leather head item's colors as [Color, Color]; [] when it has none (cloth takes the
+## robe's, leather is plain brown).
 static func cloth_colors(item: Dictionary) -> Array:
-	if cloth_style(item) == "" or not item.has("color"):
+	if item.is_empty() or item.get("slot", "") != "head" or not item.has("color"):
 		return []
 	return [Color.html(String(item.color[0])), Color.html(String(item.color[1]))]
 
@@ -284,6 +285,8 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 		item["style"] = "jellycap" if rng.randf() < 0.75 else "hood"
 		if item.style == "jellycap":
 			item.name = String(item.name).replace("Hood", "Cap")
+	if slot == "head" and (kind == "cloth" or kind == "leather"):
+		# Dyed: in the buyer's class colors at a merchant, any colors when found.
 		item["color"] = CLASS_CLOTH[cls] if shop and CLASS_CLOTH.has(cls) else DROP_CLOTH[rng.randi() % DROP_CLOTH.size()]
 	return item
 

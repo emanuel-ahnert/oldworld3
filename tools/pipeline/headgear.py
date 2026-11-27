@@ -40,6 +40,10 @@ KINDS = {
     # cloth that rises and flops back and down behind the head (more rows: the bag stays smooth).
     "jellycap": dict(offset=0.012, thick=0.005, face=(-17, 36, 54), arch=1.6, open_below=False, cut=(0.055, 0.075), ridge=0.0, blur=3,
                      snug=0.9, tip=0.0, tube=-56, shown=0.62, bag=True, rows=72),
+    # A leather mask: a loose hood closed over the face, only a band round the eyes open (and
+    # the neck covered like the hood).
+    "mask": dict(offset=0.02, thick=0.006, face=None, eyes=(-8.0, 6.0, 46.0), open_below=False, cut=(0.05, 0.075), ridge=0.0, blur=4,
+                 snug=0.86, tube=-56, shown=2.0),
     "coif": dict(offset=0.010, thick=0.005, face=(-15, 33, 50), arch=1.7, open_below=False, cut=(0.095, 0.10), ridge=0.0, blur=2,
                  snug=0.88, tube=-56, shown=0.7),
     "cowl": dict(offset=0.010, thick=0.006, face=(-12, 28, 74), arch=1.8, open_below=True, cut=(0.0, 0.045), ridge=0.0, blur=2,
@@ -272,7 +276,8 @@ def vid(i, j):
 def is_open(e, az):
     """The face opening (or the helm's eye slit)."""
     if K["face"] is None:
-        return abs(az) < 50 and -9 < e < 3                      # the helm's eye slit
+        lo, hi, aw = K.get("eyes", (-9.0, 3.0, 50.0))          # the helm's eye slit, a mask's eye band
+        return abs(az) < aw and lo < e < hi
     ec, eh, aw = K["face"]
     if K["open_below"] and abs(az) < aw and e < ec:
         return True

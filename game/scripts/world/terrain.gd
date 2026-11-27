@@ -24,6 +24,7 @@ var ridges: Array[Dictionary] = []   ## {pts: PackedVector2Array, height, width}
 var rivers: Array[Dictionary] = []   ## {pts: PackedVector2Array (every ~4 m), levels: PackedFloat32Array, width}
 var volcano: Dictionary = {}         ## {center: Vector2, radius, height, crater, floor}
 var _intrude: FastNoiseLite
+var _mtn := PackedFloat32Array()     ## per sample: m of mountain on the ground (border range, ridges)
 var _crag: FastNoiseLite
 var _crag_origin := Vector2.ZERO
 var _rdist := PackedFloat32Array()   ## per sample: distance to the nearest river's bank (INF: none near)
@@ -99,6 +100,8 @@ func compute(seed: int, p_zone: Zone = null, world_seed := 1) -> void:
 		print("FEATURES %s ridges %d rivers %d volcano %s" % [cell, ridges.size(), rivers.size(), volcano])
 	heights.resize(N * N)
 	dirt.resize(N * N)
+	_mtn.resize(N * N)
+	_mtn.fill(0.0)
 	var center_h := hills.get_noise_2d(origin.x, origin.y) * 8.0
 	for j in N:
 		for i in N:
@@ -136,6 +139,7 @@ func compute(seed: int, p_zone: Zone = null, world_seed := 1) -> void:
 			rim += pow(smoothstep(HALF - 170.0, HALF, edge0), 1.9) * (22.0 + pow(r, 1.8) * 70.0)   # the high range at the border
 			rim += _crags(x, z, rim)
 			h += rim * smoothstep(5.0, 16.0, rd)
+			_mtn[j * N + i] = rim * smoothstep(5.0, 16.0, rd)
 			for c in crossings:
 				var w := (1.0 - smoothstep(0.0, 70.0, Vector2(x, z).distance_to(c))) * (1.0 - smoothstep(4.0, 18.0, rd))
 				h = lerpf(h, CROSS_H, w)
@@ -693,6 +697,30 @@ func _ash(x: float, z: float) -> float:
 	return a
 
 
+## How much mountain stands here (m above the land around: the border's range, a ridge; the
+## volcano counts as all mountain). Camps and monsters keep to the low land.
+func mountain(x: float, z: float) -> float:
+	if _in_volcano(Vector2(x, z), 15.0):
+		return 100.0
+	if _mtn.is_empty():
+		return 0.0
+	return _mtn[_sample(x, z)]
+
+
+## Whether a spot is low, flat land for `radius` m round it (a camp's tents, a group): no
+## mountain, gentle slopes, no step in the ground.
+func open_ground(x: float, z: float, radius: float) -> bool:
+	var h0 := height_at(x, z)
+	for r in [0.0, radius * 0.5, radius]:
+		for k in (1 if r == 0.0 else 8):
+			var a := TAU * k / 8.0
+			var px: float = x + cos(a) * r
+			var pz: float = z + sin(a) * r
+			if mountain(px, pz) > 2.0 or normal_at(px, pz).y < 0.85 or absf(height_at(px, pz) - h0) > 3.0:
+				return false
+	return true
+
+
 ## Whether nothing grows here (the volcano's slopes).
 func barren(x: float, z: float) -> bool:
 	return _in_volcano(Vector2(x, z), -10.0)
@@ -733,7 +761,8 @@ func _apply_features() -> void:
 				ends = minf(ends, smoothstep(0.0, 90.0, p.distance_to(b_end)))
 			var pass_ := smoothstep(6.0, 26.0, _road_distance(p))     # the roads go over passes
 			var add := prof * hgt * (0.55 + 0.6 * c) * ends
-			heights[k] += (add + _crags(p.x, p.y, add)) * pass_)
+			heights[k] += (add + _crags(p.x, p.y, add)) * pass_
+			_mtn[k] += (add + _crags(p.x, p.y, add)) * pass_)
 	if not volcano.is_empty():
 		var c: Vector2 = volcano.center
 		var rad := float(volcano.radius)

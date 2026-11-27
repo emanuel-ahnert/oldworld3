@@ -384,7 +384,7 @@ func _class_heads() -> void:
 		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
 		if args.has("cap"):
 			# Test: each class in the merchant's jelly bag cap (or --cap hood: the hood), its colors.
-			h.equip_model("helmet", "res://assets/gear/head_jellycap.glb" if str(args.cap) != "hood" else "res://assets/gear/hood.glb")
+			h.equip_model("helmet", {"hood": "res://assets/gear/hood.glb", "mask": "res://assets/gear/head_mask.glb"}.get(str(args.cap), "res://assets/gear/head_jellycap.glb"))
 			var cc: Array = Items.CLASS_CLOTH[classes[i]]
 			h.set_hood_color([Color.html(cc[0]), Color.html(cc[1])])
 		if args.has("panic"):
@@ -875,6 +875,24 @@ func _process(_dt: float) -> void:
 		_fighting = false                  # test: run away so the enemy evades (leash)
 		var away := player.global_position + Vector3(70, 0, 0)
 		player.global_position = Vector3(away.x, World.height_at(away.x, away.z) + 0.3, away.z)
+	if args.has("click-enemy") and player and _frame == int(args.get("click-at", 200)):
+		# Test: a left click on the nearest enemy's chest on screen; who is targeted after.
+		var best: Enemy = null
+		for e in World.enemies:
+			if not e.stats.dead and e.visible and (best == null or e.global_position.distance_to(player.global_position) < best.global_position.distance_to(player.global_position)):
+				best = e
+		if best:
+			var sp := player.camera.unproject_position(best.global_position + Vector3(0, 0.8, 0))
+			for down in [true, false]:
+				var ev := InputEventMouseButton.new()
+				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.pressed = down
+				ev.position = sp
+				ev.global_position = sp
+				Input.parse_input_event(ev)
+			get_tree().create_timer(0.3).timeout.connect(func(): print("CLICK on %s at %s -> target %s" % [best.plate_name(), sp, player.target.plate_name() if player.target else "none"]))
+	if args.has("sprint-log") and player and _frame % 30 == 0:
+		print("SPRINT stamina %.2f sprinting %s" % [player.stamina, player.sprinting])     # test
 	if args.has("clicks"):
 		# Test: left clicks at X,Y;X,Y;... one every 20 frames from frame 150; the loadout printed.
 		var pts: PackedStringArray = String(args.clicks).split(";")

@@ -110,6 +110,53 @@ static func arrow(from: Vector3, p_target: Node3D, p_on_hit: Callable) -> Projec
 	return p
 
 
+## A thrown knife (Knife Throw): the dagger model, spinning end over end on an arrow's path,
+## stuck point first in the target.
+const KNIFE_SPEED := 30.0
+const KNIFE_SPIN := 22.0          ## rad/s
+const KNIFE := "res://assets/weapons/dagger.glb"
+var _spin := -1.0                 ## >= 0: spinning (a thrown knife), its angle
+var _blade: Node3D                ## the knife's model (turned so its point is along -Z)
+
+
+static func knife(from: Vector3, p_target: Node3D, p_on_hit: Callable) -> Projectile:
+	var p := Projectile.new()
+	p.target = p_target
+	p.on_hit = p_on_hit
+	p.speed = KNIFE_SPEED
+	p._arrow = true
+	p._height = 1.0
+	p._spin = 0.0
+	var model: Node3D = load(KNIFE).instantiate()
+	# Turned so its long axis runs along -Z, the point (the end away from the grip, which is at
+	# the model's origin) first; then the whole spun about the side axis in flight.
+	var box := AABB()
+	var first := true
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		var bx := mi.transform * mi.get_aabb()
+		box = bx if first else box.merge(bx)
+		first = false
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var axis := box.get_longest_axis_index()
+	var lo := box.position[axis]
+	var hi := box.end[axis]
+	var tip := Vector3.ZERO
+	tip[axis] = 1.0 if absf(hi) > absf(lo) else -1.0
+	var holder := Node3D.new()
+	holder.add_child(model)
+	model.basis = Basis(Quaternion(tip, Vector3.FORWARD))
+	model.position = -(model.basis * (tip * maxf(absf(hi), absf(lo)) * 0.5))    # its middle at the node
+	holder.scale = Vector3.ONE * 1.6            # (true to size, a spinning blade was a few pixels at range)
+	p._blade = holder
+	p.add_child(holder)
+	p.add_child(SpellFx.Tail.make(Color(0.85, 0.88, 0.95, 0.6), 0.07, 0.22))     # a faint streak behind it
+	World.root.add_child(p)
+	p.global_position = from
+	p._flat = from
+	p._dist0 = maxf(1.0, from.distance_to(p_target.global_position + Vector3(0, p._height, 0)))
+	return p
+
+
 static func _build_arrow_parts() -> void:
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.55, 0.4, 0.24)
@@ -188,6 +235,9 @@ func _fly_arrow(goal: Vector3, dt: float) -> void:
 		reparent(target)
 		global_transform = xf.translated(dir * 0.12)     # the head sunk in
 		_stuck = Time.get_ticks_msec() / 1000.0
+		if _blade:
+			_blade.basis = Basis().scaled(Vector3.ONE * 1.6)     # a knife: point in, no more spinning
+			_leave_trails()
 		return
 	_flat += dir * speed * dt
 	var s := clampf(1.0 - _flat.distance_to(goal) / _dist0, 0.0, 1.0)
@@ -197,3 +247,6 @@ func _fly_arrow(goal: Vector3, dt: float) -> void:
 	global_position = pos
 	if step.length() > 0.001:
 		global_basis = Basis.looking_at(step.normalized())
+	if _blade and _spin >= 0.0:
+		_spin += KNIFE_SPIN * dt
+		_blade.basis = Basis(Vector3.RIGHT, -_spin).scaled(Vector3.ONE * 1.6)      # end over end

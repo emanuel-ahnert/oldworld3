@@ -62,7 +62,7 @@ void fragment() {
 		// Leather: mottled brown, darker toward the edges, a stitched seam along them and over
 		// the top.
 		float n = vnoise(m * 90.0) * 0.6 + vnoise(m * 300.0) * 0.4;
-		c = vec3(0.22, 0.13, 0.07) * (0.8 + 0.35 * n);
+		c = tint * (0.8 + 0.35 * n);                    // (dyed: the item's color; plain brown by default)
 		c *= mix(0.7, 1.0, smoothstep(0.0, 0.02, edge));
 		float stitch_line = 1.0 - smoothstep(0.0, 0.0012, abs(edge - 0.008));
 		float dash = step(0.5, fract((m.x + m.y) * 160.0));

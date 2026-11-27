@@ -18,6 +18,7 @@ const RUN_SPEED := 7.0
 const SPRINT_FACTOR := 1.5          ## sprint = 10.5 m/s (from Oldworld2: sprint on Shift)
 const DAZE_TIME := 4.0              ## s of half speed after being dazed (hit from behind)
 const STAMINA_TIME := 10.0          ## seconds of sprinting on a full bar
+const SPRINT_MIN := 0.2             ## of the bar needed to start a sprint
 const STAMINA_REFILL := 20.0        ## seconds to refill while moving; twice as fast standing still
 const BACK_FACTOR := 0.5
 const TURN_SPEED := deg_to_rad(180.0)
@@ -74,12 +75,13 @@ const ABILITIES_ROGUE := [
 	{"id": "quick_stab", "name": "Quick Stab", "key": 1, "level": 1, "energy": 40, "cd": 0.0, "power": 45.0},
 	{"id": "stealth", "name": "Stealth", "key": 2, "level": 1, "energy": 0, "cd": 6.0},
 	{"id": "eviscerate", "name": "Eviscerate", "key": 3, "level": 2, "energy": 20, "cd": 0.0, "power_per_cp": 27.0},
-	{"id": "knife_throw", "name": "Knife Throw", "key": 7, "level": 4, "energy": 30, "cd": 0.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
+	{"id": "knife_throw", "name": "Knife Throw", "key": 7, "level": 4, "energy": 30, "cd": 4.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
 	{"id": "poisoned_blade", "name": "Poisoned Blade", "key": 4, "level": 3, "energy": 30, "cd": 0.0, "power": 20.0},
 	{"id": "cheap_shot", "name": "Cheap Shot", "key": 5, "level": 6, "energy": 40, "cd": 20.0, "power": 10.0},
 	{"id": "gut_slash", "name": "Gut Slash", "key": 6, "level": 8, "energy": 30, "cd": 0.0, "power": 75.0},
 	{"id": "gouge", "name": "Gouge", "key": 8, "level": 5, "energy": 40, "cd": 10.0},
 	{"id": "sap", "name": "Sap", "key": 9, "level": 8, "energy": 40, "cd": 0.0},
+	{"id": "ambush", "name": "Ambush", "key": 10, "level": 5, "energy": 50, "cd": 0.0, "power": 150.0},
 ]
 
 ## Priest (Oldworld2's Priest in real time): Holy damage, heals, a shield, Dark damage over time.
@@ -196,7 +198,7 @@ var casting := {}                  ## {a, end, start, target} while a spell is b
 var combo := 0
 const COMBO_MAX := 5
 const COMBO_KEEP := 10.0
-const COMBO_GEN := ["quick_stab", "knife_throw", "poisoned_blade", "cheap_shot", "gut_slash"]
+const COMBO_GEN := ["quick_stab", "knife_throw", "poisoned_blade", "cheap_shot", "gut_slash", "ambush"]
 var _combo_t := 0.0
 ## Dual wield (a parrying dagger in the off hand): the off hand strikes on its own swing timer,
 ## between the main hand's, for OFFHAND of a swing's power.
@@ -483,7 +485,7 @@ func _unhandled_input(event: InputEvent) -> void:
 var autorun := false
 ## Keys that leave autorun running: steering, jumping, and the windows (bags, the world map,
 ## the abilities, help), which should never stop the hero (opening the map looked like a pause).
-const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right", "jump", "bags", "map", "spellbook", "help"]
+const AUTORUN_KEEPS := ["strafe_left", "strafe_right", "turn_left", "turn_right", "jump", "sprint", "bags", "map", "spellbook", "help"]
 
 
 func _autorun_input(event: InputEvent) -> void:
@@ -531,20 +533,54 @@ func _is_click() -> bool:
 
 
 func _click_target(screen_pos: Vector2, attack: bool) -> void:
-	var from := camera.project_ray_origin(screen_pos)
-	var to := from + camera.project_ray_normal(screen_pos) * 80.0
-	var q := PhysicsRayQueryParameters3D.create(from, to, 2)
-	var hit := get_world_3d().direct_space_state.intersect_ray(q)
-	if hit and hit.collider is Enemy and not (hit.collider as Enemy).stats.dead:
-		set_target(hit.collider)
+	var e := enemy_at(screen_pos)
+	if e:
+		set_target(e)
 		if attack:
 			auto_attacking = true
 	elif not attack:
 		set_target(null)
 
 
-## Tab: the nearest living enemy in front (within 40 m and ±75°); repeated presses cycle.
+## The living enemy under a point of the screen: its body hit by a ray from the camera, else
+## (the bodies are slimmer than the models: small creatures and far ones were hard to click)
+## the one whose middle is nearest on screen within PICK_PX, the closer one first.
+const PICK_PX := 45.0
+
+
+func enemy_at(screen_pos: Vector2) -> Enemy:
+	if camera == null:
+		return null
+	var from := camera.project_ray_origin(screen_pos)
+	var to := from + camera.project_ray_normal(screen_pos) * 90.0
+	var q := PhysicsRayQueryParameters3D.create(from, to, 2)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit and hit.collider is Enemy and not (hit.collider as Enemy).stats.dead:
+		return hit.collider
+	var best: Enemy = null
+	var best_score := INF
+	for e in World.enemies:
+		if e.stats.dead or not e.visible:
+			continue
+		var mid := e.global_position + Vector3(0, 0.9 * float(e.data.get("scale", 1.0)), 0)
+		var dist := camera.global_position.distance_to(mid)
+		if dist > 90.0 or camera.is_position_behind(mid):
+			continue
+		var px := camera.unproject_position(mid).distance_to(screen_pos)
+		if px > PICK_PX:
+			continue
+		var score := px + dist * 0.5
+		if score < best_score:
+			best_score = score
+			best = e
+	return best
+
+
+## Tab: the nearest enemy in the fight first, then the nearest in front; repeated presses cycle.
+const TAB_IDLE := 25.0
 func _tab_target() -> void:
+	# Enemies fighting the hero first (nearest first, any direction within 40 m); the rest only
+	# when nearer than TAB_IDLE m and in front. Far ones not in the fight are left out.
 	var fwd := -global_transform.basis.z
 	var cands: Array = []
 	for e in World.enemies:
@@ -552,9 +588,15 @@ func _tab_target() -> void:
 			continue
 		var d := e.global_position - global_position
 		d.y = 0
-		if d.length() > 40.0 or (d.length() > 3.0 and fwd.angle_to(d.normalized()) > deg_to_rad(75)):
+		var fighting := e.state == Enemy.State.CHASE and not e.is_feared()
+		if fighting:
+			if d.length() > 40.0:
+				continue
+			cands.append([d.length(), e])
 			continue
-		cands.append([d.length(), e])
+		if d.length() > TAB_IDLE or (d.length() > 3.0 and fwd.angle_to(d.normalized()) > deg_to_rad(75)):
+			continue
+		cands.append([d.length() + 1000.0, e])          # after every one in the fight
 	if cands.is_empty():
 		return
 	cands.sort_custom(func(a, b): return a[0] < b[0])
@@ -737,7 +779,7 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 		return "Not enough mana"
 	if stats.energy < float(a.get("energy", 0)):
 		return "Not enough energy"
-	if a.id == "sap" and not stealthed:
+	if (a.id == "sap" or a.id == "ambush") and not stealthed:
 		return "Only in stealth"
 	if a.id == "eviscerate" and combo <= 0:
 		return "No combo points"
@@ -1074,6 +1116,9 @@ func _execute(a: Dictionary) -> void:
 			Audio.hit("dagger", false, -6.0, target.surface())
 		"quick_stab":
 			_melee_hit(float(a.power), "attack1", 1.0, false, 0.25)
+		"ambush":
+			# Ambush: from stealth only, a heavy blow that always crits (the opener's +50% too).
+			_melee_hit(float(a.power), "strike", 1.0, true, 1.0)
 		"gut_slash":
 			_melee_hit(float(a.power), "strike", 1.0)
 		"poisoned_blade":
@@ -1087,7 +1132,7 @@ func _execute(a: Dictionary) -> void:
 			var e := target
 			var opening := _from_stealth()
 			_opener = false
-			Projectile.launch(global_position + Vector3(0, 1.4, 0) - global_transform.basis.z * 0.5, e, Color(0.8, 0.8, 0.85), func():
+			Projectile.knife(global_position + Vector3(0, 1.4, 0) - global_transform.basis.z * 0.5, e, func():
 				if e.stats.dead or _smoke_miss(e):
 					return
 				if opening:
@@ -1097,7 +1142,7 @@ func _execute(a: Dictionary) -> void:
 					stats.crit_chance -= 1.0
 				e.stats.take_damage(r.amount, r.crit, stats)
 				Audio.hit("dagger", r.crit, 0.0, e.surface())
-				e.engage(), 0.07)
+				e.engage())
 		"stealth":
 			stealthed = not stealthed
 			model.mat.set_shader_parameter("stealth", 1.0 if stealthed else 0.0)
@@ -1770,7 +1815,7 @@ func on_kill(e: Enemy) -> void:
 	var gained := Rules.enemy_xp(e.stats.level, stats.level, e.stats.tier)
 	money += e.stats.level * ({"elite": 8, "champion": 40}.get(e.stats.tier, 3) as int)
 	_loot(e)
-	for q in quests.on_kill(e.kind):
+	for q in quests.on_kill(e.kind, e.champion):
 		message.emit("%s: complete! Return to the inn." % q.title)
 		Audio.sfx("stat_up")
 	if not quests.active.is_empty():
@@ -1992,7 +2037,10 @@ func _physics_process(dt: float) -> void:
 	var speed := RUN_SPEED * stats.move_factor() * ((1.2 if has_passive("Master of Subtlety") else 0.7) if stealthed else 1.0) * (0.5 if whirling else 1.0)
 	# Sprint forward or sideways (strafing), not backward.
 	var moving := local.length() > 0.01 and fwd >= 0.0
-	sprinting = ((Input.is_action_pressed("sprint") or auto_sprint) and moving and stamina > 0.0 and is_on_floor()) or (sprinting and not is_on_floor())
+	# A sprint starts only with SPRINT_MIN of the bar and runs until it is empty (at zero it
+	# refilled a sliver each frame and the sprint went on in flickers).
+	var can_sprint := stamina > 0.0 if sprinting else stamina >= SPRINT_MIN
+	sprinting = ((Input.is_action_pressed("sprint") or auto_sprint) and moving and can_sprint and is_on_floor()) or (sprinting and not is_on_floor() and stamina > 0.0)
 	if sprinting:
 		speed *= SPRINT_FACTOR
 		# Improved Sprint (rogue, level 2): stamina lasts five times as long (Oldworld2).
@@ -2095,6 +2143,7 @@ func _animate(local: Vector3, speed: float, dt: float) -> void:
 
 
 func _process(dt: float) -> void:
+	_hover_process(dt)
 	model.anim.set_cast(not casting.is_empty(), dt)
 	_cast_fx_process()
 	if cls == "hunter":
@@ -2348,6 +2397,8 @@ func _show_weapons() -> void:
 	var helm := String(HEADGEAR.get(head.get("kind", ""), "")) if not head.is_empty() else ""
 	if Items.cloth_style(head) == "jellycap":
 		helm = "res://assets/gear/head_jellycap.glb"
+	elif String(head.get("kind", "")) == "leather":
+		helm = "res://assets/gear/head_mask.glb"                 # leather: a mask
 	model.equip_model("helmet", helm if ResourceLoader.exists(helm) else "")
 	model.set_hood_color(Items.cloth_colors(head))
 	var legs_kind := String(equipped.get("legs", {}).get("kind", ""))
@@ -2382,7 +2433,9 @@ func visit_inn(z: Zone) -> void:
 		money += cash
 		var rng := RandomNumberGenerator.new()
 		rng.randomize()
-		var item := Items.generate(int(q.level), "rare" if rng.randf() < 0.15 else "uncommon", cls, rng)
+		# A champion's bounty: a rare item (a quarter of the time epic); a hunt: uncommon (15% rare).
+		var rarity := ("epic" if rng.randf() < 0.25 else "rare") if q.has("champion") else ("rare" if rng.randf() < 0.15 else "uncommon")
+		var item := Items.generate(int(q.level), rarity, cls, rng)
 		add_item(item)
 		message.emit("%s done: %d XP, %s, %s" % [q.title, gained, Items.money_text(cash), item.name])
 		Audio.sfx("level_up", -4.0)
@@ -2409,3 +2462,50 @@ func _lava_process(dt: float) -> void:
 		stats.take_damage(maxi(1, ceili(stats.max_hp * LAVA_BURN * 0.5)), false, null)
 		World.float_text(global_position + Vector3(0, 2.4, 0), "Lava!", Color(1.0, 0.5, 0.1), 34, self)
 		Audio.sfx("fireball", -8.0)
+
+
+## The enemy under the mouse (not while a button is held or over the HUD): its tooltip next to
+## the cursor. Looked up ten times a second.
+var _hover_t := 0.0
+
+
+func _hover_process(dt: float) -> void:
+	_hover_t -= dt
+	if _hover_t > 0.0:
+		return
+	_hover_t = 0.1
+	var vp := get_viewport()
+	if _lmb or _rmb or Input.mouse_mode != Input.MOUSE_MODE_VISIBLE or vp.gui_get_hovered_control() != null:
+		Tip.clear_mouse()
+		return
+	var e := enemy_at(vp.get_mouse_position())
+	if e == null:
+		Tip.clear_mouse()
+		return
+	Tip.at_mouse(_enemy_tip(e))
+
+
+const BEHAVIOR_TEXT := {
+	"aggressive": "Attacks on sight, from far off.",
+	"normal": "Attacks when you come close.",
+	"passive": "Attacks only when you come very close.",
+	"defensive": "Leaves you alone unless attacked.",
+}
+
+
+func _enemy_tip(e: Enemy) -> String:
+	var rank: String = {"elite": "Elite", "champion": "Champion", "boss": "Boss"}.get(e.stats.tier, "")
+	var small := "Level %d%s · %d / %d health" % [e.stats.level, ("  " + rank) if rank != "" else "", e.stats.hp, e.stats.max_hp]
+	var lines: Array[String] = [e.plate_name(), small]
+	lines.append(", ".join(e.stats.types) + " · " + String(BEHAVIOR_TEXT.get(e.data.behavior, "")))
+	if e.modifier != "":
+		lines.append("Champion: %s." % e.modifier)
+	if e.is_sheep():
+		lines.append("Polymorphed.")
+	elif e.is_feared():
+		lines.append("Feared.")
+	elif e.state == Enemy.State.CHASE:
+		lines.append("Fighting you.")
+	if e.guard_hit:
+		lines.append("Struck by the guards: no reward.")
+	return "\n".join(lines)

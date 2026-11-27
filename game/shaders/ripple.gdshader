@@ -11,7 +11,7 @@ void fragment() {
 	float r = length(p);
 	float a = clamp(age, 0.0, 1.0);
 	float R = mix(0.12, 0.96, sqrt(a));
-	float w = mix(0.035, 0.09, a);
+	float w = mix(0.016, 0.042, a);               // thin lines (they read as bands thicker)
 	float ring = 1.0 - smoothstep(0.0, w, abs(r - R));
 	float ring2 = 1.0 - smoothstep(0.0, w * 1.3, abs(r - R * 0.62));
 	float fade = pow(1.0 - a, 1.6);

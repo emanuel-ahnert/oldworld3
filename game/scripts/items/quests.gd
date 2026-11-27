@@ -1,11 +1,12 @@
 class_name Quests
 extends RefCounted
 ## Notice-board quests (design/quests.md): every inn posts three hunting quests for the
-## enemies of its zone. Reaching the inn takes them on; killing the enemies (anywhere) counts;
+## enemies of its zone, and a bounty on the zone's champion (a named elite) while it has one. Reaching the inn takes them on; killing the enemies (anywhere) counts;
 ## coming back to the inn of that zone hands them in for XP, money and an item. When all three
 ## are done, the board posts the next round.
 
 const PER_ZONE := 3
+const CHAMPION_TITLES := ["Bounty: %s", "Slay %s", "Wanted: %s", "The end of %s"]
 const TITLES := [
 	"Thin out the %s", "Bounty: %s", "Clear out the %s", "Trouble with %s", "Hunt the %s",
 ]
@@ -13,6 +14,7 @@ const TITLES := [
 var active: Array = []            ## {zone: "x,z", zone_name, kind, name, title, need, have, level, round}
 var rounds := {}                  ## "x,z" -> number of rounds handed in
 var posted := false               ## the last visit_inn posted new quests
+var champions := {}               ## "x,z" -> the last round a champion's bounty was posted in
 
 
 static func key_of(cell: Vector2i) -> String:
@@ -27,11 +29,13 @@ func visit_inn(z: Zone) -> Array:
 	var done := active.filter(func(q): return q.zone == key and int(q.have) >= int(q.need))
 	for q in done:
 		active.erase(q)
-	var left := active.filter(func(q): return q.zone == key)
+	var left := active.filter(func(q): return q.zone == key and not q.has("champion"))     # (the hunts' rounds don't wait for the champion)
 	if left.is_empty() and (not done.is_empty() or not _offered(key)):
 		if not done.is_empty():
 			rounds[key] = int(rounds.get(key, 0)) + 1
 		_post(z)
+		posted = true
+	elif _post_champion(z, int(rounds.get(key, 0))):
 		posted = true
 	return done
 
@@ -65,6 +69,25 @@ func _post(z: Zone) -> void:
 			"need": rng.randi_range(3, 5) if elite else rng.randi_range(6, 10),
 			"have": 0, "level": lo + 2 + round, "round": round, "plural": plural,
 		})
+	_post_champion(z, round)
+
+
+## The champion's bounty: this zone's named elite, once a round (posted with the round, or on
+## a later visit for a round already running).
+func _post_champion(z: Zone, round: int) -> bool:
+	var key := key_of(z.cell)
+	if int(champions.get(key, -1)) >= round:
+		return false
+	for e: Enemy in z.enemies:
+		if is_instance_valid(e) and e.champion != "":
+			champions[key] = round
+			active.append({
+				"zone": key, "zone_name": z.zone_name, "kind": e.kind, "champion": e.champion,
+				"title": CHAMPION_TITLES[absi(hash([key, round])) % CHAMPION_TITLES.size()] % e.champion,
+				"need": 1, "have": 0, "level": 5 * z.difficulty - 4 + 4 + round, "round": round, "plural": e.champion,
+			})
+			return true
+	return false
 
 
 static func _plural(n: String) -> String:
@@ -77,10 +100,14 @@ static func _plural(n: String) -> String:
 	return n + "s"
 
 
-## An enemy of this kind died to the hero. Returns the quests that just became complete.
-func on_kill(kind: String) -> Array:
+## An enemy of this kind died to the hero (`champion`: its name if it was one; a champion's
+## bounty counts only that champion, a hunt any of its kind). Returns the quests that just
+## became complete.
+func on_kill(kind: String, champion := "") -> Array:
 	var finished := []
 	for q in active:
+		if q.has("champion") and q.champion != champion:
+			continue
 		if q.kind == kind and int(q.have) < int(q.need):
 			q.have = int(q.have) + 1
 			if int(q.have) == int(q.need):
@@ -92,15 +119,18 @@ func on_kill(kind: String) -> Array:
 ## and an uncommon (15%: rare) item.
 static func reward_xp(q: Dictionary, hero_level: int) -> int:
 	var by_level := Rules.enemy_xp(int(q.level), hero_level, "trash") * 5
+	if q.has("champion"):
+		# A champion's bounty: three times as much, at most four fifths of a level.
+		return maxi(15, mini(by_level * 3, Rules.xp_to_next(hero_level) * 4 / 5))
 	return maxi(5, mini(by_level, Rules.xp_to_next(hero_level) / 2))
 
 
 static func reward_money(q: Dictionary) -> int:
-	return int(q.level) * 25
+	return int(q.level) * (100 if q.has("champion") else 25)
 
 
 func to_save() -> Dictionary:
-	return {"active": active, "rounds": rounds}
+	return {"active": active, "rounds": rounds, "champions": champions}
 
 
 func load_save(d: Dictionary) -> void:
@@ -108,3 +138,5 @@ func load_save(d: Dictionary) -> void:
 	active = a if a is Array else []
 	var r = d.get("rounds", {})
 	rounds = r if r is Dictionary else {}
+	var c = d.get("champions", {})
+	champions = c if c is Dictionary else {}

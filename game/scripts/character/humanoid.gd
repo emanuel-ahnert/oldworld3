@@ -139,10 +139,11 @@ const HEAD_LAYERS := {
 	"cowl": ["res://assets/gear/head_cowl.glb", 2], "cap": ["res://assets/gear/head_cowl.glb", 2],
 	"helmet": ["res://assets/gear/head_helm.glb", 3],
 	"head_jellycap": ["res://assets/gear/head_jellycap.glb", 0],
+	"head_mask": ["res://assets/gear/head_mask.glb", 2, 4],     # leather; only the eyes' band of the face shows
 }
 ## What of the head still shows under each kind (body_slots.gdshader hide_hair): [cos of the
 ## face's half width, brow m above the head's middle] (the openings of headgear.py's KINDS).
-const FACE_SHOWN := [[0.6, 0.036], [0.68, 0.036], [0.24, 0.034], [2.0, 0.0]]
+const FACE_SHOWN := [[0.6, 0.036], [0.68, 0.036], [0.24, 0.034], [2.0, 0.0], [0.55, 0.035, -0.022]]
 var _face_shown := []
 var _beard := false             ## a beard or a hairstyle: the head's place every frame for the shader
 var head_egg := 0.0             ## > 0: the head egg-shaped, wide on top (goblins; body_slots)
@@ -223,13 +224,16 @@ func _tint_hood() -> void:
 	if mi == null or not (mi.material_override is ShaderMaterial):
 		return
 	var hm := mi.material_override as ShaderMaterial
-	var c: Array = _hood_color if not _hood_color.is_empty() else _robe_colors
+	var c: Array = _hood_color if not _hood_color.is_empty() else (LEATHER if _head_kind == 2 else _robe_colors)
 	hm.set_shader_parameter("tint", c[0])
 	hm.set_shader_parameter("trim", c[1])
 
 
-## A cloth cap's or hood's own colors (the item's: [cloth, hem]); [] takes the robe's.
+## A cloth cap's or hood's own colors (the item's: [cloth, hem]); [] takes the robe's (leather:
+## plain brown).
 var _hood_color: Array = []
+var _head_kind := -1               ## the headgear's shader kind (headgear.gdshader), -1 none
+const LEATHER := [Color(0.22, 0.13, 0.07), Color(0.12, 0.07, 0.04)]
 
 
 func set_hood_color(c: Array) -> void:
@@ -253,7 +257,8 @@ func equip_model(key: String, path: String, rot: Variant = null, size := 1.0) ->
 		helmet_worn = layer[0] != ""
 		if _layers.has("hair"):
 			(_layers["hair"] as MeshInstance3D).visible = not helmet_worn
-		_face_shown = FACE_SHOWN[int(layer[1])] if helmet_worn else []
+		_face_shown = FACE_SHOWN[int(layer[2]) if layer.size() > 2 else int(layer[1])] if helmet_worn else []
+		_head_kind = int(layer[1]) if helmet_worn else -1
 		if helmet_worn:
 			var hm := ShaderMaterial.new()
 			hm.shader = load("res://shaders/headgear.gdshader")
@@ -609,6 +614,7 @@ func _head_update() -> void:
 	if not _face_shown.is_empty():
 		mat.set_shader_parameter("face_cos", _face_shown[0])
 		mat.set_shader_parameter("brow", _face_shown[1])
+		mat.set_shader_parameter("face_low", float(_face_shown[2]) if _face_shown.size() > 2 else -1.0)
 
 
 ## See-through (0 solid .. 1 gone): the whole figure with what it holds and wears (a rogue in

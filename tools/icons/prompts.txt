@@ -98,3 +98,4 @@ gouge | a dagger pommel striking an eye with a burst of white stars, dazed swirl
 master_of_subtlety | a hooded rogue's dark silhouette fading into shadow mist with swift motion lines, dark blue background
 sap | a short wooden cudgel wrapped in leather, big sleepy blue Z letters floating above it, a crescent moon, dark night blue background
 combat_specialization | two crossed daggers in a fighting stance with a golden lightning burst of energy between them, dark orange background
+ambush | a dagger striking down out of deep black shadow with a bright yellow critical-hit burst at its point, dark night blue background

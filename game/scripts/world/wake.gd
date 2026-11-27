@@ -1,7 +1,7 @@
 class_name Wake
 extends Node3D
 ## Water stirred by legs (the hero, monsters near him) wading through a lake: rings of ripples
-## spread from them (one every RING_EVERY s while moving, slow ones standing still) and every
+## spread from them (one every RING_EVERY s while moving, none standing still) and every
 ## footfall while running throws up a splash of droplets. Pools of ripple quads
 ## (shaders/ripple) and one-shot particle bursts, reused; made on first use under World.root.
 
@@ -47,9 +47,10 @@ func _stir(body: Node3D, speed: float) -> void:
 	if is_nan(level) or p.y > level + 0.1:
 		return
 	var moving := speed > 0.6
-	if t >= float(b.ring):
-		b.ring = t + (RING_EVERY * clampf(4.0 / maxf(speed, 0.1), 0.6, 1.4) if moving else STILL_EVERY)
-		_ring(Vector3(p.x, level + 0.015, p.z), 1.0 if moving else 0.5, RING_SIZE * (1.0 if moving else 0.7))
+	if moving and t >= float(b.ring):
+		# (Standing still: none; the slow rings round a resting hero looked busy.)
+		b.ring = t + RING_EVERY * clampf(4.0 / maxf(speed, 0.1), 0.6, 1.4)
+		_ring(Vector3(p.x, level + 0.015, p.z), 1.0, RING_SIZE)
 	if moving and speed > 2.0 and t >= float(b.step):
 		# Footfalls: a splash each step (faster running, faster steps).
 		b.step = t + clampf(1.5 / speed, 0.18, 0.45)

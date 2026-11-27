@@ -31,6 +31,7 @@ uniform vec3 head_up = vec3(0.0, 1.0, 0.0);
 uniform vec3 head_fwd = vec3(0.0, 0.0, 1.0);
 uniform float face_cos = 0.5;
 uniform float brow = 0.07;
+uniform float face_low = -1.0;   // a mask: only the band of the face above this shows (the eyes)
 uniform float chin = -0.12;
 
 // Clothes in tatters (goblins): holes torn in the outfit showing `skin`, frayed dark edges round
@@ -257,7 +258,7 @@ void fragment() {
 		vec3 rel = mesh_pos - head_center;
 		float up = dot(rel, head_up);
 		vec3 flat_ = rel - head_up * up;
-		bool face = up < brow && dot(normalize(flat_ + head_fwd * 1e-4), head_fwd) > face_cos;
+		bool face = up < brow && up > face_low && dot(normalize(flat_ + head_fwd * 1e-4), head_fwd) > face_cos;
 		bool neck = up < chin && length(flat_) < 0.075;
 		if (!face && !neck) {
 			discard;
