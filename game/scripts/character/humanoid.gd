@@ -287,6 +287,8 @@ func equip_model(key: String, path: String, rot: Variant = null, size := 1.0) ->
 		_update_grip()
 		if anim:
 			anim.keep_arms_in_air = path.get_file().begins_with("staff")
+	if _fade > 0.0:
+		set_fade.call_deferred(_fade)
 
 
 ## Something carried on a bone (a spell's glow in the hand): returns the attachment; free it to
@@ -599,10 +601,50 @@ func _head_update() -> void:
 
 
 ## See-through (0 solid .. 1 gone): the whole figure with what it holds and wears (a rogue in
-## stealth: 0.5).
+## stealth: 0.5). Imported models (weapons) get see-through copies of their materials (their
+## own instance fade didn't take); the shaded parts fade by the instance's transparency. Things
+## equipped later fade too (equip_model).
+var _fade := 0.0
+
+
 func set_fade(f: float) -> void:
+	_fade = f
 	for gi in find_children("*", "GeometryInstance3D", true, false):
-		(gi as GeometryInstance3D).transparency = f
+		var g := gi as GeometryInstance3D
+		g.transparency = f
+		var mi := g as MeshInstance3D
+		if mi == null or mi.mesh == null or mi.material_override != null:
+			continue
+		for k in mi.mesh.get_surface_count():
+			if f <= 0.0:
+				mi.set_surface_override_material(k, null)
+				continue
+			var m := mi.mesh.surface_get_material(k) as BaseMaterial3D
+			if m == null:
+				continue
+			var m2 := m.duplicate() as BaseMaterial3D
+			m2.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+			m2.albedo_color.a = m.albedo_color.a * (1.0 - f)
+			mi.set_surface_override_material(k, m2)
+
+
+## The off hand's jab (dual wield): OffhandStab eased in and out.
+var _stab: OffhandStab
+var _stab_tw: Tween
+
+
+func offhand_stab() -> void:
+	if _stab == null:
+		_stab = OffhandStab.new()
+		_stab.name = "OffhandStab"
+		_stab.influence = 0.0
+		_skel.add_child(_stab)
+	_skel.move_child(_stab, -1)
+	if _stab_tw:
+		_stab_tw.kill()
+	_stab_tw = create_tween()
+	_stab_tw.tween_property(_stab, "influence", 1.0, 0.12)
+	_stab_tw.tween_property(_stab, "influence", 0.0, 0.25)
 
 
 ## Panic (Fear): both arms up over the head, flailing (PanicArms, after every other change to the

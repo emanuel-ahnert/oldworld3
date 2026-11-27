@@ -254,7 +254,7 @@ static func _matte(n: Node, path: String) -> void:
 ## fear, stun) gets its own row above it with icons twice the size.
 const DEBUFF_MAX := 6
 const DEBUFF_SIZE := 0.27          ## m per icon
-const CC := ["polymorph", "fear", "stunned"]
+const CC := ["polymorph", "fear", "stunned", "gouge"]
 var _debuff_row: Node3D            ## turned to the camera; holds the two rows
 var _row_small: Node3D
 var _row_cc: Node3D
@@ -370,6 +370,15 @@ func fear(seconds: float) -> void:
 	stats.add_buff("fear", seconds, {"attack_speed": 0.0})
 	_fear_from = global_position
 	_fear_turn = 0.0
+	engage()
+
+
+## Gouge (rogue): out of the fight for `seconds` (held like a stun); any damage ends it.
+func gouge(seconds: float) -> void:
+	if stats.dead:
+		return
+	stats.add_buff("gouge", seconds, {"attack_speed": 0.0})
+	stats.stun_until = maxf(stats.stun_until, Combatant.now() + seconds)
 	engage()
 
 
@@ -746,7 +755,7 @@ func _use_abilities(t: float, dist: float) -> void:
 				if dist < float(data.reach) + 0.6:
 					_cooldowns[a] = t + 12.0
 					var p := World.player
-					p.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats)
+					p.stats.add_dot("poison", 15.0, 0.04, stats)
 					if humanoid:
 						humanoid.anim.play_shot("attack2")
 					_hit_later(CharAnimator.impact("attack2") if humanoid else _strike(), 20.0, "Poisoned Blade")
@@ -768,7 +777,7 @@ func _use_abilities(t: float, dist: float) -> void:
 			"life_drain":
 				if dist < 20.0:
 					_cooldowns[a] = t + 15.0
-					World.player.stats.add_dot("life_drain", 12.0, 1.0 / 32.0, stats, false, true)
+					World.player.stats.add_dot("life_drain", 12.0, 0.04, stats, false, true)
 					World.float_text(global_position + Vector3(0, 2.2, 0), "Life Drain", Color(0.8, 0.2, 0.3), 36, self)
 			"mesmerize":
 				if dist < 10.0 and stats.hp < stats.max_hp * 0.8:
@@ -780,7 +789,7 @@ func _use_abilities(t: float, dist: float) -> void:
 					_cooldowns[a] = t + 10.0
 					var p := World.player
 					var dot: String = {"venom_bite": "poison", "fire_brand": "burn", "savage_bite": "bleed"}[a]
-					p.stats.add_dot(dot, 15.0, 1.0 / 32.0, stats)
+					p.stats.add_dot(dot, 15.0, 0.04, stats)
 					World.float_text(global_position + Vector3(0, 1.6, 0), String(a).replace("_", " ").capitalize(), Color(0.6, 1, 0.4) if a == "venom_bite" else Color(1, 0.55, 0.2), 32, self)
 					var delay := _strike()
 					if humanoid:
@@ -962,8 +971,12 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 	_swarm_count()
 	if _sheep != null and _sheep.visible and amount > 0:
 		end_polymorph()                  # any damage breaks it
+	if amount > 0 and stats.buffs.has("gouge"):
+		stats.buffs.erase("gouge")       # so does any damage a Gouge
+		stats.stun_until = Combatant.now()
+		World.float_text(global_position + Vector3(0, 2.0, 0), "Gouge broken", Color(0.85, 0.85, 0.85), 28, self)
 	if OS.get_cmdline_user_args().has("--dmg-log"):
-		print("DMG %d %s" % [amount, "white" if stats.last_hit_auto else "yellow"])      # test
+		print("DMG %d %s t=%.2f" % [amount, "white" if stats.last_hit_auto else "yellow", Combatant.now()])      # test
 	_last_hurt = Combatant.now()
 	if modifier == "Thorned" and source and source.body is Player and source.body.global_position.distance_to(global_position) < 4.0:
 		# Thorns: 15% of melee damage goes back to the attacker.

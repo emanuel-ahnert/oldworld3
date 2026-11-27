@@ -621,6 +621,9 @@ func _parse_args() -> void:
 			i += 1
 
 
+var _wall_zone: Zone                  # test (--wall-test)
+
+
 func _setup_input() -> void:
 	var keys := {
 		"move_forward": [KEY_W, KEY_UP], "move_back": [KEY_S, KEY_DOWN],
@@ -948,6 +951,20 @@ func _process(_dt: float) -> void:
 				near.home = near.global_position
 				near.engage()
 				print("GUARD-TEST ", near.kind, " hp ", near.stats.hp)
+	if args.has("wall-test") and player and _frame == 40:
+		# Test: the hero 5 m inside the start village's wall, between two gates, walking out at it.
+		var wz: Zone = zones.zone_at(player.global_position)
+		var wp: Palisade = wz.settlement.get_node_or_null("Palisade") if wz and wz.settlement else null
+		if wp and wp.gates().size() >= 1:
+			var ga: float = float(wp.gates()[0].yaw) + 0.6
+			var out := Vector3(sin(ga), 0, cos(ga))
+			var at: Vector3 = wz.position + out * (Palisade.RADIUS - 5.0)
+			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
+			player.rotation.y = atan2(out.x, out.z) + PI
+			player.auto_forward = true
+			_wall_zone = wz
+	if args.has("wall-test") and _wall_zone and _frame % 60 == 0:
+		print("WALL r=%.1f" % Vector2(player.global_position.x - _wall_zone.position.x, player.global_position.z - _wall_zone.position.z).length())
 	if args.has("outfits") and player and _frame == 60:
 		# Test: outfits (characters/<name>) side by side in front of the hero.
 		var names: PackedStringArray = String(args.outfits).split(",")

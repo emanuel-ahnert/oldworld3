@@ -111,7 +111,7 @@ func _collision(terrain: Terrain, openings: Array[float], half_gate: float) -> v
 			box.size = Vector3(seg * RADIUS + 0.2, 3.0, 0.5)
 			cs.shape = box
 			cs.position = Vector3(p.x, terrain.height_at(p.x, p.z) + 1.0, p.z)
-			cs.rotation.y = mid + PI / 2
+			cs.rotation.y = mid                  # its long side along the ring (it stood across it: gaps)
 			body.add_child(cs)
 		a += seg
 

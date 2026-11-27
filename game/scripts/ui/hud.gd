@@ -195,6 +195,30 @@ func _bar(color: Color) -> ProgressBar:
 
 
 ## A unit frame: name/level line, health bar with numbers, optional rage bar.
+## The rogue's combo points: five round pips under the energy bar (lit: gathered), the frame
+## and the buff row below it made room for.
+var _combo: Array[Panel] = []
+
+
+func _build_combo() -> void:
+	var bg := _hero.root.get_child(0) as ColorRect
+	bg.size.y = 82
+	_hero_auras.position.y = 100
+	for i in Player.COMBO_MAX:
+		var p := Panel.new()
+		var sb := StyleBoxFlat.new()
+		sb.set_corner_radius_all(7)
+		sb.border_color = Color(0.55, 0.42, 0.18)
+		sb.set_border_width_all(2)
+		sb.bg_color = Color(0.12, 0.1, 0.08, 0.9)
+		p.add_theme_stylebox_override("panel", sb)
+		p.position = Vector2(8 + i * 22, 61)
+		p.size = Vector2(14, 14)
+		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_hero.root.add_child(p)
+		_combo.append(p)
+
+
 func _frame(pos: Vector2, color: Color, rage: bool) -> Dictionary:
 	var root := Control.new()
 	root.position = pos
@@ -494,6 +518,8 @@ func _process(_dt: float) -> void:
 		_combat.offset_bottom = 66
 		add_child(_combat)
 		_update_quests()
+		if player.cls == "rogue":
+			_build_combo()
 		if player.stats.uses_mana or player.stats.uses_energy:
 			var fill := StyleBoxFlat.new()
 			fill.bg_color = Color(0.25, 0.45, 0.95) if player.stats.uses_mana else Color(0.95, 0.85, 0.2)
@@ -504,6 +530,8 @@ func _process(_dt: float) -> void:
 	_hero.hp.value = float(s.hp) / s.max_hp
 	_hero.hp_text.text = "%d / %d" % [s.hp, s.max_hp]
 	_hero.rage.value = (s.mana / s.max_mana) if s.uses_mana else (s.energy / 100.0 if s.uses_energy else s.rage / 100.0)
+	for i in _combo.size():
+		(_combo[i].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Color(1.0, 0.78, 0.2) if i < player.combo else Color(0.12, 0.1, 0.08, 0.9)
 	_cast.visible = not player.casting.is_empty()
 	if _cast.visible:
 		var c: Dictionary = player.casting

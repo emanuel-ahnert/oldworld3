@@ -91,3 +91,8 @@ healing_stream | a flowing stream of glowing blue healing water, teal background
 berserk | a roaring red rage face mask with glowing eyes, blood red background
 howl | a wolf howling at the moon with sound waves, midnight blue background
 wrath_totem | a carved wooden totem pole with an angry red glowing carved face and red sparks, dark red background
+life_tap | a glowing red drop of blood turning into a swirl of blue mana energy above an open palm, dark purple background
+dark_ward | a dark purple rune shield with a withered skull sigil, ghostly purple chains around it, black background
+eviscerate | a curved dagger slashing with a bright red arc of blood and five glowing golden sparks, dark red background
+gouge | a dagger pommel striking an eye with a burst of white stars, dazed swirl, dark yellow background
+master_of_subtlety | a hooded rogue's dark silhouette fading into shadow mist with swift motion lines, dark blue background

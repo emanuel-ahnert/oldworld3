@@ -63,6 +63,7 @@ const ABILITIES_MAGE := [
 ## Polymorph: the target a sheep for POLYMORPH_TIME s (any damage breaks it; Enemy.polymorph).
 const POLYMORPH_TIME := 20.0
 const FEAR_TIME := 8.0
+const GOUGE_TIME := 6.0
 var _sheeped: Enemy                 ## the enemy this hero's Polymorph holds (one at a time)
 ## Blizzard: channelled over a circle of BLIZZARD_RADIUS m at the target (fixed when it starts).
 const BLIZZARD_RADIUS := 8.0
@@ -71,10 +72,12 @@ const BLIZZARD_RADIUS := 8.0
 const ABILITIES_ROGUE := [
 	{"id": "quick_stab", "name": "Quick Stab", "key": 1, "level": 1, "energy": 40, "cd": 0.0, "power": 45.0},
 	{"id": "stealth", "name": "Stealth", "key": 2, "level": 1, "energy": 0, "cd": 6.0},
-	{"id": "knife_throw", "name": "Knife Throw", "key": 3, "level": 2, "energy": 30, "cd": 0.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
+	{"id": "eviscerate", "name": "Eviscerate", "key": 3, "level": 2, "energy": 35, "cd": 0.0, "power_per_cp": 27.0},
+	{"id": "knife_throw", "name": "Knife Throw", "key": 7, "level": 4, "energy": 30, "cd": 0.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
 	{"id": "poisoned_blade", "name": "Poisoned Blade", "key": 4, "level": 3, "energy": 30, "cd": 0.0, "power": 20.0},
 	{"id": "cheap_shot", "name": "Cheap Shot", "key": 5, "level": 6, "energy": 40, "cd": 20.0, "power": 10.0},
 	{"id": "gut_slash", "name": "Gut Slash", "key": 6, "level": 8, "energy": 30, "cd": 0.0, "power": 75.0},
+	{"id": "gouge", "name": "Gouge", "key": 8, "level": 5, "energy": 40, "cd": 10.0},
 ]
 
 ## Priest (Oldworld2's Priest in real time): Holy damage, heals, a shield, Dark damage over time.
@@ -103,8 +106,9 @@ const ABILITIES_WARLOCK := [
 	{"id": "hex_bolt", "name": "Hex Bolt", "key": 1, "level": 1, "mana": 0, "cd": 0.0, "cast": 1.6, "power": 40.0, "element": "Dark", "range": 30.0},
 	{"id": "siphon_life", "name": "Siphon Life", "key": 2, "level": 1, "mana": 30, "cd": 0.0, "cast": 0.0, "element": "Dark", "range": 30.0},
 	{"id": "wither", "name": "Wither", "key": 3, "level": 1, "mana": 20, "cd": 0.0, "cast": 0.0, "element": "Dark", "range": 30.0},
-	{"id": "hellfire_rain", "name": "Hellfire Rain", "key": 4, "level": 2, "mana": 30, "cd": 8.0, "cast": 2.0, "power": 45.0, "element": "Fire", "range": 30.0},
-	{"id": "curse_of_weakness", "name": "Curse of Weakness", "key": 5, "level": 3, "mana": 20, "cd": 0.0, "cast": 0.0, "range": 30.0},
+	{"id": "hellfire_rain", "name": "Hellfire Rain", "key": 4, "level": 2, "mana": 30, "cd": 8.0, "cast": 2.0, "power": 20.0, "ticks": 5, "element": "Fire", "range": 30.0},
+	{"id": "life_tap", "name": "Life Tap", "key": 5, "level": 3, "mana": 0, "cd": 0.0, "self": true},
+	{"id": "curse_of_weakness", "name": "Curse of Weakness", "key": 7, "level": 4, "mana": 20, "cd": 0.0, "cast": 0.0, "range": 30.0},
 	{"id": "fear", "name": "Fear", "key": 6, "level": 6, "mana": 25, "cd": 20.0, "cast": 2.0, "range": 30.0},
 ]
 
@@ -185,6 +189,17 @@ var zoom := 6.0
 var cls := "warrior"
 var stats: Combatant
 var casting := {}                  ## {a, end, start, target} while a spell is being cast
+## Rogue: combo points (0..COMBO_MAX), one from each attack in COMBO_GEN; Eviscerate spends
+## them. Lost COMBO_KEEP s after a fight.
+var combo := 0
+const COMBO_MAX := 5
+const COMBO_KEEP := 10.0
+const COMBO_GEN := ["quick_stab", "knife_throw", "poisoned_blade", "cheap_shot", "gut_slash"]
+var _combo_t := 0.0
+## Dual wield (a parrying dagger in the off hand): the off hand strikes on its own swing timer,
+## between the main hand's, for OFFHAND of a swing's power.
+const OFFHAND := 0.5
+var _off_swing_at := 0.0
 var stealthed := false             ## rogue: enemies barely notice the hero; the next hit +50%
 var bear := false                  ## druid in Bear Form
 var _bear_model: Node3D
@@ -719,6 +734,13 @@ func ability_problem(a: Dictionary, ignore_gcd := false) -> String:
 		return "Not enough mana"
 	if stats.energy < float(a.get("energy", 0)):
 		return "Not enough energy"
+	if a.id == "eviscerate" and combo <= 0:
+		return "No combo points"
+	if a.id == "life_tap":
+		if stats.mana >= stats.max_mana:
+			return "Mana is full"
+		if stats.hp <= _life_tap_cost() + 1:
+			return "Not enough health"
 	match a.id:
 		"battle_horn", "thunder_clap", "frost_ring", "mana_shield", "blink", "whirlwind":
 			return ""
@@ -769,7 +791,7 @@ func use_ability(key: int) -> void:
 			set_target(e)
 	# Any attack on a live target starts auto-attack (like WoW), even when the ability itself
 	# can't be used yet (not enough rage, cooldown, out of range).
-	if not a.get("self", false) and not a.id in NOT_ATTACKS and target and not target.stats.dead and stats.level >= int(a.level):
+	if not a.get("self", false) and not a.id in NOT_ATTACKS and a.id != "gouge" and target and not target.stats.dead and stats.level >= int(a.level):
 		auto_attacking = true
 	if a.id == "whirlwind" and whirling:
 		# Pressed again: stop spinning, but not in the first WHIRL_LOCK s (no tap-cancel).
@@ -835,6 +857,9 @@ func _stun(e: Enemy, seconds: float) -> void:
 
 
 func _execute(a: Dictionary) -> void:
+	if a.id in COMBO_GEN:
+		combo = mini(COMBO_MAX, combo + 1)
+		_combo_t = Combatant.now()
 	match a.id:
 		"heavy_strike":
 			_melee_hit(float(a.power), "strike", 1.0)
@@ -896,7 +921,7 @@ func _execute(a: Dictionary) -> void:
 			_spell_hit(target, float(a.power), String(a.element))
 			match a.id:
 				"flame_shock":
-					target.stats.add_dot("burn", 24.0, 1.0 / 32.0, stats)
+					target.stats.add_dot("burn", 24.0, 0.04, stats)
 				"stone_shock":
 					target.silenced_until = Combatant.now() + 4.0
 					World.float_text(target.global_position + Vector3(0, 1.8, 0), "Silenced", Color(0.8, 0.7, 0.5), 34, target)
@@ -917,12 +942,12 @@ func _execute(a: Dictionary) -> void:
 				_spell_hit(e, float(a.power), "Air")
 				e.engage()
 		"rejuvenate":
-			stats.add_dot("rejuvenate", 24.0, 1.0 / 32.0, stats, true)
+			stats.add_dot("rejuvenate", 24.0, 0.04, stats, true)
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Rejuvenate", Color(0.5, 1, 0.5), 36, self)
 			Audio.sfx("heal", -4.0)
 		"insect_swarm":
 			model.anim.play_shot("release")
-			target.stats.add_dot("insect_swarm", 24.0, 1.0 / 32.0, stats)
+			target.stats.add_dot("insect_swarm", 24.0, 0.04, stats)
 			target.stats.add_buff("insect_swarm", 24.0, {"attack": 0.75})
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Insect Swarm", Color(0.6, 0.9, 0.3), 34, target)
 			target.engage()
@@ -953,18 +978,18 @@ func _execute(a: Dictionary) -> void:
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Ward of Light", Color(1, 0.95, 0.6), 40, self)
 			Audio.sfx("magic")
 		"renewal":
-			stats.add_dot("renewal", 24.0, 1.0 / 32.0, stats, true)
+			stats.add_dot("renewal", 24.0, 0.04, stats, true)
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Renewal", Color(0.5, 1, 0.5), 36, self)
 			Audio.sfx("heal", -4.0)
 		"mind_pain", "wither":
 			model.anim.play_shot("release")
-			target.stats.add_dot(a.id, 30.0 if a.id == "wither" else 24.0, 1.0 / 32.0, stats)
+			target.stats.add_dot(a.id, 30.0 if a.id == "wither" else 24.0, 0.04, stats)
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), a.name, Color(0.7, 0.4, 1.0), 34, target)
 			Audio.sfx("magic", -4.0)
 			target.engage()
 		"siphon_life":
 			model.anim.play_shot("release")
-			target.stats.add_dot("siphon_life", 15.0, 1.0 / 24.0, stats, false, true)
+			target.stats.add_dot("siphon_life", 15.0, 0.05, stats, false, true)
 			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Siphon Life", Color(0.6, 1.0, 0.4), 34, target)
 			Audio.sfx("magic", -4.0)
 			target.engage()
@@ -975,11 +1000,21 @@ func _execute(a: Dictionary) -> void:
 			var c := _area.global_position if _area else target.global_position
 			Audio.sfx("fireball")
 			var power := float(a.power)
+			var ticks := int(a.get("ticks", 5))
+			# From the first meteor's landing on, every second for `ticks` s: Fire damage to every
+			# enemy in the circle.
 			SpellFx.hellfire(c, HELLFIRE_RADIUS, func():
-				for e in World.enemies:
-					if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < HELLFIRE_RADIUS:
-						_spell_hit(e, power, "Fire", false)
-						e.engage())
+				for k in ticks:
+					get_tree().create_timer(float(k), false).timeout.connect(func(): _hellfire_tick(c, power)), 6 * ticks, float(ticks))
+		"life_tap":
+			# Life Tap: 10% of max health turned into as much mana.
+			var cost := _life_tap_cost()
+			stats.hp = maxi(1, stats.hp - cost)
+			stats.mana = minf(stats.max_mana, stats.mana + cost)
+			model.anim.play_shot("release")
+			World.float_text(global_position + Vector3(0, 2.0, 0), "-%d" % cost, Color(1, 0.3, 0.25), 40, self)
+			World.float_text(global_position + Vector3(0, 2.5, 0), "+%d mana" % cost, Color(0.45, 0.6, 1.0), 40, self)
+			Audio.sfx("dark", -6.0)
 		"curse_of_weakness":
 			model.anim.play_shot("release")
 			target.stats.add_buff("curse_of_weakness", 30.0, {"attack": 0.75})
@@ -1007,13 +1042,30 @@ func _execute(a: Dictionary) -> void:
 			stats.immune_until = Combatant.now() + 6.0
 			World.float_text(global_position + Vector3(0, 2.2, 0), "Divine Shield", Color(1, 0.95, 0.6), 44, self)
 			Audio.sfx("heal")
+		"eviscerate":
+			# Eviscerate: power_per_cp for every combo point, all of them spent.
+			var cp := combo
+			combo = 0
+			_melee_hit(float(a.power_per_cp) * cp, "strike", 1.0)
+			World.float_text(global_position + Vector3(0, 2.2, 0), "Eviscerate (%d)" % cp, Color(1, 0.8, 0.3), 34, self)
+		"gouge":
+			# Gouge: the target is out of the fight GOUGE_TIME s (any damage wakes it), and the
+			# hero stops swinging at it.
+			model.anim.play_shot("attack1")
+			_opener = false
+			_break_stealth()
+			target.gouge(GOUGE_TIME)
+			auto_attacking = false
+			World.float_text(target.global_position + Vector3(0, 1.8, 0), "Gouged", Color(1, 0.8, 0.3), 34, target)
+			Audio.hit("dagger", false, -6.0, target.surface())
 		"quick_stab":
 			_melee_hit(float(a.power), "attack1", 1.0, false, 0.25)
 		"gut_slash":
 			_melee_hit(float(a.power), "strike", 1.0)
 		"poisoned_blade":
 			_melee_hit(float(a.power), "attack2", 1.0, false, 0.0, "Physical", func(e: Enemy):
-				e.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats))
+				e.stats.add_dot("poison", 15.0, 0.04, stats)
+				e.stats.slow(15.0, 0.5, "Crippled"))
 		"cheap_shot":
 			_melee_hit(float(a.power), "attack1", 1.0, false, 0.0, "Physical", _stun.bind(3.0))
 		"knife_throw":
@@ -1074,7 +1126,7 @@ func _execute(a: Dictionary) -> void:
 			stats.root_until = 0.0
 			stats.slow_until = 0.0
 			Audio.sfx("magic")
-	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_horn", "stealth"]):
+	if target and (cls in ["warrior", "rogue", "paladin", "hunter"] or bear) and not a.get("self", false) and not (a.id in ["battle_horn", "stealth", "gouge"]):
 		auto_attacking = true
 
 
@@ -1196,6 +1248,21 @@ func _end_channel() -> void:
 
 
 const HELLFIRE_RADIUS := 8.0
+
+
+## Life Tap's price (and its mana): 10% of max health.
+func _life_tap_cost() -> int:
+	return ceili(stats.max_hp * 0.1)
+
+
+## One second of Hellfire Rain: Fire damage to every enemy in its circle.
+func _hellfire_tick(c: Vector3, power: float) -> void:
+	if stats.dead:
+		return
+	for e in World.enemies:
+		if not e.stats.dead and Vector2(e.global_position.x - c.x, e.global_position.z - c.z).length() < HELLFIRE_RADIUS:
+			_spell_hit(e, power, "Fire", false)
+			e.engage()
 const HEAL_ELEMENT := {"priest": "Holy", "paladin": "Holy", "shaman": "Water", "druid": "Nature", "hunter": "Nature"}
 var _cast_glow: Node3D            ## the spell gathering in the left hand while casting
 var _cast_rune: Node3D            ## a rune circle at the feet while casting
@@ -1275,7 +1342,10 @@ func weapon_sound() -> String:
 ## and `on_hit`) at the clip's moment of impact (CharAnimator.impact), if the target is still
 ## alive and within reach then.
 func _melee_hit(power: float, anim: String, extra: float, no_miss := false, extra_crit := 0.0, element := "Physical", on_hit := Callable()) -> void:
-	model.anim.play_shot(anim)
+	if anim == "offhand":
+		model.offhand_stab()              # the left arm thrusts (no clip of its own)
+	else:
+		model.anim.play_shot(anim)
 	extra *= _ambush()
 	if _from_stealth():
 		extra_crit += 1.0                  # out of stealth: always a critical hit
@@ -1327,7 +1397,7 @@ func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bo
 		overwhelm_until = Combatant.now() + 5.0
 		return
 	stats.crit_chance += extra_crit
-	var r := stats.roll_damage(e.stats, power, anim.begins_with("attack") and power < 40.0, extra * _enrage()) if element == "Physical" else stats.roll_damage_elem(e.stats, power, element)
+	var r := stats.roll_damage(e.stats, power, (anim.begins_with("attack") or anim == "offhand") and power < 40.0, extra * _enrage()) if element == "Physical" else stats.roll_damage_elem(e.stats, power, element)
 	stats.crit_chance -= extra_crit
 	if stats.has_buff("holy_seal"):
 		# Holy Seal (paladin): every physical hit adds a Holy hit of power 20.
@@ -1359,7 +1429,7 @@ func _arrow(e: Enemy, power: float, element: String, kind: String) -> void:
 		stats.auto_hit = false
 		Audio.hit("arrow", r.crit, 0.0, e.surface())
 		if kind == "venom_arrow":
-			e.stats.add_dot("poison", 15.0, 1.0 / 32.0, stats)
+			e.stats.add_dot("poison", 15.0, 0.04, stats)
 		if has_passive("Concussive Shots"):
 			# Every arrow slows its target by 60% for 4 s (refreshed by the next one).
 			e.stats.slow(CONCUSSIVE_TIME, 0.4, "Concussed")
@@ -1367,7 +1437,7 @@ func _arrow(e: Enemy, power: float, element: String, kind: String) -> void:
 
 
 ## Shaman (level 4): entering combat puts down a Wrath Totem (Magic +25% nearby) and a Healing
-## Stream Totem (heals 1/32 of max HP every 3 s), for 30 s (Oldworld2's totems).
+## Stream Totem (heals 4% of max HP every 3 s), for 30 s (Oldworld2's totems).
 func _totem_process(t: float) -> void:
 	if not has_passive("Totems"):
 		return
@@ -1397,7 +1467,7 @@ func _totem_process(t: float) -> void:
 	if near and t < _totem_until:
 		stats.add_buff("wrath_totem", 1.0, {"magic": 1.25})
 		if not stats.dots.has("healing_stream"):
-			stats.add_dot("healing_stream", 6.0, 1.0 / 32.0, stats, true)
+			stats.add_dot("healing_stream", 6.0, 0.04, stats, true)
 	elif t > _totem_until and not _totems.is_empty():
 		for n in _totems:
 			n.queue_free()
@@ -1490,7 +1560,7 @@ func _tips_process() -> void:
 func _combat_process(t: float) -> void:
 	_combat_end_check(t)
 	_tips_process()
-	# Demon Armor (warlock, level 4): regenerates 1/32 max HP every 3 s while fighting.
+	# Demon Armor (warlock, level 4): regenerates 2% max HP every 3 s while fighting.
 	if has_passive("Demon Armor") and stats.in_combat() and not stats.dots.has("demon_armor"):
 		stats.add_dot("demon_armor", 9.0, 0.02, stats, true)
 	if target and (target.stats.dead or not target.visible):
@@ -1503,6 +1573,10 @@ func _combat_process(t: float) -> void:
 	else:
 		_ring.visible = false
 	_totem_process(t)
+	if stats.in_combat():
+		_combo_t = t
+	elif combo > 0 and t - _combo_t > COMBO_KEEP:
+		combo = 0                         # COMBO_KEEP s after the fight
 	if has_passive("Juggernaut") and stats.in_combat():
 		# Juggernaut: 1 rage per second while fighting.
 		var dt := clampf(t - _jugg_t, 0.0, 0.5)
@@ -1528,11 +1602,24 @@ func _combat_process(t: float) -> void:
 	if auto_attacking and target and t >= _swing_at and not stats.stunned() and casting.is_empty():
 		if _target_distance() <= _melee_reach(target) and _facing_target(75.0 if _moving() else 60.0):
 			_swing_at = t + stats.swing_time
+			if _dual_wield() and _off_swing_at < t + 0.2:
+				_off_swing_at = t + stats.swing_time * 0.5      # the off hand between the main's swings
 			stats.auto_hit = true
 			_melee_hit(Rules.swing_power(stats.swing_time), _next_attack, 1.0)
 			stats.auto_hit = false
 			# Two slashes, then a thrust, then again.
 			_next_attack = {"attack1": "attack2", "attack2": "attack3"}.get(_next_attack, "attack1")
+	if _dual_wield() and auto_attacking and target and t >= _off_swing_at and not stats.stunned() and casting.is_empty():
+		if _target_distance() <= _melee_reach(target) and _facing_target(75.0 if _moving() else 60.0):
+			_off_swing_at = t + stats.swing_time
+			stats.auto_hit = true
+			_melee_hit(Rules.swing_power(stats.swing_time) * OFFHAND, "offhand", 1.0)
+			stats.auto_hit = false
+
+
+## A dagger in the off hand (and not a bear): both hands strike.
+func _dual_wield() -> bool:
+	return not bear and String(equipped.get("off", {}).get("kind", "")) == "offdagger"
 
 
 ## One Whirlwind sweep: every live enemy within reach takes a hit (no rage from these hits).
@@ -1578,18 +1665,18 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 	_break_stealth()
 	if not stats.ticking:
 		break_camp()              # direct hits only: poison, bleeding etc. don't end the rest
-	# Thorns (druid, level 4): a melee hit hurts the attacker for 1/16 of the druid's max HP.
+	# Thorns (druid, level 4): a melee hit hurts the attacker for 7% of the druid's max HP.
 	if has_passive("Thorns") and source and source.body is Enemy and not source.dead:
 		var e := source.body as Enemy
 		if not e.data.has("ranged") and e.global_position.distance_to(global_position) < 5.0:
-			source.take_damage(maxi(1, stats.max_hp / 16), false, stats)
+			source.take_damage(maxi(1, ceili(stats.max_hp * 0.07)), false, stats)
 	World.float_text(global_position + Vector3(0, 2.0, 0), "-%d" % amount + ("!" if crit else ""), Color(1, 0.3, 0.25), 56 if crit else 44, self, crit)
 	# Enrage (level 3): a crit taken, or 30% on any hit, gives +25% damage for 12 s.
 	if has_passive("Enrage") and (crit or randf() < 0.3):
 		stats.add_buff("enrage", 12.0, {})
-	# Second Wind (level 8): 30% (crits always) to heal 1/32 max HP every 3 s for 9 s.
+	# Second Wind (level 8): 30% (crits always) to heal 4% max HP every 3 s for 9 s.
 	if has_passive("Second Wind") and (crit or randf() < 0.3):
-		stats.add_dot("second_wind", 9.0, 1.0 / 32.0, stats, true)
+		stats.add_dot("second_wind", 9.0, 0.04, stats, true)
 	# Dazed: a direct hit from behind by an enemy, 30%: half speed for 4 s (like WoW's daze).
 	if not stats.ticking and source and source.body is Enemy and randf() < 0.3:
 		var from := source.body.global_position - global_position
@@ -1598,6 +1685,13 @@ func _on_damaged(amount: int, crit: bool, source: Combatant) -> void:
 			World.float_text(global_position + Vector3(0, 2.3, 0), "Dazed", Color(0.95, 0.85, 0.5), 38, self)
 	if randf() < 0.25:
 		model.anim.play_shot("hit")
+	# Dark Ward (warlock, level 10): a melee attacker that hits is cursed (Curse of Weakness).
+	if has_passive("Dark Ward") and amount > 0 and source and source.body is Enemy and not source.dead:
+		var de := source.body as Enemy
+		if not de.data.has("ranged") and de.global_position.distance_to(global_position) < 5.0:
+			if not source.has_buff("curse_of_weakness"):
+				World.float_text(de.global_position + Vector3(0, 1.8, 0), "Weakened", Color(0.7, 0.4, 1.0), 30, de)
+			source.add_buff("curse_of_weakness", 30.0, {"attack": 0.75})
 
 
 func _on_died(_killer: Combatant) -> void:
@@ -1862,7 +1956,7 @@ func _physics_process(dt: float) -> void:
 	var local := Vector3(side, 0, -fwd)
 	if local.length() > 1.0:
 		local = local.normalized()
-	var speed := RUN_SPEED * stats.move_factor() * (0.7 if stealthed else 1.0) * (0.5 if whirling else 1.0)
+	var speed := RUN_SPEED * stats.move_factor() * ((1.2 if has_passive("Master of Subtlety") else 0.7) if stealthed else 1.0) * (0.5 if whirling else 1.0)
 	# Sprint forward or sideways (strafing), not backward.
 	var moving := local.length() > 0.01 and fwd >= 0.0
 	sprinting = ((Input.is_action_pressed("sprint") or auto_sprint) and moving and stamina > 0.0 and is_on_floor()) or (sprinting and not is_on_floor())

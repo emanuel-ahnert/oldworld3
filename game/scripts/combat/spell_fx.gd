@@ -341,6 +341,7 @@ static func rune(c: Color, radius: float, fill := 0.12, spin := 0.3) -> MeshInst
 	m.set_shader_parameter("tint", c)
 	m.set_shader_parameter("fill", fill)
 	m.set_shader_parameter("spin", spin)
+	m.set_shader_parameter("strength", 1.0)        # set, so tweens find it (its fade)
 	mi.material_override = m
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
@@ -407,7 +408,8 @@ static func area_marker(radius: float, c := Color(1.0, 0.35, 0.05)) -> Node3D:
 ## Hellfire Rain: meteors falling from the sky into the circle at `center` (`radius` m) over
 ## about a second and a half, each with a flame trail and a burst where it lands; the circle
 ## flares and burns out. `on_first_land` is called when the first wave lands (the damage).
-static func hellfire(center: Vector3, radius: float, on_first_land: Callable, meteors := 16) -> void:
+## `duration` s of meteors (spread over it), the circle burning that long.
+static func hellfire(center: Vector3, radius: float, on_first_land: Callable, meteors := 16, duration := 1.3) -> void:
 	var n := Node3D.new()
 	World.root.add_child(n)
 	n.global_position = center
@@ -427,12 +429,12 @@ static func hellfire(center: Vector3, radius: float, on_first_land: Callable, me
 		var d := sqrt(randf()) * radius * 0.92
 		var land := center + Vector3(cos(a) * d, 0, sin(a) * d)
 		land.y = World.height_at(land.x, land.z)
-		var delay := 0.08 * i + randf() * 0.1
+		var delay := duration * float(i) / float(meteors) + randf() * 0.12
 		var cb := on_first_land if first else Callable()
 		first = false
 		tree.create_timer(delay).timeout.connect(func(): _meteor(land, cb))
 	var tw := n.create_tween()
-	tw.tween_interval(0.08 * meteors + 0.8)
+	tw.tween_interval(duration + 0.8)
 	tw.tween_property(r.material_override, "shader_parameter/strength", 0.0, 0.8)
 	tw.parallel().tween_property(glow, "light_energy", 0.0, 0.8)
 	tw.tween_callback(n.queue_free)

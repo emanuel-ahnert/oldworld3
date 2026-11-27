@@ -599,7 +599,7 @@ def track_sad():
 # ---- sound effects ----
 
 # Short, bright blips sound louder than their peak says; these play softer.
-QUIET = {"menu_move": 0.5, "menu_accept": 0.65, "menu_cancel": 0.65, "alert": 0.6}
+QUIET = {"menu_move": 0.5, "menu_accept": 0.65, "menu_cancel": 0.65, "alert": 0.6, "magic": 0.6}
 
 
 def sfx():
@@ -680,7 +680,16 @@ def sfx():
     n = int(0.8 * SR)
     growl = fft_filter(osc("saw", np.linspace(90, 55, n), 0.8) + noise(0.8, rng) * 0.4, low=700)
     S["dark"] = reverb(growl * env(n, 0.3, 0.2, 0.6, 0.2) * 0.5, 1.4, 0.35)
-    S["magic"] = reverb(notes([hz(n) for n in (79, 86, 91, 98)], lambda f: osc("sine", f, 0.2) * decay(int(0.2 * SR), 0.08), 0.05) * 0.6, 1.0, 0.35)
+    # A spell going off: a low swell (no chiptune arpeggio: that sounded like an old console), a
+    # breath of air through it and a faint, dark shimmer fading into the room.
+    mr = np.random.default_rng(91)
+    n = int(0.75 * SR)
+    t = t_of(0.75)
+    swell = osc("sine", 98 * (1 - 0.18 * t / 0.75), 0.75) + 0.5 * osc("sine", 147 * (1 - 0.12 * t / 0.75), 0.75)
+    swell *= env(n, 0.05, 0.15, 0.55, 0.45)
+    breath = sweep_filter(noise(0.75, mr), np.linspace(1400, 500, n // 1024 + 1)) * env(n, 0.06, 0.2, 0.35, 0.4)
+    shimmer = sum(osc("sine", hz(m) * (1 + 0.004 * np.sin(2 * np.pi * 4.5 * t + m)), 0.75) for m in (62, 69, 74)) * env(n, 0.12, 0.2, 0.4, 0.4)
+    S["magic"] = reverb(mix((0, swell * 0.7), (0, breath * 0.45), (0.03, shimmer * 0.12)), 1.3, 0.3)
     twang = pluck(220, 0.4, 0.95, 0.15) * 1.5
     S["launch"] = mix((0, twang), (0.02, S["miss"] * 0.6))
     S["fire_strike"] = mix((0, S["miss"] * 0.8), (0.05, S["light"][: int(0.4 * SR)] * 0.6))
