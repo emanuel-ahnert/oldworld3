@@ -156,6 +156,14 @@ func height_at(x: float, z: float) -> float:
 	return zn.terrain.height_at(x - zn.position.x, z - zn.position.z)
 
 
+## Whether a world point is in or right next to lava (a volcano's).
+func lava_at(p: Vector3) -> bool:
+	var zn: Zone = zones.get(cell_of(p))
+	if zn == null or zn.terrain == null:
+		return false
+	return zn.terrain.lava_at(p.x - zn.position.x, p.z - zn.position.z, p.y - zn.position.y)
+
+
 ## The water surface over a world point (NAN on dry land).
 func water_level(x: float, z: float) -> float:
 	var zn: Zone = zones.get(cell_of(Vector3(x, 0, z)))

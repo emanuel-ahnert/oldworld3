@@ -192,7 +192,35 @@ static func generate(ilvl: int, rarity: String, cls: String, rng: RandomNumberGe
 	return make(slot, ilvl, rarity, cls, rng)
 
 
-static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: RandomNumberGenerator) -> Dictionary:
+## Cloth headwear: mostly jelly bag caps (the rest hoods), each in its own colors: [cloth, hem]
+## as hex. At a merchant in the buyer's class colors, found ones in any of DROP_CLOTH.
+const CLASS_CLOTH := {
+	"mage": ["#21294f", "#a89970"], "priest": ["#c7c2b3", "#a88c4d"], "warlock": ["#470908", "#120c0c"],
+	"druid": ["#384529", "#66523a"], "rogue": ["#211f1f", "#4d4033"], "hunter": ["#334520", "#664d2e"],
+	"warrior": ["#5c1a14", "#3d2e1f"], "paladin": ["#c7c2b3", "#2e3d73"], "shaman": ["#1f3d4d", "#664d2e"],
+}
+const DROP_CLOTH := [["#7a1f17", "#3d2b1c"], ["#23386e", "#a89970"], ["#2f5222", "#5c4a30"], ["#a3842a", "#5c4021"],
+	["#4f2a63", "#2a1a33"], ["#5c4330", "#33261b"], ["#6b6b66", "#33312e"], ["#1c1b1b", "#57452f"],
+	["#1f5552", "#c7b58a"], ["#5e1f33", "#a89970"]]
+
+
+## A cloth head item's look: "jellycap" or "hood" ("" for anything else; old items by name).
+static func cloth_style(item: Dictionary) -> String:
+	if item.is_empty() or item.get("slot", "") != "head" or item.get("kind", "") != "cloth":
+		return ""
+	if item.has("style"):
+		return String(item.style)
+	return "hood" if hash(String(item.get("name", ""))) % 4 == 0 else "jellycap"
+
+
+## A cloth head item's colors as [Color, Color]; [] when it has none (it takes the robe's).
+static func cloth_colors(item: Dictionary) -> Array:
+	if cloth_style(item) == "" or not item.has("color"):
+		return []
+	return [Color.html(String(item.color[0])), Color.html(String(item.color[1]))]
+
+
+static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: RandomNumberGenerator, shop := false) -> Dictionary:
 	var b := budget(ilvl, slot, rarity)
 	var tier := 0 if ilvl < 8 else (1 if ilvl < 16 else 2)
 	var stats := {}
@@ -251,7 +279,13 @@ static func make(slot: String, ilvl: int, rarity: String, cls: String, rng: Rand
 		if rarity == "epic":
 			_add(stats, "crit", b * 0.3)
 		name += " " + suffix
-	return {"name": name, "slot": slot, "kind": kind, "ilvl": ilvl, "rarity": rarity, "stats": stats}
+	var item := {"name": name, "slot": slot, "kind": kind, "ilvl": ilvl, "rarity": rarity, "stats": stats}
+	if slot == "head" and kind == "cloth":
+		item["style"] = "jellycap" if rng.randf() < 0.75 else "hood"
+		if item.style == "jellycap":
+			item.name = String(item.name).replace("Hood", "Cap")
+		item["color"] = CLASS_CLOTH[cls] if shop and CLASS_CLOTH.has(cls) else DROP_CLOTH[rng.randi() % DROP_CLOTH.size()]
+	return item
 
 
 static func _add(stats: Dictionary, stat: String, points: float) -> void:

@@ -77,7 +77,7 @@ const PASSIVES := {
 	"warrior": [[3, "Enrage", "Taking a crit (or 30% on any hit) gives +25% damage for 12 s"], [8, "Second Wind", "30% chance when hit (always on a crit taken): heals 4% of max health{hp:0.04} every 3 s for 9 s; refreshes, doesn't stack"], [10, "Juggernaut", "Charge has no cooldown and works in combat (no rage from it there); 1 rage per second while fighting"]],
 	"warlock": [[4, "Demon Armor", "In combat you heal 2% of your max health{hp:0.02} every 3 s."], [10, "Dark Ward", "Every enemy that hits you in melee is cursed with Curse of Weakness: its Attack −25% for 30 s."]],
 	"shaman": [[4, "Totems", "Entering combat places a Wrath Totem and a Healing Stream Totem for 30 s. Within 20 m of them your Magic is +25% and you heal 4% of your max health{hp:0.04} every 3 s."]],
-	"rogue": [[6, "Improved Sprint", "Sprint stamina lasts five times as long."], [6, "Master of Subtlety", "In stealth you move at 120% speed instead of 70%."], [8, "Cheat Death", "Once every 2 minutes, a lethal hit leaves 10% health instead."],
+	"rogue": [[2, "Improved Sprint", "Sprint stamina lasts five times as long."], [6, "Master of Subtlety", "In stealth you move at 120% speed instead of 70%."], [8, "Combat Specialization", "When an enemy dodges your attack you gain 20 energy; a kill gives 40."], [8, "Cheat Death", "Once every 2 minutes, a lethal hit leaves 10% health instead and removes all your debuffs (poisons, bleeds, curses, stuns, roots, slows)."],
 		[8, "Prey on the Weak", "+10% critical hit chance for each level above the enemy, up to 100%."],
 		[10, "Poison Resistance", "Poison does 75% less damage to you."]],
 	"hunter": [[2, "Concussive Shots", "Every arrow you shoot (Auto Shot, Steady Shot, Venom Arrow, Volley) slows its target by 60% for 4 s."]],

@@ -195,6 +195,40 @@ func _bar(color: Color) -> ProgressBar:
 
 
 ## A unit frame: name/level line, health bar with numbers, optional rage bar.
+## In stealth: the Stealth icon large in the top middle of the screen (framed, breathing).
+var _stealth: Control
+
+
+func _build_stealth() -> void:
+	var tex := Icons.get_icon("stealth")
+	if tex == null:
+		return
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.04, 0.08, 0.7)
+	sb.border_color = Color(0.62, 0.45, 0.9)
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(6)
+	sb.set_content_margin_all(3)
+	p.add_theme_stylebox_override("panel", sb)
+	p.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	p.offset_left = -42
+	p.offset_right = 42
+	p.offset_top = 12                 # where the crossed swords show in a fight (never both)
+	p.offset_bottom = 96
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var icon := TextureRect.new()
+	icon.texture = tex
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	icon.custom_minimum_size = Vector2(78, 78)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(icon)
+	p.visible = false
+	add_child(p)
+	_stealth = p
+
+
 ## The rogue's combo points: five round pips under the energy bar (lit: gathered), the frame
 ## and the buff row below it made room for.
 var _combo: Array[Panel] = []
@@ -517,6 +551,7 @@ func _process(_dt: float) -> void:
 		_combat.offset_top = 14
 		_combat.offset_bottom = 66
 		add_child(_combat)
+		_build_stealth()
 		_update_quests()
 		if player.cls == "rogue":
 			_build_combo()
@@ -530,6 +565,10 @@ func _process(_dt: float) -> void:
 	_hero.hp.value = float(s.hp) / s.max_hp
 	_hero.hp_text.text = "%d / %d" % [s.hp, s.max_hp]
 	_hero.rage.value = (s.mana / s.max_mana) if s.uses_mana else (s.energy / 100.0 if s.uses_energy else s.rage / 100.0)
+	if _stealth:
+		_stealth.visible = player.stealthed
+		if _stealth.visible:
+			_stealth.modulate.a = 0.8 + 0.2 * sin(t * 2.5)     # a slow breath
 	for i in _combo.size():
 		(_combo[i].get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Color(1.0, 0.78, 0.2) if i < player.combo else Color(0.12, 0.1, 0.08, 0.9)
 	_cast.visible = not player.casting.is_empty()

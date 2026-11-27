@@ -77,6 +77,19 @@ func _draw_map() -> void:
 		if o.distance_to(_center) > Terrain.SIZE + SPAN:
 			continue
 		var t := z.terrain
+		for rg in t.ridges:
+			var rp := PackedVector2Array()
+			for q in rg.pts:
+				rp.append(_w(o + q))
+			v.draw_polyline(rp, Color(0.36, 0.33, 0.3, 0.9), maxf(3.0, float(rg.width) * 1.1 * k))
+		if not t.volcano.is_empty():
+			v.draw_circle(_w(o + t.volcano.center), float(t.volcano.radius) * 0.8 * k, Color(0.3, 0.26, 0.24, 0.95))
+			v.draw_circle(_w(o + t.volcano.center), maxf(3.0, float(t.volcano.crater) * k), Color(1.0, 0.45, 0.1))
+		for rv in t.rivers:
+			var wp := PackedVector2Array()
+			for q in rv.pts:
+				wp.append(_w(o + q))
+			v.draw_polyline(wp, Color(0.75, 0.85, 0.95) if t.frozen else Color(0.25, 0.45, 0.7), maxf(2.0, float(rv.width) * 2.0 * k))
 		for l in t.lakes:
 			v.draw_circle(_w(o + l.center), float(l.radius) * k, Color(0.75, 0.85, 0.95) if t.frozen else Color(0.25, 0.45, 0.7))
 		for road in t.roads:

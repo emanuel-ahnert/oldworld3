@@ -163,9 +163,9 @@ func _restock() -> void:
 	for slot in ["main", "chest", "legs", "head", "off", "feet"]:
 		if slot == "off" and player.cls in ["hunter"]:
 			continue
-		_shop.append(Items.make(slot, lvl, "common", player.cls, rng))
+		_shop.append(Items.make(slot, lvl, "common", player.cls, rng, true))
 	if rng.randf() < 0.5:
-		_shop.append(Items.make(Items.SLOTS[rng.randi() % Items.SLOTS.size()], lvl, "uncommon", player.cls, rng))
+		_shop.append(Items.make(Items.SLOTS[rng.randi() % Items.SLOTS.size()], lvl, "uncommon", player.cls, rng, true))
 	_dirty = true
 
 

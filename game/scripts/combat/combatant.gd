@@ -271,15 +271,33 @@ func take_damage(amount: int, crit: bool, source: Combatant) -> void:
 	if uses_rage:
 		rage = minf(100.0, rage + 50.0 * amount / max_hp)   # 1 rage per 2% of max HP lost
 	if hp == 0 and cheat_death_cd > 0.0 and now() >= _cheat_ready:
-		# Cheat Death (rogue): survive with 10% health instead.
+		# Cheat Death (rogue): survive with 10% health instead, every debuff gone.
 		_cheat_ready = now() + cheat_death_cd
 		hp = maxi(1, max_hp / 10)
+		clear_debuffs()
 		if body:
 			World.float_text(body.global_position + Vector3(0, 2.2, 0), "Cheat Death", Color(0.9, 0.9, 1.0), 44, body)
 	damaged.emit(amount, crit, source)
 	if hp == 0:
 		dead = true
 		died.emit(source)
+
+
+## Takes off everything harmful: damage over time, weakening buffs (a value under 1, as
+## auras() tells debuffs), stun, root and slow.
+func clear_debuffs() -> void:
+	for k in dots.keys():
+		if not dots[k].heal:
+			dots.erase(k)
+	for k in buffs.keys():
+		var b: Dictionary = buffs[k]
+		for v in b.values():
+			if v is float and v < 1.0 and v != b.until:
+				buffs.erase(k)
+				break
+	stun_until = 0.0
+	root_until = 0.0
+	slow_until = 0.0
 
 
 func heal(amount: int) -> void:

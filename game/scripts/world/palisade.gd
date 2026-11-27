@@ -92,28 +92,42 @@ func build(terrain: Terrain, seed: int) -> void:
 	_collision(terrain, openings, half_gate)
 
 
-## Thin boxes along the closed stretches of the ring (about 4 m each).
+## Thin boxes along the closed stretches of the ring (about 1 m each, up to the gates' edges:
+## with 4 m ones, those within reach of a gate were left out, a walk-through gap beside each
+## gate post), and a round post at each side of every gate.
 func _collision(terrain: Terrain, openings: Array[float], half_gate: float) -> void:
 	var body := StaticBody3D.new()
 	add_child(body)
-	var seg := 4.0 / RADIUS
+	var seg := 1.0 / RADIUS
 	var a := 0.0
 	while a < TAU:
 		var mid := a + seg * 0.5
 		var blocked := false
 		for g in openings:
-			if absf(angle_difference(g, mid)) < half_gate + seg * 0.5:
+			if absf(angle_difference(g, mid)) < half_gate:
 				blocked = true
 		if not blocked:
 			var p := Vector3(sin(mid) * RADIUS, 0, cos(mid) * RADIUS)
 			var cs := CollisionShape3D.new()
 			var box := BoxShape3D.new()
-			box.size = Vector3(seg * RADIUS + 0.2, 3.0, 0.5)
+			box.size = Vector3(seg * RADIUS + 0.1, 3.0, 0.5)
 			cs.shape = box
 			cs.position = Vector3(p.x, terrain.height_at(p.x, p.z) + 1.0, p.z)
-			cs.rotation.y = mid                  # its long side along the ring (it stood across it: gaps)
+			cs.rotation.y = mid                  # its long side along the ring
 			body.add_child(cs)
 		a += seg
+	var step := (LOG_R * 1.9) / RADIUS
+	for g in openings:
+		for side in [-1.0, 1.0]:
+			var ga: float = g + side * (half_gate + step * 0.5)
+			var p := Vector3(sin(ga) * RADIUS, 0, cos(ga) * RADIUS)
+			var cs := CollisionShape3D.new()
+			var cyl := CylinderShape3D.new()
+			cyl.radius = LOG_R * 1.6 + 0.08
+			cyl.height = 3.4
+			cs.shape = cyl
+			cs.position = Vector3(p.x, terrain.height_at(p.x, p.z) + 1.3, p.z)
+			body.add_child(cs)
 
 
 ## One log: a slightly tapering trunk with bark, its top cut to a point (pale fresh wood).

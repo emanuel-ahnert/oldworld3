@@ -73,6 +73,15 @@ func _ready() -> void:
 		Humanoid.STAFF_TILT = Vector3(float(g[3]), float(g[4]), float(g[5]))
 	if args.has("whirl-at"):
 		CharAnimator.WHIRL_AT = float(args["whirl-at"])     # test: the Whirlwind pose's frame
+	if args.has("zone-info"):
+		# Test: "x,y,seed;..." -> each cell's region, name and difficulty for that world seed.
+		for spec in String(args["zone-info"]).split(";"):
+			var f := spec.split(",")
+			var zc := Vector2i(int(f[0]), int(f[1]))
+			var zt := ZoneTypes.type_at(zc, int(f[2]))
+			print("ZONEINFO %s|%s|%s|%d" % [spec, zt, ZoneNames.make(ZoneTypes.TYPES[zt].names, hash([int(f[2]), zc.x, zc.y])), ZoneTypes.difficulty(zc)])
+	if args.has("feature"):
+		Terrain.force_feature = str(args.feature)       # test: this landscape feature in every zone
 	var seed := int(args.get("seed", Game.seed))
 	Game.seed = seed
 	_setup_environment()
@@ -142,6 +151,15 @@ func _ready() -> void:
 		var cp := first.chests[clampi(int(args.chest) if args.chest is String else 0, 0, first.chests.size() - 1)].position + Vector3(5, 0, 0)
 		start = Vector3(cp.x + first.position.x, 0, cp.z + first.position.z)
 		face = PI / 2                 # facing -X, toward the chest
+	if args.has("to-border"):
+		# Test: 60 m in front of the north border, 150 m beside its crossing, running north into
+		# the mountains (the border's wall should stop the hero).
+		for c in first.terrain.crossings:
+			if c.y < -100.0:
+				var bx := c.x + (150.0 if c.x < 0.0 else -150.0)
+				start = Vector3(bx + first.position.x, 0, c.y + 60.0 + first.position.z)
+				face = 0.0
+				args["autowalk"] = true
 	if args.has("to-north"):
 		# Test: 40 m in front of the start zone's north crossing, running north through it.
 		for c in first.terrain.crossings:
@@ -364,6 +382,11 @@ func _class_heads() -> void:
 		var p := player.global_position + (Vector3((i - 4) * 0.55, 0, 2.0) if classes.size() > 1 else Vector3(0, 0, float(args.get("heads-dist", 1.2))))
 		h.global_position = Vector3(p.x, World.height_at(p.x, p.z) + float(args.get("heads-goblin-lift", 0.0)), p.z)
 		h.rotation.y = PI + deg_to_rad(float(args.get("heads-turn", 0)))
+		if args.has("cap"):
+			# Test: each class in the merchant's jelly bag cap (or --cap hood: the hood), its colors.
+			h.equip_model("helmet", "res://assets/gear/head_jellycap.glb" if str(args.cap) != "hood" else "res://assets/gear/hood.glb")
+			var cc: Array = Items.CLASS_CLOTH[classes[i]]
+			h.set_hood_color([Color.html(cc[0]), Color.html(cc[1])])
 		if args.has("panic"):
 			h.anim.set_move("run", 0.5)           # test: Fear's panic (arms up) on a run
 			h.set_panic(true)
@@ -965,18 +988,78 @@ func _process(_dt: float) -> void:
 				near.home = near.global_position
 				near.engage()
 				print("GUARD-TEST ", near.kind, " hp ", near.stats.hp)
+	if args.has("to-lava") and player:
+		# Test: the hero at the start zone's lava lake's edge; health every half second.
+		var lz: Zone = zones.zone_at(player.global_position)
+		if _frame == 40 and lz and lz.terrain.volcano.has("lake"):
+			var lk: Dictionary = lz.terrain.volcano.lake
+			var at: Vector2 = lk.center + Vector2(float(lk.radius) - 0.5, 0)
+			player.global_position = lz.position + Vector3(at.x, lz.terrain.height_at(at.x, at.y) + 0.3, at.y)
+		if _frame > 40 and _frame % 30 == 0:
+			print("LAVA hp %d/%d dead %s" % [player.stats.hp, player.stats.max_hp, player.stats.dead])
+	if args.has("look-volcano") and player and _frame == 25:
+		# Test: a camera 380 m from the start zone's volcano, a little above, looking at it.
+		var vz: Zone = zones.zone_at(player.global_position)
+		var feat_c := Vector2.INF
+		if vz and not vz.terrain.volcano.is_empty():
+			feat_c = vz.terrain.volcano.center
+		elif vz and not vz.terrain.rivers.is_empty():
+			var rp: PackedVector2Array = vz.terrain.rivers[0].pts
+			feat_c = rp[rp.size() / 2]                  # (also: the middle of a river or a ridge)
+		elif vz and not vz.terrain.ridges.is_empty():
+			var gp: PackedVector2Array = vz.terrain.ridges[0].pts
+			feat_c = gp[gp.size() / 2]
+		if feat_c != Vector2.INF:
+			var vc: Vector2 = feat_c
+			var dir := (Vector2.ZERO - vc).normalized().rotated(deg_to_rad(float(args.get("look-rot", 0.0))))
+			var at := vc + dir * float(args.get("look-dist", 380.0))
+			var vcam := Camera3D.new()
+			vcam.far = 4000.0
+			add_child(vcam)
+			vcam.global_position = vz.position + Vector3(at.x, vz.terrain.height_at(at.x, at.y) + float(args.get("look-up", 40.0)), at.y)
+			vcam.look_at(vz.position + Vector3(vc.x, vz.terrain.height_at(vc.x, vc.y) + 40.0, vc.y))
+			vcam.current = true
+			World.set_view(1500.0, 1500.0)
+			for we in find_children("*", "WorldEnvironment", true, false):
+				(we as WorldEnvironment).environment.fog_enabled = false
+	if args.has("overview") and player and _frame == 20:
+		# Test: a camera high over the hero's zone looking down (the whole zone's landscape).
+		var oz: Zone = zones.zone_at(player.global_position)
+		var cam := Camera3D.new()
+		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+		cam.size = float(args.get("overview-size", 1150.0))
+		cam.far = 3000.0
+		add_child(cam)
+		cam.global_position = oz.position + Vector3(0, 900, 300)
+		cam.look_at(oz.position, Vector3.FORWARD)
+		cam.rotation_degrees.x = -70.0
+		var oc := oz.position
+		if args.has("overview-volcano") and not oz.terrain.volcano.is_empty():
+			oc += Vector3(oz.terrain.volcano.center.x, 0, oz.terrain.volcano.center.y)     # test: centered on the volcano
+		cam.global_position = oc + Vector3(0, 900, 900.0 / tan(deg_to_rad(70.0)))
+		cam.current = true
+		World.set_view(4000.0, 4000.0)
+		var env := get_viewport().world_3d.environment if get_viewport().world_3d else null
+		for we in find_children("*", "WorldEnvironment", true, false):
+			env = (we as WorldEnvironment).environment
+		if env:
+			env.fog_enabled = false
+			env.volumetric_fog_enabled = false
 	if args.has("wall-test") and player and _frame == 40:
 		# Test: the hero 5 m inside the start village's wall, between two gates, walking out at it.
 		var wz: Zone = zones.zone_at(player.global_position)
 		var wp: Palisade = wz.settlement.get_node_or_null("Palisade") if wz and wz.settlement else null
 		if wp and wp.gates().size() >= 1:
-			var ga: float = float(wp.gates()[0].yaw) + 0.6
+			var ga: float = float(wp.gates()[0].yaw) + (float(args["wall-test"]) if String(args["wall-test"]).is_valid_float() else 0.6)
 			var out := Vector3(sin(ga), 0, cos(ga))
 			var at: Vector3 = wz.position + out * (Palisade.RADIUS - 5.0)
 			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
 			player.rotation.y = atan2(out.x, out.z) + PI
 			player.auto_forward = true
 			_wall_zone = wz
+	if args.has("to-border") and player and _frame % 60 == 0:
+		var bz: Zone = zones.zone_at(player.global_position)
+		print("BORDER z=%.1f (local %.1f) y=%.1f" % [player.global_position.z, player.global_position.z - (bz.position.z if bz else 0.0), player.global_position.y])
 	if args.has("wall-test") and _wall_zone and _frame % 60 == 0:
 		print("WALL r=%.1f" % Vector2(player.global_position.x - _wall_zone.position.x, player.global_position.z - _wall_zone.position.z).length())
 	if args.has("outfits") and player and _frame == 60:
@@ -1038,6 +1121,7 @@ func _process(_dt: float) -> void:
 	if args.has("camp") and _frame == 30:
 		player.stats.hp = player.stats.max_hp / 4                 # test: rest at a fire
 		player.toggle_camp()
+		player.stats.energy = 0.0                                   # test: energy refilling at camp
 		if args.has("dot"):
 			player.stats.add_dot("poison", 8.0, 1.0 / 64.0, null)   # test: poisoned while resting
 	_fight_bot()

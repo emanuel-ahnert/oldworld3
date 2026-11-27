@@ -27,6 +27,7 @@ varying vec3 wpos;
 varying vec3 wnorm;
 varying float dirt_w;
 varying float shore_w;
+varying float ash_w;        // a volcano's slopes (Terrain: COLOR.b): dark ash and rock, no snow
 // Large-scale variation (tens of meters), read once per vertex (2 m apart) instead of per pixel:
 // x: the meadow's brightness (grass texture, 97 m, blurred), y: its warmth (for the roads),
 // z: patches (noise, 46 m), w: the rock's tint (noise, 90 m). Texture reads were the main cost.
@@ -37,6 +38,7 @@ void vertex() {
 	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	dirt_w = COLOR.r;
 	shore_w = COLOR.g;
+	ash_w = COLOR.b;
 	vec3 big = textureLod(grass_tex_plain, wpos.xz / 97.0, 5.0).rgb;
 	large = vec4(big.g, big.r,
 		textureLod(noise_tex, wpos.xz / 46.0, 1.0).r,
@@ -166,16 +168,30 @@ void fragment() {
 		rk = mix(rk, rk * rk_big * 2.0, 0.5);
 		float n_rock = large.w;
 		rk *= mix(vec3(0.86, 0.9, 1.0), vec3(1.1, 1.0, 0.86), n_rock);
-		float band = sin(wpos.y * 0.21 + n_rock * 4.0);                     // broad layers
-		rk *= 0.88 + 0.12 * smoothstep(-0.3, 0.5, band);
+		float band = sin(wpos.y * 0.21 + n_rock * 4.0);                     // broad layers, soft
+		rk *= 0.94 + 0.06 * smoothstep(-0.3, 0.5, band);
+		// Streaks running down the faces (water and weathering), across the layers.
+		float streak = texture(noise_tex, vec2((wpos.x + wpos.z) * 0.035, wpos.y * 0.004)).r;
+		rk *= 0.8 + 0.35 * streak;
 		rk *= rock_tint;
 		// Moss and grass in the ledges (rock facing up), patchy.
 		float moss = rock_moss.a * smoothstep(0.5, 0.8, wnorm.y) * smoothstep(0.3, 0.6, n_rock + n_mid * 0.5);
 		rk = mix(rk, rock_moss.rgb * (0.7 + 0.6 * dot(rk, vec3(0.333))), moss);
 		col = mix(col, rk, rock_w);
 	}
+	// A volcano: dark grey ash over everything, black rock on its steeper parts and rusty
+	// streaks running down (old lava); no snow.
+	if (ash_w > 0.001) {
+		float n_ash = large.z;
+		vec3 ash = mix(vec3(0.12, 0.11, 0.1), vec3(0.19, 0.17, 0.15), n_ash) * (0.85 + 0.3 * n_mid);
+		vec3 basalt = rock_triplanar_t(wpos, wnorm, rock_tile, dpx, dpy) * vec3(0.32, 0.3, 0.3);
+		ash = mix(ash, basalt, smoothstep(0.1, 0.3, slope));
+		float streak = smoothstep(0.62, 0.8, large.w) * smoothstep(0.08, 0.2, slope);
+		ash = mix(ash, vec3(0.32, 0.15, 0.08), streak * 0.6);
+		col = mix(col, ash, ash_w);
+	}
 	// Snow caps: above the zone's snow line, on the flatter parts.
-	if (wpos.y > snow_line - 12.0) {
+	if (wpos.y > snow_line - 12.0 && ash_w < 0.5) {
 		float sw = smoothstep(snow_line, snow_line + 10.0, wpos.y + (n_mid - 0.5) * 16.0) * smoothstep(0.45, 0.72, wnorm.y);
 		col = mix(col, vec3(0.9, 0.92, 0.96), sw);
 	}

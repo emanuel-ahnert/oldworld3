@@ -138,6 +138,7 @@ const HEAD_LAYERS := {
 	"hood": ["res://assets/gear/head_hood.glb", 0], "coif": ["res://assets/gear/head_coif.glb", 1],
 	"cowl": ["res://assets/gear/head_cowl.glb", 2], "cap": ["res://assets/gear/head_cowl.glb", 2],
 	"helmet": ["res://assets/gear/head_helm.glb", 3],
+	"head_jellycap": ["res://assets/gear/head_jellycap.glb", 0],
 }
 ## What of the head still shows under each kind (body_slots.gdshader hide_hair): [cos of the
 ## face's half width, brow m above the head's middle] (the openings of headgear.py's KINDS).
@@ -222,8 +223,18 @@ func _tint_hood() -> void:
 	if mi == null or not (mi.material_override is ShaderMaterial):
 		return
 	var hm := mi.material_override as ShaderMaterial
-	hm.set_shader_parameter("tint", _robe_colors[0])
-	hm.set_shader_parameter("trim", _robe_colors[1])
+	var c: Array = _hood_color if not _hood_color.is_empty() else _robe_colors
+	hm.set_shader_parameter("tint", c[0])
+	hm.set_shader_parameter("trim", c[1])
+
+
+## A cloth cap's or hood's own colors (the item's: [cloth, hem]); [] takes the robe's.
+var _hood_color: Array = []
+
+
+func set_hood_color(c: Array) -> void:
+	_hood_color = c
+	_tint_hood()
 
 
 func has_layer(key: String) -> bool:
@@ -695,3 +706,27 @@ func set_hairstyle(style: String, color: Color) -> void:
 	hm.set_shader_parameter("strand_scale", 120.0 if style == "mohawk" else 700.0)
 	mi.material_override = hm
 	mi.visible = not helmet_worn
+
+
+## Sneaking (a rogue in stealth): SneakPose (crouched, hunched, knees bent, the feet planted),
+## eased in and out.
+var _sneak: SneakPose
+var _sneak_tw: Tween
+
+
+func set_sneak(on: bool) -> void:
+	if _sneak == null:
+		if not on:
+			return
+		_sneak = SneakPose.new()
+		_sneak.name = "SneakPose"
+		_sneak.influence = 0.0
+		_skel.add_child(_sneak)
+		_skel.move_child(_sneak, 0)               # first: the arms' modifiers act on the crouched pose
+	if _sneak_tw:
+		_sneak_tw.kill()
+	_sneak.active = true
+	_sneak_tw = create_tween()
+	_sneak_tw.tween_property(_sneak, "influence", 1.0 if on else 0.0, 0.3)
+	if not on:
+		_sneak_tw.tween_callback(func(): _sneak.active = false)

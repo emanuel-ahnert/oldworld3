@@ -36,6 +36,10 @@ body_dir, KIND, out = Path(a[0]), a[1], Path(a[2])
 KINDS = {
     "hood": dict(offset=0.012, thick=0.007, face=(-17, 36, 54), arch=1.6, open_below=False, cut=(0.055, 0.075), ridge=0.0, blur=3,
                  snug=0.9, tip=0.06, tube=-56, shown=0.62),
+    # A jelly bag cap: the hood's cover round the face, its crown drawn out into a long bag of
+    # cloth that rises and flops back and down behind the head (more rows: the bag stays smooth).
+    "jellycap": dict(offset=0.012, thick=0.005, face=(-17, 36, 54), arch=1.6, open_below=False, cut=(0.055, 0.075), ridge=0.0, blur=3,
+                     snug=0.9, tip=0.0, tube=-56, shown=0.62, bag=True, rows=72),
     "coif": dict(offset=0.010, thick=0.005, face=(-15, 33, 50), arch=1.7, open_below=False, cut=(0.095, 0.10), ridge=0.0, blur=2,
                  snug=0.88, tube=-56, shown=0.7),
     "cowl": dict(offset=0.010, thick=0.006, face=(-12, 28, 74), arch=1.8, open_below=True, cut=(0.0, 0.045), ridge=0.0, blur=2,
@@ -79,7 +83,7 @@ rr = np.linalg.norm(d, axis=1)
 EL = np.degrees(np.arcsin(np.clip(d[:, 2] / rr, -1, 1)))
 AZ = np.degrees(np.arctan2(d[:, 0], -d[:, 1]))        # 0 = straight ahead (-y), +90 = left (+x)
 
-NE, NA = 46, 96                                        # elevation -85..90, azimuth -180..180
+NE, NA = K.get("rows", 46), 96                                        # elevation -85..90, azimuth -180..180
 E0, E1 = -85.0, 86.0
 ei = np.clip(((EL - E0) / (E1 - E0) * (NE - 1)).round().astype(int), 0, NE - 1)
 ai = (((AZ + 180) / 360 * NA).round().astype(int)) % NA
@@ -350,6 +354,58 @@ verts = np.vstack([verts, np.array([HC[0], HC[1], last[:, 2].max() + 0.004]) + n
 uvs.append((0.5, 1.0))
 for j in range(NA):
     faces.append([vid(NE - 1, j), vid(NE - 1, j + 1), top])
+
+if K.get("bag"):
+    # The jelly bag: the shell's own crown drawn out (no extra piece): every vertex above Z0 is
+    # carried along a curve that leaves the crown straight up, bends back and hangs down behind
+    # the head; its distance from the shell's axis narrows from the head's width to a point
+    # (the cloth's long taper), the round top becoming the bag's end.
+    Z0 = HC[2] + 0.05
+    TOP = float(verts[:, 2].max())
+    base_c = np.array([HC[0], HC[1] + 0.012, Z0])
+    # (Its end clear of the hood behind the head: hung lower, it cut into it.)
+    ctrl = [base_c, base_c + np.array([0.0, 0.0, 0.12]), base_c + np.array([0.025, 0.13, 0.15]), base_c + np.array([0.06, 0.24, -0.01])]
+
+    def bez(t):
+        a_, b_, c_, d_ = ctrl
+        return (1 - t) ** 3 * a_ + 3 * (1 - t) ** 2 * t * b_ + 3 * (1 - t) * t * t * c_ + t ** 3 * d_
+
+    def rot_between(u, v):
+        """The rotation (matrix) turning unit vector u onto v."""
+        c = float(u @ v)
+        ax = np.cross(u, v)
+        sn = float(np.linalg.norm(ax))
+        if sn < 1e-8:
+            return np.eye(3)
+        ax /= sn
+        K_ = np.array([[0, -ax[2], ax[1]], [ax[2], 0, -ax[0]], [-ax[1], ax[0], 0]])
+        return np.eye(3) + K_ * sn + K_ @ K_ * (1 - c)
+
+    up = np.array([0.0, 0.0, 1.0])
+    R0 = max(float(np.max(np.hypot(verts[np.abs(verts[:, 2] - Z0) < 0.01, 0] - base_c[0], verts[np.abs(verts[:, 2] - Z0) < 0.01, 1] - base_c[1]))), 0.05)
+    for vi in range(len(verts)):
+        p_ = verts[vi]
+        if p_[2] <= Z0:
+            continue
+        sv = min((p_[2] - Z0) / max(TOP - Z0, 1e-4), 1.0)
+        q = np.array([p_[0] - base_c[0], p_[1] - base_c[1], 0.0])
+        dome = max(R0 * math.sqrt(max(1.0 - sv * sv, 0.0)), 0.004)
+        # A full, soft sock: the cap's own width where it starts (wider, its edge folded over the
+        # rows below: a dark slit), a small round end.
+        want = R0 * (1.0 - sv) ** 0.95 + 0.014 * sv
+        q = q * min(want / dome, 1.6)
+        c = bez(sv)
+        tan = bez(min(sv + 0.01, 1.0)) - bez(max(sv - 0.01, 0.0))
+        tan /= np.linalg.norm(tan)
+        # The cloth's cross-section turns with the curve only once it has narrowed (turned at
+        # the wide base, the back of the crown folded down into the rows below: a slit).
+        bend = min(max((sv - 0.3) / 0.55, 0.0), 1.0)
+        bend = bend * bend * (3 - 2 * bend)
+        tt = up * (1 - bend) + tan * bend
+        mapped = c + rot_between(up, tt / np.linalg.norm(tt)) @ q
+        w = min(sv / 0.15, 1.0)
+        w = w * w * (3 - 2 * w)
+        verts[vi] = p_ * (1 - w) + mapped * w
 
 _v = verts[verts[:, 2] > NECK]
 print(f"DIMS width {np.ptp(_v[:, 0]):.3f} depth {np.ptp(_v[:, 1]):.3f} height {np.ptp(verts[:, 2]):.3f} "

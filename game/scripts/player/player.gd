@@ -73,7 +73,7 @@ const BLIZZARD_RADIUS := 8.0
 const ABILITIES_ROGUE := [
 	{"id": "quick_stab", "name": "Quick Stab", "key": 1, "level": 1, "energy": 40, "cd": 0.0, "power": 45.0},
 	{"id": "stealth", "name": "Stealth", "key": 2, "level": 1, "energy": 0, "cd": 6.0},
-	{"id": "eviscerate", "name": "Eviscerate", "key": 3, "level": 2, "energy": 35, "cd": 0.0, "power_per_cp": 27.0},
+	{"id": "eviscerate", "name": "Eviscerate", "key": 3, "level": 2, "energy": 20, "cd": 0.0, "power_per_cp": 27.0},
 	{"id": "knife_throw", "name": "Knife Throw", "key": 7, "level": 4, "energy": 30, "cd": 0.0, "power": 45.0, "range": 25.0, "min_range": 5.0, "element": "Physical"},
 	{"id": "poisoned_blade", "name": "Poisoned Blade", "key": 4, "level": 3, "energy": 30, "cd": 0.0, "power": 20.0},
 	{"id": "cheap_shot", "name": "Cheap Shot", "key": 5, "level": 6, "energy": 40, "cd": 20.0, "power": 10.0},
@@ -252,7 +252,7 @@ var _jugg_t := 0.0                  ## Juggernaut: rage gained so far this secon
 func _ready() -> void:
 	BlobShadow.attach(self, 0.55)
 	collision_layer = 4      # the hero; nothing collides with it, enemies walk through
-	collision_mask = 1
+	collision_mask = 1 | Terrain.BORDER_LAYER     # the ground, buildings, trees; the zone's border
 	var col := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.35
@@ -1081,7 +1081,7 @@ func _execute(a: Dictionary) -> void:
 				e.stats.add_dot("poison", 15.0, 0.04, stats)
 				e.stats.slow(15.0, 0.5, "Crippled"))
 		"cheap_shot":
-			_melee_hit(float(a.power), "attack1", 1.0, false, 0.0, "Physical", _stun.bind(3.0))
+			_melee_hit(float(a.power), "attack1", 1.0, true, 0.0, "Physical", _stun.bind(3.0))      # can't be dodged
 		"knife_throw":
 			model.anim.play_shot("release")
 			var e := target
@@ -1102,6 +1102,7 @@ func _execute(a: Dictionary) -> void:
 			stealthed = not stealthed
 			model.mat.set_shader_parameter("stealth", 1.0 if stealthed else 0.0)
 			model.set_fade(0.5 if stealthed else 0.0)
+			model.set_sneak(stealthed)
 			message.emit("Stealth" if stealthed else "")
 		"frost_ring":
 			model.anim.play_shot("release")
@@ -1409,6 +1410,7 @@ func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bo
 		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Dodge", Color(0.8, 0.8, 0.8), 40, e)
 		Audio.sfx("miss")
 		overwhelm_until = Combatant.now() + 5.0
+		_combat_spec(20.0)
 		return
 	stats.crit_chance += extra_crit
 	var r := stats.roll_damage(e.stats, power, (anim.begins_with("attack") or anim == "offhand") and power < 40.0, extra * _enrage()) if element == "Physical" else stats.roll_damage_elem(e.stats, power, element)
@@ -1534,6 +1536,7 @@ func _break_stealth() -> void:
 		stealthed = false
 		model.mat.set_shader_parameter("stealth", 0.0)
 		model.set_fade(0.0)
+		model.set_sneak(false)
 		cooldowns["stealth"] = Combatant.now() + 6.0
 
 
@@ -1567,7 +1570,7 @@ func _tips_process() -> void:
 	var fighting := stats.in_combat()
 	if _was_fighting and not fighting and kills > 0 and not tips_shown.has("camp") and not stats.dead:
 		tips_shown["camp"] = true
-		hint.emit("Tip: press C to camp and recover your health%s." % (" and mana" if stats.uses_mana else ""))
+		hint.emit("Tip: press C to camp and recover your health%s." % (" and mana" if stats.uses_mana else (" and energy" if stats.uses_energy else "")))
 	_was_fighting = fighting
 
 
@@ -1632,6 +1635,14 @@ func _combat_process(t: float) -> void:
 			var off_mult := Rules.weapon_mult(_off_damage) if _off_damage > 0.0 else main_mult
 			_melee_hit(Rules.swing_power(stats.swing_time) * OFFHAND, "offhand", off_mult / maxf(main_mult, 0.01))
 			stats.auto_hit = false
+
+
+## Combat Specialization (rogue, level 8): energy back when an attack is dodged (20) and for a
+## kill (40).
+func _combat_spec(gain: float) -> void:
+	if has_passive("Combat Specialization") and stats.uses_energy:
+		stats.energy = minf(100.0, stats.energy + gain)
+		World.float_text(global_position + Vector3(0, 2.3, 0), "+%d energy" % roundi(gain), Color(1.0, 0.85, 0.2), 30, self)
 
 
 ## A dagger in the off hand (and not a bear): both hands strike.
@@ -1755,6 +1766,7 @@ var kills := 0
 
 func on_kill(e: Enemy) -> void:
 	kills += 1
+	_combat_spec(40.0)
 	var gained := Rules.enemy_xp(e.stats.level, stats.level, e.stats.tier)
 	money += e.stats.level * ({"elite": 8, "champion": 40}.get(e.stats.tier, 3) as int)
 	_loot(e)
@@ -1801,10 +1813,11 @@ func knockback(v: Vector3) -> void:
 # --- camp --------------------------------------------------------------------------------
 
 ## Camp (Oldworld2): C while standing still lights a fire; the hero sits and regenerates 10% of
-## max HP and 20% of max mana per second. Moving, turning, jumping, an ability or a direct hit (not damage over time) breaks
+## max HP and 20% of max mana per second, energy CAMP_ENERGY a second on top of its own 5. Moving, turning, jumping, an ability or a direct hit (not damage over time) breaks
 ## camp. Enemies can still find a resting hero.
 const CAMP_HP := 0.10
 const CAMP_MANA := 0.20
+const CAMP_ENERGY := 20.0
 var camp: Node3D                    ## the fire while camping
 var _camp_hp := 0.0
 var _camp_since := 0.0
@@ -1923,6 +1936,8 @@ func _camp_process(dt: float) -> void:
 		_camp_hp -= int(_camp_hp)
 	if stats.uses_mana:
 		stats.mana = minf(stats.max_mana, stats.mana + stats.max_mana * CAMP_MANA * rate * dt)
+	if stats.uses_energy:
+		stats.energy = minf(100.0, stats.energy + CAMP_ENERGY * rate * dt)
 	var light: OmniLight3D = camp.get_meta("light")
 	if light.light_energy > 1.5:          # flicker once the fire is lit
 		light.light_energy = 2.2 + 0.35 * sin(Combatant.now() * 17.0) * sin(Combatant.now() * 5.3)
@@ -1944,6 +1959,7 @@ func _physics_process(dt: float) -> void:
 		return
 	_combat_process(t)
 	_camp_process(dt)
+	_lava_process(dt)
 	if World.zones and not World.zones.zones.has(World.zones.cell_of(global_position)):
 		if not World.zones.ensure_here(global_position):
 			velocity = Vector3.ZERO                       # a zone still building: wait, don't fall
@@ -1979,7 +1995,7 @@ func _physics_process(dt: float) -> void:
 	sprinting = ((Input.is_action_pressed("sprint") or auto_sprint) and moving and stamina > 0.0 and is_on_floor()) or (sprinting and not is_on_floor())
 	if sprinting:
 		speed *= SPRINT_FACTOR
-		# Improved Sprint (rogue, level 6): stamina lasts five times as long (Oldworld2).
+		# Improved Sprint (rogue, level 2): stamina lasts five times as long (Oldworld2).
 		var drain := 0.2 if has_passive("Improved Sprint") else 1.0
 		stamina = maxf(0.0, stamina - dt / STAMINA_TIME * drain)
 	else:
@@ -2330,7 +2346,10 @@ func _show_weapons() -> void:
 	model.equip_model("offhand", "res://assets/weapons/dagger.glb" if off_kind == "offdagger" else "")
 	var head: Dictionary = equipped.get("head", {})
 	var helm := String(HEADGEAR.get(head.get("kind", ""), "")) if not head.is_empty() else ""
+	if Items.cloth_style(head) == "jellycap":
+		helm = "res://assets/gear/head_jellycap.glb"
 	model.equip_model("helmet", helm if ResourceLoader.exists(helm) else "")
+	model.set_hood_color(Items.cloth_colors(head))
 	var legs_kind := String(equipped.get("legs", {}).get("kind", ""))
 	model.set_layer("legs", LEG_LAYERS.plate if legs_kind == "plate" else "")
 	var chest_kind := String(equipped.get("chest", {}).get("kind", ""))
@@ -2372,3 +2391,21 @@ func visit_inn(z: Zone) -> void:
 		message.emit("New quests on the notice board of %s" % z.zone_name)
 	quests_changed.emit()
 	saved_point.emit()
+
+
+## Lava (a volcano's crater, flows and lake): in it or right next to it the hero burns,
+## LAVA_BURN of max health a second, in ticks every half second.
+const LAVA_BURN := 0.2
+var _lava_t := 0.0
+
+
+func _lava_process(dt: float) -> void:
+	if World.zones == null or not World.zones.lava_at(global_position):
+		_lava_t = 0.0
+		return
+	_lava_t += dt
+	if _lava_t >= 0.5:
+		_lava_t -= 0.5
+		stats.take_damage(maxi(1, ceili(stats.max_hp * LAVA_BURN * 0.5)), false, null)
+		World.float_text(global_position + Vector3(0, 2.4, 0), "Lava!", Color(1.0, 0.5, 0.1), 34, self)
+		Audio.sfx("fireball", -8.0)

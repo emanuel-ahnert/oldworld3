@@ -104,7 +104,7 @@ func compute(terrain: Terrain, seed: int, avoid: Array[Vector3] = [], info: Dict
 				continue
 			if terrain.road_distance(px, pz) < Terrain.ROAD_WIDTH + 2.0:
 				continue
-			if terrain.lake_distance(px, pz) < 4.0:
+			if terrain.lake_distance(px, pz) < 4.0 or terrain.barren(px, pz):
 				continue
 			var blocked := false
 			for q in avoid:

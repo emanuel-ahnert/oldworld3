@@ -13,9 +13,9 @@ for set in plate_legs plate_shoulders; do
   cp spike/body/$set.glb $W/
 done
 # Headgear built around the full-size head (worn as the "head" layer): cloth hood, mail coif,
-# leather cap, plate helm.
+# leather cap, plate helm; the jelly bag cap (a hood with a bag flopping back and down).
 mkdir -p spike/body/headgear
-for k in hood coif cowl helm; do
+for k in hood jellycap coif cowl helm; do
   blender -b --python tools/pipeline/headgear.py -- spike/body $k spike/body/headgear/$k.glb 2>&1 | grep -E "Error|Traceback" || true
   cp spike/body/headgear/$k.glb game/assets/gear/head_$k.glb
 done

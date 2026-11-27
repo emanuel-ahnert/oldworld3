@@ -125,7 +125,7 @@ func prepare() -> void:
 	_prepared = true
 	BlobShadow.attach(self, float(data.radius) * 1.4 * float(data.get("scale", 1.0)) * (1.2 if champion != "" else 1.0))
 	collision_layer = 2      # enemies (picking); they don't block the hero or each other
-	collision_mask = 1       # terrain and trees
+	collision_mask = 1 | Terrain.BORDER_LAYER       # terrain and trees; the zone's border
 	var col := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = data.radius
