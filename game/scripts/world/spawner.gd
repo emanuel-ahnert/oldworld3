@@ -74,7 +74,7 @@ func generate(p_zone: Zone, seed: int, forest_noise: FastNoiseLite) -> void:
 				"mummy", "scarab", "cobra":
 					if forest > 0.55 or road < 10.0:
 						continue
-				"bandit", "berserker", "nomad", "corsair", "hoplite", "cultist", "vampire":
+				"bandit", "berserker", "nomad", "corsair", "hoplite", "cultist", "cultist_zealot", "vampire":
 					if road < 14.0 or road > 40.0 or forest > 0.6:
 						continue
 			if zone.landmarks.any(func(q): return Vector2(x - q.x, z - q.z).length() < 50.0):
@@ -219,7 +219,7 @@ func _spawn_group(kind: String, center: Vector3, dist: float, rng: RandomNumberG
 		zone.enemies.append(e)       # registered in World.enemies when the zone is attached
 	for e in members:
 		e.group = members
-	if kind in ["bandit", "goblin", "berserker", "nomad", "corsair", "cultist"]:
+	if kind in ["bandit", "goblin", "berserker", "nomad", "corsair", "cultist", "cultist_zealot"]:
 		_camp(center, rng, terrain, kind != "goblin")
 	groups.append({"kind": kind, "pos": center, "members": members})
 

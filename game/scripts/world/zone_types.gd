@@ -83,7 +83,7 @@ const TYPES := {
 		"trees": {"deadtree": 0.4, "darkpine": 0.6},
 		"bushes": true, "bush_kind": "deadbush", "bush_density": 2.5, "eyes": true,
 		"graveyards": 5,      # fenced graveyards with a crypt (Graveyard), not stones in the woods
-		"enemies": {"dire_wolf": 14, "bat_swarm": 10, "cultist": 6, "vampire": 4},
+		"enemies": {"dire_wolf": 14, "bat_swarm": 10, "cultist": 3, "cultist_zealot": 2, "vampire": 6},
 		"inn": "res://assets/buildings/gothichouse.glb", "houses": ["res://assets/buildings/gothichouse.glb", "res://assets/buildings/crypt.glb"],
 		"music": "unholy", "village_music": "chapel", "names": "unholy",
 		"fog": Color(0.34, 0.37, 0.33), "fog_density": 0.011, "fog_end": 170.0, "sun": Color(0.8, 0.88, 0.66), "sun_energy": 0.68, "frozen_lakes": false,

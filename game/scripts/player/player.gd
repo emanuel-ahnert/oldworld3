@@ -1451,7 +1451,9 @@ func _melee_land(e: Enemy, power: float, anim: String, extra: float, no_miss: bo
 		overwhelm_until = Combatant.now() + 5.0
 		return
 	# Dodge: only facing the attacker (not from behind), like WoW; it opens Overwhelm too.
-	if not no_miss and randf() < e.stats.dodge_chance and to_me.dot(-e.global_transform.basis.z) > 0.0:
+	# (No dodging while stunned, gouged, sapped or a sheep: it can't move to.)
+	var helpless := e.stats.stunned() or e.is_sheep()
+	if not no_miss and not helpless and randf() < e.stats.dodge_chance and to_me.dot(-e.global_transform.basis.z) > 0.0:
 		World.float_text(e.global_position + Vector3(0, 1.6, 0), "Dodge", Color(0.8, 0.8, 0.8), 40, e)
 		Audio.sfx("miss")
 		overwhelm_until = Combatant.now() + 5.0
@@ -2302,6 +2304,39 @@ func sell(i: int) -> void:
 	money += price
 	Audio.sfx("coins", -4.0)
 	inventory_changed.emit()
+
+
+## Away from a merchant: throws bag item i away (a full bag). The first right-click asks, a
+## second on the same item within DISCARD_ASK s does it; a potion goes one at a time.
+const DISCARD_ASK := 3.0
+var _discard_ask := -1
+var _discard_at := 0.0
+
+
+func discard(i: int) -> void:
+	if i < 0 or i >= bag.size():
+		return
+	var it: Dictionary = bag[i]
+	var t := Combatant.now()
+	if _discard_ask != i or t - _discard_at > DISCARD_ASK:
+		_discard_ask = i
+		_discard_at = t
+		message.emit("Right-click again to throw away %s" % it.name)
+		inventory_changed.emit()
+		return
+	_discard_ask = -1
+	if it.slot == "potion" and int(it.count) > 1:
+		it.count = int(it.count) - 1
+	else:
+		bag.remove_at(i)
+	message.emit("Thrown away: %s" % it.name)
+	Audio.sfx("miss", -6.0)
+	inventory_changed.emit()
+
+
+## Whether bag item i waits for the second right-click (the bags show it).
+func discard_pending(i: int) -> bool:
+	return _discard_ask == i and Combatant.now() - _discard_at <= DISCARD_ASK
 
 
 func buy(item: Dictionary) -> bool:

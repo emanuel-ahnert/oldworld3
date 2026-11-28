@@ -174,11 +174,18 @@ const WEST_EAST := {
 		"model": "creature:res://assets/creatures/bats.glb", "fallback": "res://assets/creatures/wisp.glb",
 		"group": Vector2i(1, 2), "abilities": [], "float": 1.6, "flying": true, "swarm": true,
 	},
+	# The cult: Acolytes cast from afar, Zealots close in with a burning mace.
 	"cultist": {
-		"name": "Cultist", "types": ["Dark", "Fire"], "resistance": 11, "tier": "elite", "hp": 320, "attack": 8, "magic": 14,
+		"name": "Cultist Acolyte", "types": ["Dark", "Fire"], "resistance": 11, "tier": "elite", "hp": 320, "attack": 8, "magic": 14,
 		"defense": 8, "behavior": "normal", "speed": 6.0, "swing": 2.2, "reach": 1.2, "radius": 0.4,
 		"model": "humanoid:cultist", "scale": 1.0, "group": Vector2i(2, 3), "abilities": ["dark_pact"], "ranged": 14.0,
 		"element": "Dark", "weapon": "dagger",
+	},
+	"cultist_zealot": {
+		"name": "Cultist Zealot", "types": ["Dark", "Fire"], "resistance": 10, "tier": "elite", "hp": 380, "attack": 13, "magic": 8,
+		"defense": 11, "behavior": "normal", "speed": 6.6, "swing": 2.0, "reach": 1.4, "radius": 0.45,
+		"model": "humanoid:cultist", "scale": 1.05, "group": Vector2i(2, 3), "abilities": ["dark_pact", "fire_brand"],
+		"weapon": "mace",
 	},
 	"vampire": {
 		"name": "Vampire", "types": ["Dark"], "resistance": 11, "tier": "elite", "hp": 400, "attack": 14, "magic": 12,

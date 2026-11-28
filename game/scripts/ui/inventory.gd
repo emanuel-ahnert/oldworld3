@@ -1,7 +1,8 @@
 class_name Inventory
 extends CanvasLayer
 ## The bags window (B or I): equipped items on the left (click to take off), the hero's numbers,
-## the bag (click: equip or drink, right-click at a merchant: sell) and, close to an inn, the
+## the bag (click: equip or drink, right-click at a merchant: sell, elsewhere: throw away, asked
+## once) and, close to an inn, the
 ## merchant's goods (click to buy). Doesn't pause the game.
 
 var player: Player
@@ -57,7 +58,7 @@ func _ready() -> void:
 	_money = _text(17)
 	mid.add_child(_money)
 	var hint := _text(13)
-	hint.text = "Click: equip / drink    Right-click at a merchant: sell\nHover for details    B or I closes"
+	hint.text = "Click: equip / drink    Right-click: sell at a merchant, else throw away\nHover for details    B or I closes"
 	hint.add_theme_color_override("font_color", Color(0.7, 0.7, 0.65))
 	mid.add_child(hint)
 
@@ -206,7 +207,14 @@ func _rebuild() -> void:
 			b.pressed.connect(player.equip.bind(i))
 			b.gui_input.connect(func(ev: InputEvent):
 				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
-					player.sell(i))
+					# At a merchant: sell; anywhere else: throw away (asked once first).
+					if player.near_merchant():
+						player.sell(i)
+					else:
+						player.discard(i))
+			if player.discard_pending(i):
+				b.add_theme_color_override("font_color", Color(1.0, 0.4, 0.3))
+				b.text = "Throw away?  " + b.text
 		_bag_grid.add_child(b)
 	_money.text = "Money: %s    Potions (G): %d" % [Items.money_text(player.money), player.potion_count()]
 

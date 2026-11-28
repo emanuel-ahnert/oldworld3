@@ -898,15 +898,16 @@ func _process(_dt: float) -> void:
 		var pts: PackedStringArray = String(args.clicks).split(";")
 		var k := (_frame - 150) / 20
 		if _frame >= 150 and (_frame - 150) % 20 == 0 and k < pts.size():
-			var xy := pts[k].split(",")
+			var right := pts[k].begins_with("r")           # "rX,Y": a right click
+			var xy := pts[k].trim_prefix("r").split(",")
 			for down in [true, false]:
 				var ev := InputEventMouseButton.new()
-				ev.button_index = MOUSE_BUTTON_LEFT
+				ev.button_index = MOUSE_BUTTON_RIGHT if right else MOUSE_BUTTON_LEFT
 				ev.pressed = down
 				ev.position = Vector2(float(xy[0]), float(xy[1]))
 				ev.global_position = ev.position
 				get_viewport().push_input(ev)
-			print("CLICK ", pts[k], " -> ", player.loadout)
+			print("CLICK ", pts[k], " -> ", player.loadout, " bag ", player.bag.map(func(it): return "%s x%d" % [it.name, int(it.get("count", 1))]))
 	if args.has("menu-click") and _frame == int(args["menu-click"]):
 		# Test: a click at 30% of the music bar (the second volume bar).
 		var bars := _menu.find_children("*", "Control", true, false).filter(func(c): return c.custom_minimum_size.x == GameMenu.BAR_W)
@@ -980,7 +981,7 @@ func _process(_dt: float) -> void:
 		var hz: Zone = zones.zone_at(player.global_position)
 		var pal: Palisade = hz.settlement.get_node_or_null("Palisade") if hz and hz.settlement else null
 		if pal and not pal.gates().is_empty():
-			var g: Dictionary = pal.gates()[mini(int(args.get("gate-view", 0)) if String(args["gate-view"]).is_valid_int() else 0, pal.gates().size() - 1)]
+			var g: Dictionary = pal.gates()[mini(int(args.get("gate-view", 0)) if str(args["gate-view"]).is_valid_int() else 0, pal.gates().size() - 1)]
 			var out: Vector3 = g.out
 			var at: Vector3 = hz.position + out * (Palisade.RADIUS + 9.0)
 			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)
@@ -1068,7 +1069,7 @@ func _process(_dt: float) -> void:
 		var wz: Zone = zones.zone_at(player.global_position)
 		var wp: Palisade = wz.settlement.get_node_or_null("Palisade") if wz and wz.settlement else null
 		if wp and wp.gates().size() >= 1:
-			var ga: float = float(wp.gates()[0].yaw) + (float(args["wall-test"]) if String(args["wall-test"]).is_valid_float() else 0.6)
+			var ga: float = float(wp.gates()[0].yaw) + (float(args["wall-test"]) if str(args["wall-test"]).is_valid_float() else 0.6)
 			var out := Vector3(sin(ga), 0, cos(ga))
 			var at: Vector3 = wz.position + out * (Palisade.RADIUS - 5.0)
 			player.global_position = Vector3(at.x, World.height_at(at.x, at.z) + 0.3, at.z)

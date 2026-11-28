@@ -16,5 +16,5 @@ void fragment() {
 	float ring2 = 1.0 - smoothstep(0.0, w * 1.3, abs(r - R * 0.62));
 	float fade = pow(1.0 - a, 1.6);
 	ALBEDO = vec3(0.82, 0.9, 0.94);
-	ALPHA = clamp((ring * 0.45 + ring2 * 0.2) * fade * strength, 0.0, 1.0) * step(r, 1.0);
+	ALPHA = clamp((ring * 0.45 + ring2 * 0.2) * fade * strength, 0.0, 1.0) * step(r, 1.0) * 0.5;      // half see-through
 }
